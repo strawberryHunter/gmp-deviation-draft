@@ -1,0 +1,6 @@
+# Same bytes on every OS: the draft records SHA-256 of rules.yaml and the
+# history CSV, and sample_output/ must match on Windows and Linux alike.
+* text=auto eol=lf
+*.docx binary
+*.png binary
+*.pdf binary

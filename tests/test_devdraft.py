@@ -439,7 +439,7 @@ def test_cli_exits_on_bad_rules(tmp_path):
 import ast  # noqa: E402
 
 ALLOWED_IMPORTS = {"__future__", "argparse", "ast", "csv", "dataclasses", "datetime",
-                   "hashlib", "pathlib", "re", "yaml", "docx"}
+                   "hashlib", "pathlib", "re", "sys", "yaml", "docx"}
 
 
 def test_package_imports_nothing_that_can_reach_a_network_or_llm():
@@ -1191,3 +1191,20 @@ def test_handoff_has_user_todo_and_update_date():
     assert re.search(r"마지막 갱신: \d{4}-\d{2}-\d{2}", text)
     assert "## 3. 사용자가 해야 할 일" in text and "## 4. 다음 작업 후보" in text
     assert "docs/HANDOFF.md" in (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+
+
+# --- console encodings (English / Korean Windows) ---------------------------------
+
+import os  # noqa: E402
+import sys  # noqa: E402
+
+
+@pytest.mark.parametrize("enc", ["cp1252", "ascii", "cp949", "utf-8"])
+def test_cli_messages_survive_console_encoding(tmp_path, enc):
+    env = {**os.environ, "PYTHONIOENCODING": enc}
+    p = subprocess.run([sys.executable, "-m", "devdraft.cli", str(INTAKE / "DEV-2026-2204.yaml"),
+                        "--out", str(tmp_path)], cwd=ROOT, capture_output=True, env=env)
+    assert p.returncode == 1, p.stderr.decode("utf-8", "replace")  # rejected form, not a crash
+    assert b"Traceback" not in p.stderr
+    shown = enc if enc in ("cp949", "utf-8") else "utf-8"  # Hangul-capable encodings are kept
+    assert "필수 항목 누락: detected_by" in p.stdout.decode(shown)
