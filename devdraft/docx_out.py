@@ -123,10 +123,14 @@ def _field(par, instr: str) -> None:
         run._r.append(el)
 
 
-def _header_footer(doc: Document, dev_id: str, generated: str) -> None:
+def _header_footer(doc: Document, dev_id: str, generated: str, synthetic: bool = False) -> None:
     sec = doc.sections[0]
     hp = sec.header.paragraphs[0]
     hp.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    if synthetic:
+        s = hp.add_run("합성 데이터 — 실제 문서 아님  ·  ")
+        s.bold = True
+        s.font.color.rgb = RGBColor(0xC0, 0x00, 0x00)
     r = hp.add_run("초안 — 승인 문서 아님")
     r.bold = True
     r.font.color.rgb = RGBColor(0xC0, 0x00, 0x00)
@@ -174,7 +178,9 @@ def markdown_to_docx(md: str, out_path: str | Path) -> Path:
     _style(doc)
     title = re.search(r"^# .*?(\S+)\s*$", md, flags=re.M)
     gen = re.search(r"\| 초안 생성일 \| ([^|]+) \|", md)
-    _header_footer(doc, title.group(1) if title else "", gen.group(1).strip() if gen else "")
+    from .draft import SYNTHETIC_MARK
+    _header_footer(doc, title.group(1) if title else "", gen.group(1).strip() if gen else "",
+                   synthetic=SYNTHETIC_MARK in md)
 
     lines = md.splitlines()
     i = 0

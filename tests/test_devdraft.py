@@ -439,7 +439,7 @@ def test_cli_exits_on_bad_rules(tmp_path):
 import ast  # noqa: E402
 
 ALLOWED_IMPORTS = {"__future__", "argparse", "ast", "csv", "dataclasses", "datetime",
-                   "pathlib", "re", "yaml", "docx"}
+                   "hashlib", "pathlib", "re", "yaml", "docx"}
 
 
 def test_package_imports_nothing_that_can_reach_a_network_or_llm():
@@ -957,3 +957,102 @@ def test_markdown_to_docx_on_default_rules_sample(tmp_path):
     text = "\n".join(p.text for p in _all_paragraphs(doc))
     assert text.count(BLANK_TEXT) == md.count(BLANK_TEXT)
     assert "DEV-2026-2203" in doc.sections[0].header.paragraphs[0].text
+
+
+# --- provenance and synthetic-data guard ---------------------------------------
+
+import hashlib  # noqa: E402
+
+from devdraft import __version__  # noqa: E402
+
+
+def _real_copy(tmp_path, name="DEV-2026-2201"):
+    """Same form without `synthetic: true`, i.e. what a real form looks like."""
+    text = (INTAKE / f"{name}.yaml").read_text(encoding="utf-8")
+    p = tmp_path / f"{name}_real.yaml"
+    p.write_text("\n".join(l for l in text.splitlines() if not l.startswith("synthetic:")) + "\n", encoding="utf-8")
+    return p
+
+
+def _real_history(tmp_path):
+    rows = list(csv.DictReader(open(ROOT / "data/synthetic/history.csv", encoding="utf-8")))
+    for r in rows:
+        r["synthetic"] = "False"
+    p = tmp_path / "qms_export.csv"
+    with open(p, "w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    return p
+
+
+import csv  # noqa: E402
+
+
+def test_real_form_with_synthetic_history_is_rejected(tmp_path):
+    with pytest.raises(IntakeError) as e:
+        build(_real_copy(tmp_path), ROOT / "config/rules.yaml", ROOT / "data/synthetic/history.csv",
+              tmp_path / "o", TODAY)
+    assert "합성" in str(e.value) and "--history" in str(e.value)
+    assert not (tmp_path / "o").exists() or not list((tmp_path / "o").glob("*_draft.md"))
+
+
+def test_real_form_with_real_history_has_no_synthetic_marks(tmp_path):
+    md = build(_real_copy(tmp_path), ROOT / "config/rules.yaml", _real_history(tmp_path),
+               tmp_path / "o", TODAY, want_docx=True).read_text(encoding="utf-8")
+    assert "합성" not in md
+    doc = _Document(tmp_path / "o" / "DEV-2026-2201_draft.docx")
+    assert "합성" not in doc.sections[0].header.paragraphs[0].text
+
+
+def test_synthetic_draft_is_marked_in_md_docx_and_summary(tmp_path):
+    results, summary = run_batch([INTAKE / "DEV-2026-2203.yaml"], ROOT / "config/rules.yaml",
+                                 ROOT / "data/synthetic/history.csv", tmp_path, TODAY,
+                                 want_docx=True, want_summary=True)
+    md = (tmp_path / "DEV-2026-2203_draft.md").read_text(encoding="utf-8")
+    assert md.splitlines()[2].startswith("> **합성(가짜) 데이터로 만든 초안")
+    head = _Document(tmp_path / "DEV-2026-2203_draft.docx").sections[0].header.paragraphs[0].text
+    assert head.startswith("합성 데이터 — 실제 문서 아님")
+    assert "합성(가짜) 데이터로 만든 초안이 포함" in summary.read_text(encoding="utf-8")
+
+
+def test_footer_names_the_actual_input_file(tmp_path):
+    src = tmp_path / "칭량_서명누락_v2.yaml"
+    src.write_bytes((INTAKE / "DEV-2026-2203.yaml").read_bytes())
+    md = build(src, ROOT / "config/rules.yaml", ROOT / "data/synthetic/history.csv",
+               tmp_path / "o", TODAY).read_text(encoding="utf-8")
+    assert "`칭량_서명누락_v2.yaml`" in md and "`DEV-2026-2203.yaml`" not in md
+
+
+def test_provenance_hashes_match_files(tmp_path):
+    form, hist = _real_copy(tmp_path), _real_history(tmp_path)
+    rules = SOP_RULES
+    md = build(form, rules, hist, tmp_path / "o", TODAY).read_text(encoding="utf-8")
+    sec = md.split("## 부록. 생성 근거", 1)[1]
+    for p in (form, rules, hist):
+        assert f"{p.name} (SHA-256 {hashlib.sha256(p.read_bytes()).hexdigest()}" in sec
+    assert "SYN-QA-SOP-001 Rev.01" in sec and "| 기준일 | 2026-11-24 |" in sec
+    assert f"devdraft {__version__}" in sec and f"{len(HISTORY)}행)" in sec
+
+
+def test_provenance_marks_synthetic_history():
+    md = (ROOT / "sample_output/DEV-2026-2201_draft.md").read_text(encoding="utf-8")
+    assert "행, 합성 데이터)" in md.split("## 부록. 생성 근거", 1)[1]
+
+
+def test_same_inputs_give_identical_draft(tmp_path):
+    a = build(INTAKE / "DEV-2026-2201.yaml", ROOT / "config/rules.yaml",
+              ROOT / "data/synthetic/history.csv", tmp_path / "a", TODAY).read_bytes()
+    b = build(INTAKE / "DEV-2026-2201.yaml", ROOT / "config/rules.yaml",
+              ROOT / "data/synthetic/history.csv", tmp_path / "b", TODAY).read_bytes()
+    assert a == b
+
+
+def test_sample_output_is_up_to_date(tmp_path):
+    """sample_output/ must be what the current code produces (README links to it)."""
+    run_batch(sorted(INTAKE.glob("*.yaml")), ROOT / "config/rules.yaml",
+              ROOT / "data/synthetic/history.csv", tmp_path, TODAY, want_summary=True)
+    for f in tmp_path.glob("*.md"):
+        assert f.read_text(encoding="utf-8") == (ROOT / "sample_output" / f.name).read_text(encoding="utf-8"), \
+            f"{f.name} is stale — regenerate with: python -m devdraft.cli data/synthetic/intake/*.yaml " \
+            "--summary --today 2026-11-24 --out sample_output"

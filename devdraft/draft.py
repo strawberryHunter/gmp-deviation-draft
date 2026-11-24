@@ -24,6 +24,24 @@ BANNER = (
 )
 
 
+SYNTHETIC_MARK = "합성(가짜) 데이터로 만든 초안 — 실제 일탈 문서로 사용 금지"
+
+
+def _provenance_block(dev: Deviation, src: dict | None, generated_on: str) -> str:
+    if not src:
+        return "생성 근거 정보 없음 (도구를 직접 호출한 경우)."
+    rows = [
+        ("입력 양식", f"{src['form']} (SHA-256 {src['form_sha']})"),
+        ("분류 규칙", f"{src['rules']} (SHA-256 {src['rules_sha']})"),
+        ("분류 기준 SOP", src.get("sop") or "미기재"),
+        ("반복성 조회 이력", f"{src['history']} (SHA-256 {src['history_sha']}, {src['history_rows']}행"
+                        + (", 합성 데이터" if src.get("history_synthetic") else "") + ")"),
+        ("기준일", src["today"]),
+        ("생성 도구", f"devdraft {src['version']}"),
+    ]
+    return "\n".join(["| 항목 | 값 |", "|---|---|"] + [f"| {k} | {v} |" for k, v in rows])
+
+
 def _params_table(dev: Deviation) -> str:
     if not dev.parameters:
         return "해당 없음"
@@ -39,7 +57,8 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
                     recurrence: list[dict], plan: list[tuple[str, str]],
                     generated_on: str | None = None, *, rules: dict | None = None,
                     also: list[tuple[str, str]] | None = None,
-                    self_in_history: bool = False) -> str:
+                    self_in_history: bool = False,
+                    sources: dict | None = None) -> str:
     generated_on = generated_on or date.today().isoformat()
     rec_cfg = (rules or {}).get("recurrence") or {"window_days": 365, "match_on": ["equipment_id", "category"]}
     window = f"최근 {rec_cfg['window_days']}일"
@@ -76,10 +95,14 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
             + "\n"
         )
     plan_block = "\n".join(f"| {k} | {v} | {TBD} |" for k, v in plan)
+    banner = BANNER
+    if dev.synthetic:
+        banner = f"> **{SYNTHETIC_MARK}**  \n" + banner
+    form_name = (sources or {}).get("form") or "입력 양식"
 
     return f"""# 일탈 보고서 초안 — {dev.id}
 
-{BANNER}
+{banner}
 | 항목 | 내용 |
 |---|---|
 | 일탈 번호 | {dev.id} |
@@ -157,7 +180,14 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
 
 검증된 QMS에서 수행합니다. 이 초안에는 서명란을 두지 않습니다.
 
+## 부록. 생성 근거
+
+이 초안을 만든 입력 파일과 규칙입니다. 같은 파일로 다시 만들면 같은 초안이 나옵니다.
+SHA-256 값으로 파일이 바뀌지 않았는지 확인할 수 있습니다.
+
+{_provenance_block(dev, sources, generated_on)}
+
 ---
-*이 초안은 입력 양식 `{dev.id}.yaml`로부터 자동 생성되었습니다. 생성 도구는 사실을 재배열할 뿐,
+*이 초안은 입력 양식 `{form_name}`로부터 자동 생성되었습니다. 생성 도구는 사실을 재배열할 뿐,
 조사 결과나 결론을 생성하지 않습니다.*
 """
