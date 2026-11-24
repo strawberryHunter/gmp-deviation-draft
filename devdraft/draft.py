@@ -10,8 +10,11 @@ from __future__ import annotations
 from datetime import date
 
 from .intake import Deviation
+from .rules import level_label
 
 TBD = "☐ **작성 필요**"
+
+_MATCH_LABEL = {"equipment_id": "설비", "category": "유형", "site": "사업장"}
 
 BANNER = (
     "> **초안입니다 — 승인 문서가 아닙니다.**  \n"
@@ -34,14 +37,32 @@ def _params_table(dev: Deviation) -> str:
 
 def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
                     recurrence: list[dict], plan: list[tuple[str, str]],
-                    generated_on: str | None = None) -> str:
+                    generated_on: str | None = None, *, rules: dict | None = None,
+                    also: list[tuple[str, str]] | None = None) -> str:
     generated_on = generated_on or date.today().isoformat()
-    rec_block = "최근 12개월 내 동일 설비·유형 건 없음."
+    rec_cfg = (rules or {}).get("recurrence") or {"window_days": 365, "match_on": ["equipment_id", "category"]}
+    window = f"최근 {rec_cfg['window_days']}일"
+    match = "·".join(_MATCH_LABEL.get(k, k) for k in rec_cfg["match_on"])
+    rec_block = f"{window} 내 동일 {match} 건 없음."
     if recurrence:
+        # Past root causes are hidden unless QA opts in: listing them invites
+        # copying an old cause instead of investigating this one.
+        cols = ["dev_id", "opened", "final_class"]
+        head = ["번호", "개설일", "등급"]
+        if rec_cfg.get("show_root_cause", False):
+            cols.append("root_cause")
+            head.append("근본원인 (당시 기록)")
         rec_block = "\n".join(
-            [f"최근 12개월 내 유사 건 {len(recurrence)}건:", "", "| 번호 | 개설일 | 등급 | 근본원인 |", "|---|---|---|---|"]
-            + [f"| {r['dev_id']} | {r['opened']} | {r['final_class']} | {r['root_cause']} |" for r in recurrence]
+            [f"{window} 내 동일 {match} 건 {len(recurrence)}건 (목록만 표시, 원인 연관성은 판단하지 않음):", "",
+             "| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
+            + ["| " + " | ".join(str(r.get(c, "")) for c in cols) + " |" for r in recurrence]
         )
+    sop = (rules or {}).get("sop_reference") or ""
+    source = sop if sop else f"{TBD} — 분류 기준 출처 미기재 (config/rules.yaml sop_reference). 사내 SOP와 대조 필요."
+    also_block = ""
+    if also:
+        also_block = "\n그 밖에 해당한 트리거 (하위 등급):\n" + "\n".join(
+            f"- [{level_label(rules, lvl)}] {r}" for lvl, r in also) + "\n"
     plan_block = "\n".join(f"| {k} | {v} | {TBD} |" for k, v in plan)
 
     return f"""# 일탈 보고서 초안 — {dev.id}
@@ -74,10 +95,12 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
 
 ## 3. 분류 (제안)
 
-**제안 등급: {proposed.upper()}**
+**제안 등급: {level_label(rules, proposed)}**
 
 근거:
 {chr(10).join(f"- {r}" for r in reasons)}
+{also_block}
+분류 기준 출처: {source}
 
 | 확인 항목 | 보고자 입력 |
 |---|---|
@@ -89,6 +112,7 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
 | 타 배치 영향 가능성 | {"예" if dev.other_batches_possibly_affected else "아니오"} |
 
 **QA 검토자 확정 등급:** {TBD}
+
 **제안과 다를 경우 사유:** {TBD}
 
 ## 4. 반복성 검토

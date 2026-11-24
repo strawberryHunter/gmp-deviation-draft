@@ -10,6 +10,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from .intake import Deviation
+from .rules import RECURRENCE_FIELD, level_ids
 
 
 def load_history(path: str | Path) -> list[dict]:
@@ -31,20 +32,31 @@ def find_recurrence(dev: Deviation, history: list[dict], rules: dict, today: dat
     return sorted(hits, key=lambda r: r["opened"], reverse=True)
 
 
-def propose_class(dev: Deviation, rules: dict, recurrence_count: int = 0) -> tuple[str, list[str]]:
-    for level in ("critical", "major", "minor"):
-        reasons = []
-        for trig in rules["classes"][level]:
+def matched_triggers(dev: Deviation, rules: dict, recurrence_count: int = 0) -> list[tuple[str, str]]:
+    """Every trigger the form hits, as (level id, reason), highest level first."""
+    hits = []
+    for level in level_ids(rules):
+        for trig in rules["classes"].get(level) or []:
             fld = trig["field"]
-            if fld == "_default":
-                reasons.append(trig["reason"])
-            elif "equals" in trig and dev.get(fld) == trig["equals"]:
-                reasons.append(trig["reason"])
-            elif "min" in trig and fld == "recurrence_12m" and recurrence_count >= trig["min"]:
-                reasons.append(f"{trig['reason']} — 유사 건 {recurrence_count}건")
-        if reasons:
-            return level, reasons
-    return "minor", ["분류 근거 없음 (검토자 확인 필요)"]
+            if "equals" in trig and dev.get(fld) == trig["equals"]:
+                hits.append((level, trig["reason"]))
+            elif "min" in trig and fld == RECURRENCE_FIELD and recurrence_count >= trig["min"]:
+                hits.append((level, f"{trig['reason']} — 유사 건 {recurrence_count}건"))
+    return hits
+
+
+def propose_class(dev: Deviation, rules: dict, recurrence_count: int = 0) -> tuple[str, list[str]]:
+    hits = matched_triggers(dev, rules, recurrence_count)
+    if not hits:
+        return rules["default_level"], [rules["default_reason"]]
+    top = hits[0][0]
+    return top, [r for lvl, r in hits if lvl == top]
+
+
+def lower_triggers(dev: Deviation, rules: dict, recurrence_count: int = 0) -> list[tuple[str, str]]:
+    """Triggers hit below the proposed level — shown so the reviewer sees all of them."""
+    hits = matched_triggers(dev, rules, recurrence_count)
+    return [h for h in hits if hits and h[0] != hits[0][0]]
 
 
 def investigation_plan(dev: Deviation, rules: dict) -> list[tuple[str, str]]:

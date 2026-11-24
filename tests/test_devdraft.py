@@ -5,14 +5,18 @@ import pytest
 import yaml
 
 from devdraft.classify import find_recurrence, investigation_plan, load_history, propose_class
-from devdraft.cli import build
+from devdraft.cli import build, run_batch
+from devdraft.summary import FormResult, render_summary
 from devdraft.draft import render_markdown
-from devdraft.intake import IntakeError, load
+import subprocess
+
+from devdraft.intake import Deviation, IntakeError, RulesError, load
 
 ROOT = Path(__file__).resolve().parents[1]
 RULES = yaml.safe_load((ROOT / "config/rules.yaml").read_text(encoding="utf-8"))
 HISTORY = load_history(ROOT / "data/synthetic/history.csv")
 INTAKE = ROOT / "data/synthetic/intake"
+TEMPLATE = ROOT / "templates/intake_template.yaml"
 TODAY = date(2026, 11, 24)
 
 
@@ -92,3 +96,539 @@ def test_end_to_end_writes_md_and_docx(tmp_path):
     assert p.exists()
     docx = tmp_path / "DEV-2026-2201_draft.docx"
     assert docx.exists() and docx.stat().st_size > 10_000
+
+
+# --- risk flag validation -------------------------------------------------
+
+FLAGS = RULES["required_flags"]
+
+
+def write_form(tmp_path, **changes):
+    base = yaml.safe_load((INTAKE / "DEV-2026-2201.yaml").read_text(encoding="utf-8"))
+    for k, v in changes.items():
+        if v is _DROP:
+            base.pop(k, None)
+        else:
+            base[k] = v
+    p = tmp_path / "form.yaml"
+    p.write_text(yaml.safe_dump(base, allow_unicode=True), encoding="utf-8")
+    return p
+
+
+_DROP = object()
+
+
+@pytest.mark.parametrize("flag", FLAGS)
+def test_omitted_flag_is_rejected_not_read_as_false(tmp_path, flag):
+    with pytest.raises(IntakeError) as e:
+        load(write_form(tmp_path, **{flag: _DROP}), RULES)
+    assert flag in str(e.value)
+
+
+@pytest.mark.parametrize("flag", FLAGS)
+def test_blank_flag_is_rejected(tmp_path, flag):
+    with pytest.raises(IntakeError) as e:
+        load(write_form(tmp_path, **{flag: None}), RULES)
+    assert "미응답" in str(e.value) and flag in str(e.value)
+
+
+@pytest.mark.parametrize("value", ["yes", "예", "true", "false", "아니오", 1, 0, "Y"])
+def test_non_boolean_flag_is_rejected(tmp_path, value):
+    with pytest.raises(IntakeError) as e:
+        load(write_form(tmp_path, sterility_assurance_impacted=value), RULES)
+    assert "sterility_assurance_impacted" in str(e.value)
+
+
+def test_explicit_false_flags_are_accepted(tmp_path):
+    d = load(write_form(tmp_path, **{f: False for f in FLAGS}), RULES)
+    assert all(d.get(f) is False for f in FLAGS)
+
+
+def test_all_problems_reported_together(tmp_path):
+    p = write_form(tmp_path, detected_by="", spec_oos=_DROP, cpp_excursion="yes")
+    with pytest.raises(IntakeError) as e:
+        load(p, RULES)
+    msg = str(e.value)
+    assert "detected_by" in msg and "spec_oos" in msg and "cpp_excursion" in msg
+
+
+def test_every_class_trigger_is_a_required_flag():
+    for triggers in RULES["classes"].values():
+        for t in triggers:
+            if "equals" in t:
+                assert t["field"] in FLAGS, t["field"]
+
+
+def test_rules_with_unguarded_trigger_stop_the_run(tmp_path):
+    bad = yaml.safe_load(yaml.safe_dump(RULES))
+    bad["required_flags"].remove("sterility_assurance_impacted")
+    with pytest.raises(RulesError) as e:
+        load(INTAKE / "DEV-2026-2202.yaml", bad)
+    assert "sterility_assurance_impacted" in str(e.value)
+
+
+def test_rules_flag_must_be_boolean_field():
+    bad = yaml.safe_load(yaml.safe_dump(RULES))
+    bad["required_flags"].append("title")
+    with pytest.raises(RulesError):
+        load(INTAKE / "DEV-2026-2201.yaml", bad)
+
+
+# --- blank intake template ------------------------------------------------
+
+def _template():
+    return yaml.safe_load(TEMPLATE.read_text(encoding="utf-8"))
+
+
+def test_template_has_only_known_fields_and_no_judgement_fields():
+    t = _template()
+    known = set(Deviation.__dataclass_fields__)
+    assert set(t) <= known
+    for f in ("root_cause", "impact_assessment", "capa", "final_class"):
+        assert f not in t
+
+
+def test_template_covers_all_required_fields_and_flags():
+    t = _template()
+    for f in RULES["required_fields"] + FLAGS:
+        assert f in t, f
+
+
+def test_template_is_blank():
+    """Nothing pre-filled: every value is empty, so QA must type each fact."""
+    for k, v in _template().items():
+        assert v in ("", None, []), f"{k} is pre-filled: {v!r}"
+
+
+def test_unfilled_template_is_rejected_with_every_missing_item():
+    with pytest.raises(IntakeError) as e:
+        load(TEMPLATE, RULES)
+    msg = str(e.value)
+    for f in RULES["required_fields"] + FLAGS:
+        assert f in msg, f
+
+
+def test_filled_template_is_accepted(tmp_path):
+    filled = yaml.safe_load((INTAKE / "DEV-2026-2203.yaml").read_text(encoding="utf-8"))
+    t = _template()
+    t.update({k: v for k, v in filled.items() if k in t})
+    p = tmp_path / "f.yaml"
+    p.write_text(yaml.safe_dump(t, allow_unicode=True), encoding="utf-8")
+    assert load(p, RULES).id == "DEV-2026-2203"
+
+
+def test_template_trigger_comments_match_rules():
+    """The '→ major/critical' hints in the template must follow rules.yaml."""
+    level_of = {t["field"]: lvl for lvl, ts in RULES["classes"].items() for t in ts if "equals" in t}
+    for line in TEMPLATE.read_text(encoding="utf-8").splitlines():
+        key = line.split(":", 1)[0]
+        if key in level_of and "→" in line:
+            assert f"→ {level_of[key]} " in line, line
+
+
+# --- repository hygiene ---------------------------------------------------
+
+@pytest.mark.parametrize("path", ["drafts/DEV-1_draft.md", "x/DEV-1_draft.docx", "sample_output/a.docx"])
+def test_real_outputs_are_gitignored(path):
+    r = subprocess.run(["git", "check-ignore", "-q", path], cwd=ROOT)
+    if r.returncode == 128:
+        pytest.skip("not a git checkout")
+    assert r.returncode == 0, f"{path} is not ignored"
+
+
+# --- batch summary (--summary) --------------------------------------------
+
+def _batch(tmp_path, forms, **kw):
+    return run_batch(forms, ROOT / "config/rules.yaml", ROOT / "data/synthetic/history.csv",
+                     tmp_path, TODAY, want_summary=True, **kw)
+
+
+def test_summary_lists_every_form_drafted_or_rejected(tmp_path):
+    forms = sorted(INTAKE.glob("*.yaml"))
+    results, path = _batch(tmp_path, forms)
+    md = path.read_text(encoding="utf-8")
+    assert path.name == "_summary_2026-11-24.md"
+    assert "입력 4건 · 초안 생성 3건 · 거부 1건" in md
+    for f in forms:
+        assert f.name in md
+    rejected = md.split("## 거부", 1)[1]
+    assert "DEV-2026-2204.yaml" in rejected and "detected_by" in rejected
+
+
+def test_summary_marks_class_as_proposal_only(tmp_path):
+    _, path = _batch(tmp_path, sorted(INTAKE.glob("*.yaml")))
+    md = path.read_text(encoding="utf-8")
+    assert "판단·승인 문서가 아닙니다" in md
+    for lvl in ("MAJOR", "CRITICAL", "MINOR"):
+        assert f"{lvl} (제안)" in md
+    assert "확정 등급:" not in md  # confirmation lives only in each draft
+
+
+def test_summary_never_repeats_historical_root_causes(tmp_path):
+    _, path = _batch(tmp_path, [INTAKE / "DEV-2026-2201.yaml"])
+    md = path.read_text(encoding="utf-8")
+    assert "| 5 |" in md  # recurrence count only (same site)
+    for rc in {r["root_cause"] for r in HISTORY}:
+        assert rc not in md, rc
+    assert "근본원인" not in md
+
+
+def test_summary_contains_no_numbers_beyond_input_and_counts(tmp_path):
+    _, path = _batch(tmp_path, [INTAKE / "DEV-2026-2201.yaml"])
+    md = path.read_text(encoding="utf-8")
+    assert "3.62" not in md and "3.40-3.60" not in md  # parameters stay in the draft
+
+
+def test_summary_header_follows_rules_window(tmp_path):
+    md = render_summary([FormResult(file="a.yaml", ok=False, error="x")], "2026-11-24", 180)
+    assert "최근 180일" not in md  # no drafted rows -> no table header
+    md = render_summary([FormResult(file="a.yaml", ok=True, dev_id="D", proposed="minor")], "2026-11-24", 180)
+    assert "최근 180일" in md
+
+
+def test_summary_escapes_pipes_in_cells():
+    r = FormResult(file="a.yaml", ok=True, dev_id="D-1", title="A | B", proposed="minor", reasons=["x"])
+    row = [l for l in render_summary([r], "2026-11-24", 365).splitlines() if l.startswith("| D-1")][0]
+    assert "A \\| B" in row
+
+
+def test_duplicate_id_in_one_run_is_rejected_not_overwritten(tmp_path):
+    f = INTAKE / "DEV-2026-2203.yaml"
+    results, path = _batch(tmp_path / "out", [f, f])
+    assert [r.ok for r in results] == [True, False]
+    assert "이미 있습니다" in results[1].error
+
+
+def test_malformed_yaml_is_a_rejection_not_a_crash(tmp_path):
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("id: DEV-1\ntitle: [unclosed\n", encoding="utf-8")
+    results, path = _batch(tmp_path / "out", [bad, INTAKE / "DEV-2026-2203.yaml"])
+    assert [r.ok for r in results] == [False, True]
+    assert "YAML 문법 오류" in results[0].error
+
+
+def test_no_summary_file_without_flag(tmp_path):
+    run_batch([INTAKE / "DEV-2026-2203.yaml"], ROOT / "config/rules.yaml",
+              ROOT / "data/synthetic/history.csv", tmp_path, TODAY)
+    assert not list(tmp_path.glob("_summary_*"))
+
+
+# --- rules.yaml structure (levels / SOP mapping) -----------------------------
+
+import copy  # noqa: E402
+
+from devdraft.classify import lower_triggers  # noqa: E402
+from devdraft.rules import load_rules  # noqa: E402
+from devdraft.intake import check_rules  # noqa: E402
+
+
+def rules_with(**changes):
+    r = copy.deepcopy(RULES)
+    r.update(changes)
+    return r
+
+
+def test_shipped_rules_file_is_valid():
+    load_rules(ROOT / "config/rules.yaml")
+
+
+def test_custom_levels_and_labels_from_sop():
+    """A 4-level SOP with Korean labels needs only rules.yaml changes."""
+    r = rules_with(
+        levels=[{"id": "l1", "label": "중대(1등급)"}, {"id": "l2", "label": "주요(2등급)"},
+                {"id": "l3", "label": "경미(3등급)"}, {"id": "l4", "label": "사건(Event)"}],
+        default_level="l4",
+        default_reason="트리거 해당 없음",
+        classes={
+            "l1": [{"field": "sterility_assurance_impacted", "equals": True, "reason": "무균"}],
+            "l2": [{"field": "cpp_excursion", "equals": True, "reason": "CPP"}],
+            "l3": [{"field": "recurrence_count", "min": 1, "reason": "반복"}],
+        },
+        sop_reference="QA-SOP-000 Rev.00 (test)",
+    )
+    check_rules(r)
+    d = dev("DEV-2026-2201")
+    n = len(find_recurrence(d, HISTORY, r, TODAY))
+    level, reasons = propose_class(d, r, n)
+    assert level == "l2" and reasons == ["CPP"]
+    md = render_markdown(d, level, reasons, [], [], "2026-11-24", rules=r,
+                         also=lower_triggers(d, r, n))
+    assert "제안 등급: 주요(2등급)" in md
+    assert "[경미(3등급)] 반복" in md
+    assert "QA-SOP-000 Rev.00 (test)" in md
+    level, _ = propose_class(dev("DEV-2026-2203"), r, 0)
+    assert level == "l4"
+
+
+def test_missing_sop_reference_is_flagged_in_draft():
+    d = dev("DEV-2026-2203")
+    md = render_markdown(d, "minor", ["x"], [], [], "2026-11-24", rules=rules_with(sop_reference=""))
+    line = [l for l in md.splitlines() if l.startswith("분류 기준 출처")][0]
+    assert "작성 필요" in line
+
+
+def test_lower_level_triggers_are_not_hidden():
+    d = dev("DEV-2026-2202")  # critical, but also other_batches_possibly_affected (major)
+    assert lower_triggers(d, RULES, 0) == [("major", "다른 배치 영향 가능성")]
+    md = (ROOT / "sample_output/DEV-2026-2202_draft.md").read_text(encoding="utf-8")
+    assert "[MAJOR] 다른 배치 영향 가능성" in md
+
+
+def test_recurrence_text_follows_window_days():
+    r = rules_with(recurrence={"window_days": 180, "match_on": ["equipment_id", "category"]})
+    d = dev("DEV-2026-2201")
+    md = render_markdown(d, "major", ["x"], [], [], "2026-11-24", rules=r)
+    assert "최근 180일" in md and "12개월" not in md
+
+
+def test_match_on_site_excludes_other_site_same_equipment_id():
+    d = dev("DEV-2026-2201")  # Plant A
+    any_site = rules_with(recurrence={"window_days": 365, "match_on": ["equipment_id", "category"]})
+    both = find_recurrence(d, HISTORY, any_site, TODAY)
+    same_site = find_recurrence(d, HISTORY, RULES, TODAY)
+    assert {h["site"] for h in both} == {"Plant A", "Plant B"}
+    assert {h["site"] for h in same_site} == {"Plant A"}
+    assert len(same_site) == len(both) - 1
+
+
+def test_recurrence_trigger_can_sit_at_any_level():
+    r = copy.deepcopy(RULES)
+    r["classes"]["critical"].append({"field": "recurrence_count", "min": 5, "reason": "5회 이상 반복"})
+    level, reasons = propose_class(dev("DEV-2026-2201"), r, 6)
+    assert level == "critical" and any("5회 이상" in x for x in reasons)
+
+
+@pytest.mark.parametrize("mutate, needle", [
+    (lambda r: r["classes"].__setitem__("minor", [{"field": "_default", "reason": "x"}]), "default_level"),
+    (lambda r: r["classes"]["major"][-1].__setitem__("field", "recurrence_12m"), "recurrence_count"),
+    (lambda r: r["classes"].__setitem__("severe", []), "severe"),
+    (lambda r: r.__setitem__("default_level", "low"), "default_level"),
+    (lambda r: r.__setitem__("default_reason", ""), "default_reason"),
+    (lambda r: r["classes"]["major"][0].__setitem__("equals", "true"), "true 또는 false"),
+    (lambda r: r["classes"]["major"][0].__setitem__("equal", True), "알 수 없는 키"),
+    (lambda r: r["classes"]["major"][0].__setitem__("min", 1), "하나만"),
+    (lambda r: r["classes"]["major"].append({"field": "cpp_excursion", "min": 2, "reason": "x"}), "min 은"),
+    (lambda r: r["classes"]["major"][-1].__setitem__("min", 0), "1 이상"),
+    (lambda r: r["recurrence"].__setitem__("window_days", 0), "window_days"),
+    (lambda r: r["recurrence"].__setitem__("match_on", ["batch"]), "match_on"),
+    (lambda r: r["levels"].append({"id": "major"}), "중복"),
+    (lambda r: r.pop("levels"), "levels"),
+])
+def test_rules_mistakes_stop_the_run(mutate, needle):
+    r = copy.deepcopy(RULES)
+    mutate(r)
+    with pytest.raises(RulesError) as e:
+        check_rules(r)
+    assert needle in str(e.value)
+
+
+def test_cli_exits_on_bad_rules(tmp_path):
+    bad = tmp_path / "rules.yaml"
+    r = copy.deepcopy(RULES)
+    r["default_level"] = "nope"
+    bad.write_text(yaml.safe_dump(r, allow_unicode=True), encoding="utf-8")
+    p = subprocess.run(["python", "-m", "devdraft.cli", str(INTAKE / "DEV-2026-2203.yaml"),
+                        "--rules", str(bad), "--out", str(tmp_path / "o")],
+                       cwd=ROOT, capture_output=True, text=True)
+    assert p.returncode == 2 and "RULES ERR" in p.stdout
+    assert not (tmp_path / "o").exists()
+
+
+# --- guard rails not covered earlier ----------------------------------------
+
+import ast  # noqa: E402
+
+ALLOWED_IMPORTS = {"__future__", "argparse", "ast", "csv", "dataclasses", "datetime",
+                   "pathlib", "re", "yaml", "docx"}
+
+
+def test_package_imports_nothing_that_can_reach_a_network_or_llm():
+    for py in (ROOT / "devdraft").glob("*.py"):
+        tree = ast.parse(py.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                mods = [a.name.split(".")[0] for a in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.level == 0:
+                mods = [node.module.split(".")[0]]
+            else:
+                continue
+            for m in mods:
+                assert m in ALLOWED_IMPORTS, f"{py.name}: import {m}"
+
+
+def test_capa_and_review_fields_stay_blank():
+    d = dev("DEV-2026-2201")
+    md = render_markdown(d, "major", ["x"], [], investigation_plan(d, RULES), "2026-11-24", rules=RULES)
+    capa = md.split("## 8. CAPA", 1)[1].split("##", 1)[0]
+    assert capa.count("작성 필요") == 3
+    plan = md.split("## 5. 조사 계획", 1)[1].split("##", 1)[0]
+    assert plan.count("작성 필요") == len(RULES["ishikawa"])
+    assert "QA 검토자 확정 등급:** ☐ **작성 필요" in md
+
+
+def test_docx_keeps_placeholders(tmp_path):
+    from docx import Document
+    build(INTAKE / "DEV-2026-2201.yaml", ROOT / "config/rules.yaml",
+          ROOT / "data/synthetic/history.csv", tmp_path, TODAY, want_docx=True)
+    doc = Document(tmp_path / "DEV-2026-2201_draft.docx")
+    text = [p.text for p in doc.paragraphs] + [c.text for t in doc.tables for row in t.rows for c in row.cells]
+    joined = "\n".join(text)
+    assert joined.count("작성 필요") >= 3 + len(RULES["ishikawa"]) + 4
+    assert "승인 문서가 아닙니다" in joined
+
+
+# --- strict booleans (YAML 1.1 yes/no/on/off are NOT booleans here) ---------
+
+import re  # noqa: E402
+
+from devdraft.rules import strict_load  # noqa: E402
+
+
+@pytest.mark.parametrize("word", ["yes", "no", "on", "off", "Yes", "NO", "y", "n"])
+def test_unquoted_yes_no_flag_is_rejected(tmp_path, word):
+    text = (INTAKE / "DEV-2026-2203.yaml").read_text(encoding="utf-8")
+    text = text.replace("spec_oos: false", f"spec_oos: {word}")
+    p = tmp_path / "f.yaml"
+    p.write_text(text, encoding="utf-8")
+    with pytest.raises(IntakeError) as e:
+        load(p, RULES)
+    assert "spec_oos" in str(e.value) and "true/false" in str(e.value)
+
+
+@pytest.mark.parametrize("word, value", [("true", True), ("True", True), ("TRUE", True),
+                                         ("false", False), ("False", False), ("FALSE", False)])
+def test_true_false_spellings_are_booleans(word, value):
+    assert strict_load(f"x: {word}")["x"] is value
+
+
+def test_strict_loader_keeps_other_scalars():
+    d = strict_load("a: no\nb: '3.62'\nc: 2026-11-21T14:20\nd: N/A\n")
+    assert d == {"a": "no", "b": "3.62", "c": "2026-11-21T14:20", "d": "N/A"}
+
+
+def test_rules_equals_yes_is_rejected(tmp_path):
+    text = (ROOT / "config/rules.yaml").read_text(encoding="utf-8")
+    assert "\n      equals: true\n" in text
+    text = text.replace("\n      equals: true\n", "\n      equals: yes\n", 1)
+    p = tmp_path / "rules.yaml"
+    p.write_text(text, encoding="utf-8")
+    with pytest.raises(RulesError) as e:
+        load_rules(p)
+    assert "true 또는 false" in str(e.value)
+
+
+# --- exit codes -------------------------------------------------------------
+
+def _cli(*args, cwd=ROOT):
+    return subprocess.run(["python", "-m", "devdraft.cli", *map(str, args)],
+                          cwd=cwd, capture_output=True, text=True)
+
+
+def test_exit_code_0_when_every_form_drafted(tmp_path):
+    p = _cli(INTAKE / "DEV-2026-2201.yaml", INTAKE / "DEV-2026-2203.yaml", "--out", tmp_path, "--today", "2026-11-24")
+    assert p.returncode == 0, p.stdout
+
+
+def test_exit_code_1_when_any_form_rejected_but_others_still_drafted(tmp_path):
+    p = _cli(*sorted(INTAKE.glob("*.yaml")), "--out", tmp_path, "--today", "2026-11-24")
+    assert p.returncode == 1
+    assert len(list(tmp_path.glob("*_draft.md"))) == 3
+
+
+# (exit code 2 for invalid rules: test_cli_exits_on_bad_rules)
+
+
+# --- past root causes hidden by default ---------------------------------------
+
+def test_recurrence_table_hides_root_cause_by_default():
+    assert RULES["recurrence"]["show_root_cause"] is False
+    md = (ROOT / "sample_output/DEV-2026-2201_draft.md").read_text(encoding="utf-8")
+    sec = md.split("## 4. 반복성 검토", 1)[1].split("##", 1)[0]
+    assert "DEV-2026-1100" in sec
+    for rc in {r["root_cause"] for r in HISTORY}:
+        assert rc not in sec, rc
+    assert "근본원인" not in sec
+
+
+def test_recurrence_table_shows_root_cause_when_enabled():
+    r = copy.deepcopy(RULES)
+    r["recurrence"]["show_root_cause"] = True
+    d = dev("DEV-2026-2201")
+    rec = find_recurrence(d, HISTORY, r, TODAY)
+    md = render_markdown(d, "major", ["x"], rec, [], "2026-11-24", rules=r)
+    assert "근본원인 (당시 기록)" in md and "procedure gap" in md
+
+
+def test_history_without_root_cause_column_works_when_hidden():
+    rows = [{k: v for k, v in h.items() if k != "root_cause"} for h in HISTORY]
+    d = dev("DEV-2026-2201")
+    rec = find_recurrence(d, rows, RULES, TODAY)
+    md = render_markdown(d, "major", ["x"], rec, [], "2026-11-24", rules=RULES)
+    assert "DEV-2026-1100" in md
+
+
+def test_show_root_cause_must_be_boolean():
+    r = copy.deepcopy(RULES)
+    r["recurrence"]["show_root_cause"] = "no"
+    with pytest.raises(RulesError):
+        check_rules(r)
+
+
+# --- decision log format ------------------------------------------------------
+
+DECISION_LINE = re.compile(r"^- \[\d{4}-\d{2}-\d{2}\] .+ — .+ — .+ — \((확인 필요|확인 불필요)\)$")
+
+
+def test_decisions_log_format():
+    lines = [l for l in (ROOT / "DECISIONS.md").read_text(encoding="utf-8").splitlines() if l.startswith("- ")]
+    assert lines
+    bad = [l for l in lines if not DECISION_LINE.match(l)]
+    assert not bad, "\n".join(bad)
+
+
+# --- template comment glued to a value ---------------------------------------
+
+def _filled_template_text():
+    t = TEMPLATE.read_text(encoding="utf-8")
+    src = yaml.safe_load((INTAKE / "DEV-2026-2203.yaml").read_text(encoding="utf-8"))
+    for k, v in src.items():
+        if k in ("synthetic", "parameters"):
+            continue
+        val = ("true" if v else "false") if isinstance(v, bool) else f"'{v}'"
+        t = re.sub(rf"^{k}:( *)(''|)( *)#", lambda m: f"{k}: {val}  #", t, count=1, flags=re.M)
+    return t
+
+
+def test_template_filled_with_spaces_before_comments_is_accepted(tmp_path):
+    p = tmp_path / "f.yaml"
+    p.write_text(_filled_template_text(), encoding="utf-8")
+    d = load(p, RULES)
+    assert d.title == "배치 기록서 서명 누락 (원료 칭량 단계)"
+
+
+@pytest.mark.parametrize("key, glued", [
+    ("title", "title: 서명 누락# [필수] 한 줄 제목. 무엇이 기준과 달랐는지."),
+    ("spec_oos", "spec_oos: false# 규격 이탈(OOS) 시험 결과가 있는가"),
+])
+def test_comment_glued_to_value_is_rejected(tmp_path, key, glued):
+    text = re.sub(rf"^{key}:.*$", glued, _filled_template_text(), count=1, flags=re.M)
+    p = tmp_path / "f.yaml"
+    p.write_text(text, encoding="utf-8")
+    with pytest.raises(IntakeError) as e:
+        load(p, RULES)
+    assert "양식 주석이 붙어" in str(e.value) and key in str(e.value)
+
+
+def test_hash_inside_real_value_is_not_flagged(tmp_path):
+    text = re.sub(r"^description:.*$", "description: 'lot#5531 사용, 포트#4 확인'", _filled_template_text(),
+                  count=1, flags=re.M)
+    p = tmp_path / "f.yaml"
+    p.write_text(text, encoding="utf-8")
+    assert "lot#5531" in load(p, RULES).description
+
+
+def test_shipped_rules_match_recurrence_within_same_site():
+    assert "site" in RULES["recurrence"]["match_on"]
+    hits = find_recurrence(dev("DEV-2026-2201"), HISTORY, RULES, TODAY)
+    assert hits and {h["site"] for h in hits} == {"Plant A"}
+    assert "DEV-2026-1023" not in {h["dev_id"] for h in hits}  # Plant B, same equipment ID
