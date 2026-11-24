@@ -66,7 +66,8 @@ def check_history(path: str | Path, rules: dict, today: date | None = None) -> H
         return rep
 
     categories = set(rules["categories"])
-    levels = set(level_ids(rules))
+    # final_class in history may follow an older or different scheme; rules can list it
+    levels = set(level_ids(rules)) | set(rules.get("history_class_labels") or [])
     seen: dict[str, int] = {}
     unknown_cat: dict[str, list[int]] = {}
     unknown_cls: dict[str, list[int]] = {}
@@ -91,7 +92,7 @@ def check_history(path: str | Path, rules: dict, today: date | None = None) -> H
 
         for col in ("site", "equipment_id"):
             if col in rules["recurrence"]["match_on"] and not (row.get(col) or "").strip():
-                rep.warnings.append(f"{n}행: {col} 비어 있음 — 어떤 일탈과도 일치하지 않음")
+                rep.warnings.append(f"{n}행: {col} 비어 있음 — 어떤 deviation과도 일치하지 않음")
         cat = (row.get("category") or "").strip()
         if cat and cat not in categories:
             unknown_cat.setdefault(cat, []).append(n)

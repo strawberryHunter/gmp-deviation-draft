@@ -52,7 +52,7 @@ def draft_one(form: Path, rules: dict, history: list[dict], out_dir: Path,
         )
     if seen_ids is not None:
         if dev.id in seen_ids:
-            raise IntakeError(f"같은 일탈 번호({dev.id})의 양식이 이번 실행에 이미 있습니다 — 덮어쓰지 않습니다.")
+            raise IntakeError(f"같은 deviation 번호({dev.id})의 양식이 이번 실행에 이미 있습니다 — 덮어쓰지 않습니다.")
         seen_ids.add(dev.id)
     rec = find_recurrence(dev, history, rules, today)
     level, reasons = propose_class(dev, rules, len(rec))

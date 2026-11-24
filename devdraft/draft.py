@@ -24,7 +24,7 @@ BANNER = (
 )
 
 
-SYNTHETIC_MARK = "합성(가짜) 데이터로 만든 초안 — 실제 일탈 문서로 사용 금지"
+SYNTHETIC_MARK = "합성(가짜) 데이터로 만든 초안 — 실제 deviation 문서로 사용 금지"
 
 
 def _provenance_block(dev: Deviation, src: dict | None, generated_on: str) -> str:
@@ -78,7 +78,7 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
             + ["| " + " | ".join(str(r.get(c, "")) for c in cols) + " |" for r in recurrence]
         )
     if self_in_history:
-        rec_block += f"\n\n※ 이력 파일에 이번 일탈({dev.id}) 자체가 있어 반복 건에서 제외했습니다."
+        rec_block += f"\n\n※ 이력 파일에 이번 deviation({dev.id}) 자체가 있어 반복 건에서 제외했습니다."
     sop = (rules or {}).get("sop_reference") or ""
     source = sop if sop else f"{TBD} — 분류 기준 출처 미기재 (config/rules.yaml sop_reference). 사내 SOP와 대조 필요."
     also_block = ""
@@ -100,12 +100,12 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
         banner = f"> **{SYNTHETIC_MARK}**  \n" + banner
     form_name = (sources or {}).get("form") or "입력 양식"
 
-    return f"""# 일탈 보고서 초안 — {dev.id}
+    return f"""# Deviation 보고서 초안 — {dev.id}
 
 {banner}
 | 항목 | 내용 |
 |---|---|
-| 일탈 번호 | {dev.id} |
+| Deviation 번호 | {dev.id} |
 | 제목 | {dev.title} |
 | 사업장 / 구역 | {dev.site} / {dev.area} |
 | 제품 / 배치 | {dev.product} / {dev.batch} |

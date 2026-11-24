@@ -1,6 +1,6 @@
 # gmp-deviation-draft
 
-생산시설 품질 문서 작성 중 반복 부분을 줄이는 **GMP 일탈(Deviation) 보고서 초안 도우미**입니다.
+생산시설 품질 문서 작성 중 반복 부분을 줄이는 **GMP deviation 보고서 초안 도우미**입니다.
 
 ```
 양식 입력(YAML) → 검증 → 분류 제안 + 반복성 조회 + 조사 계획 → 보고서 초안(MD/DOCX) → 사람이 검토
@@ -8,7 +8,7 @@
 
 **처음 쓰는 경우 → [사용 가이드 `docs/USAGE.md`](docs/USAGE.md)** (설치, 양식 작성, 거부 메시지 대응, 초안 검토, SOP에 맞춘 rules.yaml 수정)
 
-> **모든 데이터는 합성(가짜) 데이터입니다.** 사업장·제품·배치·설비·일탈 사례 모두 지어낸 것입니다.
+> **모든 데이터는 합성(가짜) 데이터입니다.** 사업장·제품·배치·설비·deviation 사례 모두 지어낸 것입니다.
 
 ## 설계 원칙 — 도구가 하지 않는 것
 
@@ -33,7 +33,7 @@ GxP 문서라 "그럴듯하게 채워주는" 동작이 가장 위험합니다. �
 
 ## 입력 양식 작성
 
-빈 템플릿 [`templates/intake_template.yaml`](templates/intake_template.yaml)을 복사해 `<일탈번호>.yaml`로 저장하고 채웁니다.
+빈 템플릿 [`templates/intake_template.yaml`](templates/intake_template.yaml)을 복사해 `<deviation 번호>.yaml`로 저장하고 채웁니다.
 항목마다 무엇을 어떻게 적는지 주석이 달려 있습니다. 복사본은 `drafts/` 등 커밋되지 않는 위치에 두십시오.
 
 - `[필수]` 항목이 비어 있으면 초안을 만들지 않고 누락 항목을 **한 번에 모두** 알려줍니다.
@@ -53,11 +53,11 @@ python -m devdraft.cli --check-history --history <QMS에서 내보낸 이력.csv
 `--summary`는 여러 건을 한 번에 처리할 때 `_summary_<날짜>.md`를 함께 만듭니다
 ([예시](sample_output/_summary_2026-11-24.md)).
 
-- 초안이 만들어진 건: 일탈 번호, 제목, **제안** 등급과 근거, 반복 건 수, 초안 파일
+- 초안이 만들어진 건: deviation 번호, 제목, **제안** 등급과 근거, 반복 건 수, 초안 파일
 - 거부된 건: 입력 파일과 거부 사유 (보완 후 다시 실행)
 - 확정 등급란은 두지 않습니다. 확정은 각 초안에서만 합니다. 우선순위·처리 순서도 매기지 않습니다.
 - 과거 이력의 근본원인과 공정 수치는 요약표에 옮기지 않습니다 (건수만 표시, 상세는 각 초안).
-- 한 실행에 같은 일탈 번호가 두 번 나오면 두 번째는 덮어쓰지 않고 거부합니다. YAML 문법 오류도 해당 건만 거부합니다.
+- 한 실행에 같은 deviation 번호가 두 번 나오면 두 번째는 덮어쓰지 않고 거부합니다. YAML 문법 오류도 해당 건만 거부합니다.
 
 결과 예시(Markdown)는 [`sample_output/`](sample_output/)에 있습니다. `*.docx`는 저장소에 넣지 않으므로 `--docx`로 직접 생성해 확인하십시오.
 
@@ -83,9 +83,12 @@ python -m devdraft.cli --check-history --history <QMS에서 내보낸 이력.csv
 - `classes` — 등급별 트리거 (예/아니오 항목 `equals: true`, 반복 건수 `recurrence_count` + `min`)
 - `required_fields` / `required_flags` — 필수 입력 항목 / 반드시 true·false로 답할 항목
 - `recurrence` — 조회 기간(`window_days`), 일치 기준(`match_on`: equipment_id / category / site), 과거 근본원인 표시 여부(`show_root_cause`, 기본 false)
-- `categories` — 허용 일탈 유형
+- `categories` — 허용 deviation 유형
 - `ishikawa` — 6M 조사 항목 문구
 - `manual_checks` — 도구가 평가하지 못하는 SOP 조항. 초안에 `☐ 검토자가 직접 확인` 항목으로 표시
+- `history_class_labels` — 이력의 `final_class` 중 `levels`에 없어도 되는 값
+
+공개된 실제 SOP(Duke COMM-PAS-013)를 옮긴 예시: [`docs/sop_mapping/Duke_COMM-PAS-013.md`](docs/sop_mapping/Duke_COMM-PAS-013.md) → [`config/examples/rules_Duke_COMM-PAS-013.yaml`](config/examples/rules_Duke_COMM-PAS-013.yaml). Critical/Major/Minor가 없는 SOP라 도구는 Repeat Deviation 해당 여부만 제안합니다.
 
 합성 SOP를 옮긴 완성 예시: [`data/synthetic/sop/SYN-QA-SOP-001.md`](data/synthetic/sop/SYN-QA-SOP-001.md) → [`config/examples/rules_SYN-QA-SOP-001.yaml`](config/examples/rules_SYN-QA-SOP-001.yaml) ([사용 가이드 5-2-1](docs/USAGE.md#5-2-1-끝까지-따라-해-볼-수-있는-예시-합성-sop))
 
@@ -98,7 +101,7 @@ rules.yaml에 오류(없는 등급 참조, 오타 키, 따옴표 붙은 `"true"`
 
 - 외부 전송 없음. LLM 호출 없음. 전부 로컬에서 동작합니다.
 - 실제 배치 데이터를 쓰려면 이 저장소가 아니라 사내 환경에서 실행하고, 합성 데이터는 제거하십시오.
-- `drafts/`와 `*.docx`는 `.gitignore`에 있습니다. 실제 일탈 내용이 저장소에 들어가지 않도록 하기 위함입니다.
+- `drafts/`와 `*.docx`는 `.gitignore`에 있습니다. 실제 deviation 내용이 저장소에 들어가지 않도록 하기 위함입니다.
 
 ## 합성 데이터 다시 만들기
 

@@ -1,6 +1,6 @@
 # 사용 가이드
 
-GMP 일탈 보고서 **초안** 도우미 사용법입니다. QA 담당자가 처음 쓰는 경우를 기준으로 순서대로 적었습니다.
+GMP deviation 보고서 **초안** 도우미 사용법입니다. QA 담당자가 처음 쓰는 경우를 기준으로 순서대로 적었습니다.
 
 ```
 ① 템플릿 복사·작성 → ② 실행 → ③ 거부되면 양식 보완 → ④ 초안 검토·작성 → ⑤ 검증된 QMS에 등록·승인
@@ -31,7 +31,7 @@ python -m pytest -q
 
 ---
 
-## 2. 일탈 1건 처리하기
+## 2. deviation 1건 처리하기
 
 ### 2-1. 양식 작성
 
@@ -61,7 +61,7 @@ description: |
 
 ### 2-2. 실행
 
-실제 일탈은 QMS에서 내보낸 이력 CSV를 `--history`로 함께 지정합니다 (이력 준비는 6장).
+실제 deviation은 QMS에서 내보낸 이력 CSV를 `--history`로 함께 지정합니다 (이력 준비는 6장).
 
 ```bash
 python -m devdraft.cli drafts/DEV-2026-2301.yaml --docx --out drafts --history /사내경로/deviation_history.csv
@@ -89,7 +89,7 @@ OK  DEV-2026-2301.yaml -> drafts/DEV-2026-2301_draft.md
 | `알 수 없는 항목: root_cause` | 양식에 없는 항목입니다. 오타이거나, 근본원인처럼 양식에 쓰면 안 되는 항목입니다. |
 | `category는 [...] 중 하나여야 합니다` | 템플릿 주석의 목록 중 하나로 고칩니다. |
 | `YAML 문법 오류 (N행)` | N행 근처의 들여쓰기, `:` 뒤 공백, 따옴표 짝을 확인합니다. |
-| `같은 일탈 번호(...)의 양식이 이번 실행에 이미 있습니다` | 한 번 실행에 같은 `id`가 두 파일에 있습니다. 하나를 고칩니다. |
+| `같은 deviation 번호(...)의 양식이 이번 실행에 이미 있습니다` | 한 번 실행에 같은 `id`가 두 파일에 있습니다. 하나를 고칩니다. |
 | `RULES ERR ...` | 양식이 아니라 `config/rules.yaml` 문제입니다. 5장 참고. 이때는 아무 초안도 만들지 않습니다. |
 | `반복성 조회 이력이 합성(가짜) 데이터입니다` | 실제 양식을 기본 합성 이력으로 실행했습니다. `--history`로 실제 이력 CSV를 지정합니다 (6장). 가짜 반복 건이 실제 초안에 붙는 것을 막기 위해 거부합니다. |
 | `HISTORY ERR ...` | 이력 CSV 문제입니다. `--check-history`로 전체 목록을 보고 고칩니다 (6장). 아무 초안도 만들지 않습니다. |
@@ -100,7 +100,7 @@ OK  DEV-2026-2301.yaml -> drafts/DEV-2026-2301_draft.md
 
 초안(`.docx`)을 열면 `☐ 작성 필요` 칸이 **노란색으로 강조**되어 남아 있습니다. **도구는 이 칸을 절대 채우지 않습니다.**
 
-- 모든 쪽 머리글에 빨간 글씨로 `초안 — 승인 문서 아님 · 일탈 번호 · 초안 생성일`, 바닥글에 쪽 번호가 들어갑니다. 쪽을 따로 인쇄해도 초안임을 알 수 있습니다.
+- 모든 쪽 머리글에 빨간 글씨로 `초안 — 승인 문서 아님 · deviation 번호 · 초안 생성일`, 바닥글에 쪽 번호가 들어갑니다. 쪽을 따로 인쇄해도 초안임을 알 수 있습니다.
 - 첫 쪽의 노란 상자는 이 문서가 초안이라는 경고입니다.
 - 빈칸을 채우면 노란 강조를 지워 두면 남은 빈칸을 찾기 쉽습니다 (Word: 홈 → 텍스트 강조 색 → 색 없음).
 - 표가 다음 쪽으로 넘어가면 머리 행이 반복됩니다.
@@ -131,7 +131,7 @@ python -m devdraft.cli drafts/*.yaml --docx --summary --out drafts --history /�
 
 각 건의 초안과 함께 `drafts/_summary_<날짜>.md`가 생깁니다 ([예시](../sample_output/_summary_2026-11-24.md)).
 
-- **초안 생성** 표: 일탈 번호, 제목, 제안 등급과 근거, 반복 건 수, 초안 파일
+- **초안 생성** 표: deviation 번호, 제목, 제안 등급과 근거, 반복 건 수, 초안 파일
 - **거부** 표: 입력 파일과 거부 사유 — 보완할 목록으로 사용
 - 확정 등급란, 우선순위, 과거 근본원인, 공정 수치는 요약표에 넣지 않습니다.
 
@@ -157,9 +157,9 @@ python -m devdraft.cli drafts/*.yaml --docx --summary --out drafts --history /�
 
 SOP에 이렇게 적혀 있다고 가정합니다 (예시일 뿐, 실제 SOP 아님).
 
-> 1등급(중대): 무균 보증 또는 출하 제품에 영향 가능성이 있는 일탈
+> 1등급(중대): 무균 보증 또는 출하 제품에 영향 가능성이 있는 deviation
 > 2등급(주요): CPP 이탈, OOS, 또는 최근 2년 내 동일 설비·유형 3회 이상 반복
-> 3등급(경미): 위에 해당하지 않는 일탈
+> 3등급(경미): 위에 해당하지 않는 deviation
 
 ```yaml
 sop_reference: "QA-SOP-XXX Rev.XX"
@@ -220,12 +220,33 @@ python -m devdraft.cli data/synthetic/intake/*.yaml --summary --today 2026-11-24
 5.5.2(CPP 30분 이상 지속)는 입력 양식에 지속 시간 수치 칸이 없어 트리거로 옮기지 않고 `manual_checks`로 두었습니다. 그래서 모든 초안에 검토자 확인 항목으로 나옵니다.
 실제 SOP를 옮길 때도 이 파일을 복사해서 시작하면 됩니다.
 
+### 5-2-2. 공개된 실제 SOP 예시 (Duke COMM-PAS-013)
+
+실제로 공개된 deviation SOP를 옮긴 예시입니다. Duke와 관련이 없고, 원문은 저장소에 복사하지 않았습니다.
+
+- 조항별 매핑과 근거: [`docs/sop_mapping/Duke_COMM-PAS-013.md`](sop_mapping/Duke_COMM-PAS-013.md)
+- 옮긴 결과: [`config/examples/rules_Duke_COMM-PAS-013.yaml`](../config/examples/rules_Duke_COMM-PAS-013.yaml)
+
+```bash
+python -m devdraft.cli data/synthetic/intake/*.yaml --summary --today 2026-11-24 --rules config/examples/rules_Duke_COMM-PAS-013.yaml --out /tmp/duke_example
+```
+
+이 SOP에는 **Critical/Major/Minor 등급이 없습니다.** 사람이 매기는 위험 점수(Severity × Probability × Detectability)와 "2년 안에 다시 일어난 deviation(Repeat Deviation)"으로 관리합니다. 그래서:
+
+| 샘플 | 도구 제안 | 이유 |
+|---|---|---|
+| DEV-2026-2201 | Repeat Deviation | 2년 안에 같은 사업장·설비·유형 5건 |
+| DEV-2026-2202 | Repeat Deviation | 2년 안에 1건 (DEV-2025-1022) — 1년 기준이었다면 해당 없음 |
+| DEV-2026-2203 | Repeat Deviation 해당 없음 | 0건 |
+
+위험 점수, CAPA 필요 여부, 3영업일 내 개시, quarantine은 모두 `manual_checks`로 초안에 `☐` 항목으로 남습니다. **SOP에 없는 등급을 도구가 만들어 내지 않는 것**이 이 예시의 요점입니다.
+
 ### 5-3. 트리거 문법
 
 | 형식 | 의미 |
 |---|---|
 | `field: <예/아니오 항목>` + `equals: true` | 입력 양식에서 그 항목이 `true`이면 해당 |
-| `field: recurrence_count` + `min: N` | 조회 기간 안에 `match_on` 조건이 모두 같은 과거 일탈이 N건 이상이면 해당. 어느 등급에나 둘 수 있음 |
+| `field: recurrence_count` + `min: N` | 조회 기간 안에 `match_on` 조건이 모두 같은 과거 deviation이 N건 이상이면 해당. 어느 등급에나 둘 수 있음 |
 
 사용할 수 있는 예/아니오 항목: `cpp_excursion`, `spec_oos`, `other_batches_possibly_affected`, `sterility_assurance_impacted`, `released_product_affected`, `data_integrity_concern`.
 
@@ -275,9 +296,10 @@ manual_checks:
 |---|---|
 | `required_fields` | 필수 입력 항목. 빼면 해당 항목이 비어도 초안이 만들어집니다 |
 | `required_flags` | 반드시 true/false로 답할 항목. 트리거에 쓰는 항목은 빼면 실행이 멈춥니다 |
-| `categories` | 허용 일탈 유형. 바꾸면 템플릿 주석의 목록도 같이 고칩니다 |
+| `categories` | 허용 deviation 유형. 바꾸면 템플릿 주석의 목록도 같이 고칩니다 |
 | `ishikawa` | 조사 계획(6M) 항목 문구 |
 | `manual_checks` | 도구가 평가하지 않는 SOP 조항 (`clause`, `text`). 초안에 검토자 확인 항목으로 표시. 5-5 참고 |
+| `history_class_labels` | 이력 CSV `final_class`에 있어도 되는 값 중 `levels`에 없는 것 (SOP 개정 전 등급명, 등급 없는 SOP 등). 여기 없는 값은 이력 점검에서 경고 |
 | `recurrence.show_root_cause` | 반복 건 표에 과거 건의 근본원인(당시 기록)을 표시할지. 기본 `false` — 과거 원인을 옮겨 쓰는 것을 막기 위함 |
 
 rules.yaml을 바꾸면 사내 변경관리 절차에 따라 변경 이력(누가, 언제, 어떤 SOP 개정에 맞춰)을 남기십시오.
@@ -312,18 +334,18 @@ python -m devdraft.cli --check-history --history /사내경로/deviation_history
 | 경고 | 기준일 이후 날짜, `site`·`equipment_id` 빈칸, rules.yaml에 없는 `category`·`final_class` | 계속 진행, `HISTORY WARN n건` 한 줄 표시 |
 
 - Excel에서 저장할 때는 **CSV UTF-8(쉼표로 분리)** 를 고릅니다. 이 형식이 붙이는 BOM은 자동 처리됩니다.
-- 기준일(`--today`) 이후 날짜의 건과, 이력에 이미 들어 있는 **이번 일탈 자신**은 반복 건에서 뺍니다. 자신을 뺀 경우 초안에 그렇게 표시됩니다.
+- 기준일(`--today`) 이후 날짜의 건과, 이력에 이미 들어 있는 **이번 deviation 자신**은 반복 건에서 뺍니다. 자신을 뺀 경우 초안에 그렇게 표시됩니다.
 - `final_class`가 rules.yaml `levels`에 없는 값이면(예: SOP 개정 전 등급명) 경고만 하고 표시는 그대로 합니다. 분류 제안에는 쓰지 않습니다.
 
 필요한 열 (첫 줄 머리글, UTF-8):
 
 | 열 | 내용 |
 |---|---|
-| `dev_id` | 일탈 번호 |
+| `dev_id` | Deviation 번호 |
 | `opened` | 개설일 `YYYY-MM-DD` |
 | `site` | 사업장 |
 | `equipment_id` | 설비 ID (입력 양식과 같은 표기) |
-| `category` | 일탈 유형 (rules.yaml `categories`와 같은 값) |
+| `category` | deviation 유형 (rules.yaml `categories`와 같은 값) |
 | `final_class` | 확정 등급 |
 | `root_cause` | (선택) 기록된 근본원인. rules.yaml `recurrence.show_root_cause: true`일 때만 초안에 그대로 표시, 도구가 해석하지 않음 |
 
@@ -357,5 +379,5 @@ python -m devdraft.cli --check-history --history /사내경로/deviation_history
 ## 8. 데이터 취급 주의
 
 - 실제 배치 정보가 담긴 양식·초안·이력은 `drafts/` 또는 저장소 밖에 둡니다. `drafts/`와 `*.docx`는 git에 올라가지 않지만, 다른 폴더의 `.md`·`.yaml`은 올라갈 수 있습니다.
-- `git status`에 실제 일탈 파일이 보이면 커밋하지 마십시오.
+- `git status`에 실제 deviation 파일이 보이면 커밋하지 마십시오.
 - 이 도구의 출력을 실제 GMP 문서에 쓰려면 사내 절차에 따른 검토와, 필요 시 소프트웨어 적격성 평가가 먼저 필요합니다.

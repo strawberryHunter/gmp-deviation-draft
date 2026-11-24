@@ -27,7 +27,7 @@ required_flags:
   - data_integrity_concern
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 분류 제안 규칙 — 사내 일탈 관리 SOP의 등급 정의를 여기에 옮깁니다.
+# 분류 제안 규칙 — 사내 deviation 관리 SOP의 등급 정의를 여기에 옮깁니다.
 # 수정 방법은 docs/USAGE.md "5. rules.yaml을 SOP에 맞추기" 참고.
 # 저장 후 `python -m pytest -q` 와 샘플 실행으로 결과를 확인하십시오.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ default_reason: "상위 등급 트리거에 해당 없음 (보고자 입력 기�
 
 # 등급별 트리거. 하나라도 해당하면 그 등급을 제안하고, 위 levels 순서대로 확인합니다.
 #   equals: true  → 입력 양식의 예/아니오 항목 (required_flags 에 있어야 함)
-#   min: N        → recurrence_count (조회 기간 내 일치하는 과거 일탈 건수) 가 N 이상
+#   min: N        → recurrence_count (조회 기간 내 일치하는 과거 deviation 건수) 가 N 이상
 # 하위 등급 트리거에 해당한 것도 초안에 "그 밖에 해당한 트리거"로 함께 표시됩니다.
 classes:
   critical:
@@ -88,6 +88,10 @@ classes:
 #     - clause: "5.5.2"
 #       text: "CPP 이탈이 30분 이상 지속되었는가 — 해당하면 중대"
 manual_checks: []
+
+# 이력 CSV의 final_class 로 허용할 값 중 levels 에 없는 것 (SOP 개정 전 등급명 등).
+# 여기 없는 값은 --check-history 에서 경고합니다. 표시만 하고 분류 제안에는 쓰지 않습니다.
+# 예: history_class_labels: [A, B, C]
 
 # 반복성 조회.
 #   window_days : 오늘(--today) 기준 며칠 전까지 볼지

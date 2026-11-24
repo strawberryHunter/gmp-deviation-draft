@@ -135,6 +135,10 @@ def check_rules(rules: dict, bool_fields: set[str] | None = None) -> None:
                 if not isinstance(trig["min"], int) or isinstance(trig["min"], bool) or trig["min"] < 1:
                     problems.append(f"{where}: min 은 1 이상의 정수여야 합니다")
 
+    hcl = rules.get("history_class_labels")
+    if hcl is not None and (not isinstance(hcl, list) or not all(isinstance(x, str) and x.strip() for x in hcl)):
+        problems.append("history_class_labels 는 문자열 목록이어야 합니다 (예: [critical, major, minor])")
+
     manual = rules.get("manual_checks")
     if manual is not None:
         if not isinstance(manual, list):
