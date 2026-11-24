@@ -10,6 +10,27 @@
 
 **현재 상태와 다음 할 일 → [`docs/HANDOFF.md`](docs/HANDOFF.md)**
 
+## 결과물 미리보기 (설치 없이)
+
+현실적인 합성 사례 4건을 도구에 넣어 만든 Word 초안을 PDF로 렌더링한 것입니다. **모두 합성 데이터**이며, 판단이 필요한 칸은 노란 `☐ 작성 필요`로 비어 있습니다.
+
+<table>
+<tr>
+<td><img src="sample_output/showcase/DEV-2026-2301_p1.png" width="380" alt="DEV-2026-2301 초안 1쪽"></td>
+<td><img src="sample_output/showcase/DEV-2026-2301_p2.png" width="380" alt="DEV-2026-2301 초안 2쪽"></td>
+</tr>
+<tr><td colspan="2" align="center">DEV-2026-2301 — 1쪽: 사실 정리·분류 제안과 근거 · 2쪽: 판단 칸은 모두 비워 둠</td></tr>
+</table>
+
+| 사례 | 상황 | 도구 제안 | 초안 |
+|---|---|---|---|
+| DEV-2026-2301 | SEC-HPLC 수동 재적분, 사유 미기재 | CRITICAL — 데이터 완전성 우려 | [PDF](sample_output/showcase/DEV-2026-2301_draft.pdf) · [MD](sample_output/showcase/DEV-2026-2301_draft.md) |
+| DEV-2026-2302 | 원료 입고 시험 엔도톡신 OOS | MAJOR — 규격 이탈 | [PDF](sample_output/showcase/DEV-2026-2302_draft.pdf) · [MD](sample_output/showcase/DEV-2026-2302_draft.md) |
+| DEV-2026-2303 | 무균 복장 자격 만료 작업자의 Grade B 작업 | CRITICAL — 무균 보증 영향 | [PDF](sample_output/showcase/DEV-2026-2303_draft.pdf) · [MD](sample_output/showcase/DEV-2026-2303_draft.md) |
+| DEV-2026-2304 | 2-8°C 보관실 25분 온도 초과 | MAJOR — 다른 배치 영향 가능 | [PDF](sample_output/showcase/DEV-2026-2304_draft.pdf) · [MD](sample_output/showcase/DEV-2026-2304_draft.md) |
+
+등급은 **제안**일 뿐이고 확정은 QA 검토자가 합니다. 다시 만들기: `python scripts/make_showcase.py` (LibreOffice 필요)
+
 **처음 쓰는 경우 → [사용 가이드 `docs/USAGE.md`](docs/USAGE.md)** (설치, 양식 작성, 거부 메시지 대응, 초안 검토, SOP에 맞춘 rules.yaml 수정)
 
 > **모든 데이터는 합성(가짜) 데이터입니다.** 사업장·제품·배치·설비·deviation 사례 모두 지어낸 것입니다.

@@ -1,0 +1,25 @@
+synthetic: true
+id: DEV-2026-2302
+title: Poloxamer 188 입고 시험 엔도톡신 규격 초과 (OOS)
+site: Plant A
+area: QC Lab / Warehouse
+product: SYN-mAb-07 drug substance
+batch: RM-26-0933 (원료 입고 lot)
+equipment_id: ''
+category: material
+detected_at: 2026-11-23T15:05
+detected_by: QC 시험자
+process_step: Incoming raw material testing - Poloxamer 188
+description: Poloxamer 188 입고 lot RM-26-0933의 엔도톡신 1차 시험 결과 0.62 EU/mg (규격 ≤ 0.50
+  EU/mg). 재시험 전 결과.
+immediate_actions: lot RM-26-0933 부적합 보류 라벨 부착 및 격리, OOS 조사 개시 통보, 공급업체 CoA 확보 요청.
+parameters:
+- name: Endotoxin
+  spec: ≤ 0.50 EU/mg
+  actual: 0.62 EU/mg
+cpp_excursion: false
+spec_oos: true
+other_batches_possibly_affected: false
+sterility_assurance_impacted: false
+released_product_affected: false
+data_integrity_concern: false

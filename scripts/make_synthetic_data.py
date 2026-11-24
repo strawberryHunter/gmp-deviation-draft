@@ -109,6 +109,66 @@ INTAKE = [
 ]
 
 
+# Realistic showcase cases for the portfolio (synthetic; separate folder so
+# the test fixtures in intake/ stay unchanged). One per main risk path.
+SHOWCASE = [
+    {
+        "id": "DEV-2026-2301",
+        "title": "SEC-HPLC 순도 시험 수동 재적분 — 사유 미기재",
+        "site": "Plant A", "area": "QC Lab", "product": "SYN-mAb-07 drug substance",
+        "batch": "DS-26-0418", "equipment_id": "HPLC-07", "category": "documentation",
+        "detected_at": "2026-11-24T09:40", "detected_by": "QC 데이터 검토자",
+        "process_step": "Release testing - SEC-HPLC purity",
+        "description": "출하 시험 데이터 검토 중 감사추적(audit trail)에서 2026-11-20 16:42 주 피크 수동 재적분 1건 확인. "
+                       "재적분 사유 기재 없음. 보고된 순도 98.7%, 최초 적분 결과 98.1%.",
+        "immediate_actions": "해당 결과 보고 보류, 분석자 및 QC 책임자 통보, 원 데이터와 감사추적 사본 확보 (10:15).",
+        "parameters": [{"name": "SEC-HPLC main peak purity", "spec": "≥ 97.0%", "actual": "98.7% (재적분) / 98.1% (최초)"}],
+        "cpp_excursion": False, "spec_oos": False, "other_batches_possibly_affected": False,
+        "sterility_assurance_impacted": False, "released_product_affected": False, "data_integrity_concern": True,
+    },
+    {
+        "id": "DEV-2026-2302",
+        "title": "Poloxamer 188 입고 시험 엔도톡신 규격 초과 (OOS)",
+        "site": "Plant A", "area": "QC Lab / Warehouse", "product": "SYN-mAb-07 drug substance",
+        "batch": "RM-26-0933 (원료 입고 lot)", "equipment_id": "", "category": "material",
+        "detected_at": "2026-11-23T15:05", "detected_by": "QC 시험자",
+        "process_step": "Incoming raw material testing - Poloxamer 188",
+        "description": "Poloxamer 188 입고 lot RM-26-0933의 엔도톡신 1차 시험 결과 0.62 EU/mg (규격 ≤ 0.50 EU/mg). 재시험 전 결과.",
+        "immediate_actions": "lot RM-26-0933 부적합 보류 라벨 부착 및 격리, OOS 조사 개시 통보, 공급업체 CoA 확보 요청.",
+        "parameters": [{"name": "Endotoxin", "spec": "≤ 0.50 EU/mg", "actual": "0.62 EU/mg"}],
+        "cpp_excursion": False, "spec_oos": True, "other_batches_possibly_affected": False,
+        "sterility_assurance_impacted": False, "released_product_affected": False, "data_integrity_concern": False,
+    },
+    {
+        "id": "DEV-2026-2303",
+        "title": "무균 복장 자격 만료 작업자의 Grade B 구역 작업",
+        "site": "Plant B", "area": "Aseptic Filling (Grade B)", "product": "SYN-mAb-03 drug product (PFS)",
+        "batch": "DP-26-1183", "equipment_id": "FIL-L2", "category": "personnel",
+        "detected_at": "2026-11-23T11:20", "detected_by": "무균 공정 감독자",
+        "process_step": "Aseptic filling - operator support",
+        "description": "교육 기록 대조 중, 작업자 1명이 무균 복장 자격(gowning qualification) 만료일 2026-11-15 이후인 "
+                       "2026-11-22에 Grade B 구역에서 충전 지원 작업을 수행한 것을 확인.",
+        "immediate_actions": "해당 작업자 무균 구역 출입 중지, 2026-11-22 작업자 장갑·복장 접촉판 EM 결과 검토 요청, QA 통보.",
+        "cpp_excursion": False, "spec_oos": False, "other_batches_possibly_affected": False,
+        "sterility_assurance_impacted": True, "released_product_affected": False, "data_integrity_concern": False,
+    },
+    {
+        "id": "DEV-2026-2304",
+        "title": "2-8°C 보관실 온도 상한 초과 (25분)",
+        "site": "Plant A", "area": "Cold Room 2", "product": "SYN-mAb-07 drug substance",
+        "batch": "DS-26-0409, DS-26-0410", "equipment_id": "CR-02", "category": "equipment",
+        "detected_at": "2026-11-24T02:12", "detected_by": "창고 담당자 (야간)",
+        "process_step": "Intermediate storage (2-8°C)",
+        "description": "보관실 온도 모니터링 알람. 02:10–02:35 동안 최고 8.6°C 기록. 해당 시간 문 개폐 기록 없음. "
+                       "냉각기 압축기 재기동 후 02:35 정상 범위 복귀.",
+        "immediate_actions": "보관 중 배치 2건 격리 표시, 온도 로그 출력 보관, 설비팀 냉각기 점검 요청, QA 통보 (03:00).",
+        "parameters": [{"name": "Storage temperature", "spec": "2-8°C", "actual": "max 8.6°C", "duration": "25 min"}],
+        "cpp_excursion": False, "spec_oos": False, "other_batches_possibly_affected": True,
+        "sterility_assurance_impacted": False, "released_product_affected": False, "data_integrity_concern": False,
+    },
+]
+
+
 def main() -> None:
     hist = make_history()
     out = ROOT / "data/synthetic/history.csv"
@@ -121,6 +181,12 @@ def main() -> None:
         p = ROOT / "data/synthetic/intake" / f"{form['id']}.yaml"
         p.write_text(yaml.safe_dump({"synthetic": True, **form}, allow_unicode=True, sort_keys=False), encoding="utf-8")
         print(f"intake: {p.name}")
+    showcase_dir = ROOT / "data/synthetic/showcase"
+    showcase_dir.mkdir(parents=True, exist_ok=True)
+    for form in SHOWCASE:
+        p = showcase_dir / f"{form['id']}.yaml"
+        p.write_text(yaml.safe_dump({"synthetic": True, **form}, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        print(f"showcase: {p.name}")
 
 
 if __name__ == "__main__":
