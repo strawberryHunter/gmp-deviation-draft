@@ -123,7 +123,7 @@ devdraft/
   intake.py     양식 로드 + 검증 (누락/미허용 항목 거부)
   classify.py   분류 제안, 반복성 조회, 6M 조사 계획
   draft.py      Markdown 초안 렌더링
-  docx_out.py   Word 변환 (Arial, 표 괘선)
+  docx_out.py   Word 변환 (모든 쪽 '초안' 머리글, 빈칸 노란 강조, 경고 상자)
   rules.py      rules.yaml 로드 + 검증
   history.py    이력 CSV 점검 (--check-history)
   summary.py    일괄 처리 요약표 (--summary)

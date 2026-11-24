@@ -846,3 +846,114 @@ def test_malformed_manual_checks_stop_the_run(bad):
 def test_example_sop_history_check_is_clean():
     rep = check_history(ROOT / "data/synthetic/history.csv", load_rules(SOP_RULES), TODAY)
     assert rep.ok and not rep.warnings
+
+
+# --- Word output: a reviewer can't mistake the draft or miss a blank ---------
+
+from docx import Document as _Document  # noqa: E402
+from docx.enum.text import WD_COLOR_INDEX  # noqa: E402
+from docx.oxml.ns import qn as _qn  # noqa: E402
+
+from devdraft.docx_out import _add_inline, markdown_to_docx  # noqa: E402
+
+
+@pytest.fixture(scope="module")
+def sop_docx(tmp_path_factory):
+    out = tmp_path_factory.mktemp("docx")
+    md_path = build(INTAKE / "DEV-2026-2201.yaml", SOP_RULES, ROOT / "data/synthetic/history.csv",
+                    out, TODAY, want_docx=True)
+    return md_path.read_text(encoding="utf-8"), _Document(out / "DEV-2026-2201_draft.docx")
+
+
+def _all_paragraphs(doc):
+    yield from doc.paragraphs
+    for t in doc.tables:
+        for row in t.rows:
+            for cell in row.cells:
+                yield from cell.paragraphs
+
+
+def test_docx_every_blank_is_boxed_bold_and_highlighted(sop_docx):
+    md, doc = sop_docx
+    runs = [r for p in _all_paragraphs(doc) for r in p.runs if BLANK_TEXT in r.text]
+    assert len(runs) == md.count(BLANK_TEXT)
+    for r in runs:
+        assert r.text.startswith("☐") and r.bold and r.font.highlight_color == WD_COLOR_INDEX.YELLOW, r.text
+
+
+BLANK_TEXT = "작성 필요"
+
+
+def test_docx_manual_check_box_is_highlighted(sop_docx):
+    _, doc = sop_docx
+    p = next(p for p in doc.paragraphs if "SOP 5.5.2" in p.text)
+    box = next(r for r in p.runs if r.text.startswith("☐"))
+    assert box.font.highlight_color == WD_COLOR_INDEX.YELLOW
+
+
+def test_docx_every_page_says_draft(sop_docx):
+    _, doc = sop_docx
+    for sec in doc.sections:
+        head = " ".join(p.text for p in sec.header.paragraphs)
+        assert "초안 — 승인 문서 아님" in head and "DEV-2026-2201" in head and "2026-11-24" in head
+        foot_xml = sec.footer._element.xml
+        assert "PAGE" in foot_xml and "NUMPAGES" in foot_xml
+
+
+def test_docx_banner_is_a_shaded_box(sop_docx):
+    _, doc = sop_docx
+    cell = doc.tables[0].rows[0].cells[0]
+    assert "승인 문서가 아닙니다" in cell.text
+    assert cell._tc.tcPr.find(_qn("w:shd")) is not None
+    assert cell.paragraphs[0].runs[0].bold
+
+
+def test_docx_table_headers_repeat_and_are_shaded(sop_docx):
+    _, doc = sop_docx
+    data_tables = [t for t in doc.tables[1:]]
+    assert len(data_tables) >= 5
+    for t in data_tables:
+        first = t.rows[0]
+        assert first._tr.trPr.find(_qn("w:tblHeader")) is not None
+        assert first.cells[0]._tc.tcPr.find(_qn("w:shd")) is not None
+
+
+def test_docx_has_no_raw_markdown(sop_docx):
+    _, doc = sop_docx
+    for p in _all_paragraphs(doc):
+        assert "**" not in p.text and "`" not in p.text, p.text
+        assert not p.text.startswith("*"), p.text
+
+
+def test_docx_joins_wrapped_markdown_lines_into_one_paragraph(sop_docx):
+    _, doc = sop_docx
+    hits = [p for p in doc.paragraphs if "자동 생성되었습니다" in p.text]
+    assert len(hits) == 1 and "조사 결과나 결론을 생성하지 않습니다" in hits[0].text
+    assert all(r.italic for r in hits[0].runs if r.text.strip())
+
+
+def test_docx_sets_korean_font():
+    doc = _Document()
+    from devdraft.docx_out import _style
+    _style(doc)
+    fonts = doc.styles["Normal"].element.rPr.find(_qn("w:rFonts"))
+    assert fonts.get(_qn("w:eastAsia")) == "Malgun Gothic"
+
+
+def test_inline_markdown_to_runs():
+    doc = _Document()
+    p = doc.add_paragraph()
+    _add_inline(p, "a **b** `c` *d `e`* ☐ **작성 필요** f")
+    got = [(r.text, bool(r.bold), bool(r.italic)) for r in p.runs]
+    assert ("b", True, False) in got and ("c", False, False) in got
+    assert ("d ", False, True) in got and ("e", False, True) in got
+    assert ("☐ 작성 필요", True, False) in got
+    assert p.text == "a b c d e ☐ 작성 필요 f"
+
+
+def test_markdown_to_docx_on_default_rules_sample(tmp_path):
+    md = (ROOT / "sample_output/DEV-2026-2203_draft.md").read_text(encoding="utf-8")
+    doc = _Document(markdown_to_docx(md, tmp_path / "x.docx"))
+    text = "\n".join(p.text for p in _all_paragraphs(doc))
+    assert text.count(BLANK_TEXT) == md.count(BLANK_TEXT)
+    assert "DEV-2026-2203" in doc.sections[0].header.paragraphs[0].text

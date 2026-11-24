@@ -1,61 +1,233 @@
-"""Write the draft to a Word file QA can edit and track changes in."""
+"""Write the draft to a Word file QA can edit and track changes in.
+
+What matters in Word is that a reviewer cannot mistake the draft for a
+finished document and cannot overlook a blank that still needs writing:
+
+- every page carries a "draft — not an approved document" header;
+- every "작성 필요" blank keeps its ☐ and is bold + highlighted;
+- the warning banner is a shaded box, not body text;
+- table header rows repeat on each page.
+"""
 from __future__ import annotations
 
 import re
 from pathlib import Path
 
 from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_COLOR_INDEX
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor
+
+FONT = "Arial"
+FONT_KO = "Malgun Gothic"  # Arial has no Hangul; Word would otherwise substitute per machine
+BLANK = "작성 필요"
+
+# **bold**, `code`, *italic* — in that order of precedence
+_INLINE = re.compile(r"(\*\*.+?\*\*|`[^`]+`|(?<!\*)\*(?!\*).+?(?<!\*)\*(?!\*))")
+
+
+def _set_fonts(style_or_run_font, size: int | None = None) -> None:
+    f = style_or_run_font
+    f.name = FONT
+    if size:
+        f.size = Pt(size)
+    rpr = f.element.get_or_add_rPr() if hasattr(f, "element") else None
+    if rpr is not None:
+        fonts = rpr.find(qn("w:rFonts"))
+        if fonts is None:
+            fonts = OxmlElement("w:rFonts")
+            rpr.append(fonts)
+        fonts.set(qn("w:eastAsia"), FONT_KO)
 
 
 def _style(doc: Document) -> None:
-    normal = doc.styles["Normal"]
-    normal.font.name = "Arial"
-    normal.font.size = Pt(10)
+    for name, size in (("Normal", 10), ("Heading 1", 15), ("Heading 2", 12), ("Heading 3", 11), ("List Bullet", 10)):
+        st = doc.styles[name]
+        st.font.name = FONT
+        st.font.size = Pt(size)
+        st.font.color.rgb = RGBColor(0, 0, 0)
+        rpr = st.element.get_or_add_rPr()
+        fonts = rpr.find(qn("w:rFonts"))
+        if fonts is None:
+            fonts = OxmlElement("w:rFonts")
+            rpr.append(fonts)
+        for attr in ("w:ascii", "w:hAnsi", "w:cs"):
+            fonts.set(qn(attr), FONT)
+        fonts.set(qn("w:eastAsia"), FONT_KO)
+
+
+def _mark_blank(run) -> None:
+    run.bold = True
+    run.font.highlight_color = WD_COLOR_INDEX.YELLOW
+
+
+# "☐ **작성 필요**" (draft.TBD) and a bare "☐" are kept as one highlighted unit
+_BLANK_TOKEN = re.compile(rf"(☐ ?(?:\*\*)?{BLANK}(?:\*\*)?|☐)")
+
+
+def _add_inline(par, text: str, bold: bool = False, italic: bool = False) -> None:
+    """Add text to a paragraph, turning Markdown emphasis into Word runs."""
+    for chunk in _BLANK_TOKEN.split(text):
+        if not chunk:
+            continue
+        if _BLANK_TOKEN.fullmatch(chunk):
+            run = par.add_run(chunk.replace("**", ""))
+            run.italic = italic or None
+            _mark_blank(run)
+            continue
+        for part in _INLINE.split(chunk):
+            if not part:
+                continue
+            if part.startswith("**") and part.endswith("**") and len(part) > 4:
+                _add_inline(par, part[2:-2], bold=True, italic=italic)
+            elif part.startswith("*") and part.endswith("*") and len(part) > 2 and not part.startswith("**"):
+                _add_inline(par, part[1:-1], bold=bold, italic=True)
+            elif part.startswith("`") and part.endswith("`") and len(part) > 2:
+                run = par.add_run(part[1:-1])
+                run.bold, run.italic = bold or None, italic or None
+            else:
+                run = par.add_run(part)
+                run.bold, run.italic = bold or None, italic or None
+
+
+def _shade(cell, fill: str) -> None:
+    tcpr = cell._tc.get_or_add_tcPr()
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:val"), "clear")
+    shd.set(qn("w:color"), "auto")
+    shd.set(qn("w:fill"), fill)
+    tcpr.append(shd)
+
+
+def _repeat_header(row) -> None:
+    trpr = row._tr.get_or_add_trPr()
+    h = OxmlElement("w:tblHeader")
+    h.set(qn("w:val"), "true")
+    trpr.append(h)
+
+
+def _field(par, instr: str) -> None:
+    for kind, text in (("begin", None), (None, instr), ("separate", None), (None, "1"), ("end", None)):
+        run = par.add_run()
+        if kind:
+            el = OxmlElement("w:fldChar")
+            el.set(qn("w:fldCharType"), kind)
+        elif text == instr:
+            el = OxmlElement("w:instrText")
+            el.set(qn("xml:space"), "preserve")
+            el.text = instr
+        else:
+            el = OxmlElement("w:t")
+            el.text = text
+        run._r.append(el)
+
+
+def _header_footer(doc: Document, dev_id: str, generated: str) -> None:
+    sec = doc.sections[0]
+    hp = sec.header.paragraphs[0]
+    hp.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    r = hp.add_run("초안 — 승인 문서 아님")
+    r.bold = True
+    r.font.color.rgb = RGBColor(0xC0, 0x00, 0x00)
+    hp.add_run(f"  ·  {dev_id}  ·  초안 생성일 {generated}").font.size = Pt(8)
+    fp = sec.footer.paragraphs[0]
+    fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    fp.add_run("자동 생성 초안 — 검토·승인은 검증된 QMS에서  ·  ").font.size = Pt(8)
+    _field(fp, "PAGE")
+    fp.add_run(" / ")
+    _field(fp, "NUMPAGES")
+
+
+def _table(doc: Document, rows: list[list[str]]) -> None:
+    width = max(len(r) for r in rows)
+    t = doc.add_table(rows=0, cols=width)
+    t.style = "Table Grid"
+    for n, r in enumerate(rows):
+        row = t.add_row()
+        if n == 0:
+            _repeat_header(row)
+        for c, val in enumerate(r + [""] * (width - len(r))):
+            cell = row.cells[c]
+            par = cell.paragraphs[0]
+            _add_inline(par, val, bold=(n == 0))
+            if n == 0:
+                _shade(cell, "D9D9D9")
+    doc.add_paragraph()
+
+
+def _banner(doc: Document, lines: list[str]) -> None:
+    t = doc.add_table(rows=1, cols=1)
+    t.style = "Table Grid"
+    cell = t.rows[0].cells[0]
+    _shade(cell, "FFF2CC")
+    par = cell.paragraphs[0]
+    for k, line in enumerate(lines):
+        if k:
+            par = cell.add_paragraph()
+        _add_inline(par, line.rstrip("\\ ").rstrip())
+    doc.add_paragraph()
 
 
 def markdown_to_docx(md: str, out_path: str | Path) -> Path:
     doc = Document()
     _style(doc)
+    title = re.search(r"^# .*?(\S+)\s*$", md, flags=re.M)
+    gen = re.search(r"\| 초안 생성일 \| ([^|]+) \|", md)
+    _header_footer(doc, title.group(1) if title else "", gen.group(1).strip() if gen else "")
+
     lines = md.splitlines()
     i = 0
+    para: list[str] = []
+
+    def flush() -> None:
+        if para:
+            p = doc.add_paragraph()
+            for k, chunk in enumerate(para):
+                if k:
+                    p.add_run().add_break()
+                _add_inline(p, chunk.rstrip())
+            para.clear()
+
     while i < len(lines):
         line = lines[i]
         if line.startswith("|") and i + 1 < len(lines) and set(lines[i + 1].replace("|", "").strip()) <= set("-: "):
-            rows, i = [], i
+            flush()
+            rows = []
             while i < len(lines) and lines[i].startswith("|"):
                 cells = [c.strip() for c in lines[i].strip().strip("|").split("|")]
                 if not set("".join(cells)) <= set("-: "):
                     rows.append(cells)
                 i += 1
-            width = max(len(r) for r in rows)
-            t = doc.add_table(rows=0, cols=width)
-            t.style = "Table Grid"
-            for n, r in enumerate(rows):
-                cells = t.add_row().cells
-                for c, val in enumerate(r + [""] * (width - len(r))):
-                    cells[c].text = re.sub(r"\*\*|☐ ", "", val)
-                    if n == 0:
-                        for p in cells[c].paragraphs:
-                            for run in p.runs:
-                                run.bold = True
-            doc.add_paragraph()
+            _table(doc, rows)
             continue
         if line.startswith("> "):
-            p = doc.add_paragraph(re.sub(r"\*\*|\\$", "", line[2:]).strip())
-            p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            for run in p.runs:
-                run.bold = True
-                run.font.color.rgb = RGBColor(0x00, 0x00, 0x00)
-        elif line.startswith("#"):
+            flush()
+            quote = []
+            while i < len(lines) and lines[i].startswith("> "):
+                quote.append(lines[i][2:])
+                i += 1
+            _banner(doc, quote)
+            continue
+        if line.startswith("#"):
+            flush()
             level = len(line) - len(line.lstrip("#"))
             doc.add_heading(line.lstrip("# ").strip(), level=min(level, 4))
         elif line.startswith("- "):
-            doc.add_paragraph(re.sub(r"\*\*", "", line[2:]), style="List Bullet")
-        elif line.strip() and not line.startswith("---"):
-            doc.add_paragraph(re.sub(r"\*\*|☐ ", "", line))
+            flush()
+            _add_inline(doc.add_paragraph(style="List Bullet"), line[2:])
+        elif not line.strip() or line.startswith("---"):
+            flush()
+        else:
+            # Markdown: consecutive lines form one paragraph; a trailing
+            # double space is a hard line break.
+            if para and not para[-1].endswith("  "):
+                para[-1] = para[-1].rstrip() + " " + line.strip()
+            else:
+                para.append(line)
         i += 1
+    flush()
+
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     doc.save(out)
