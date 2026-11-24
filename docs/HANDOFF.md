@@ -1,7 +1,7 @@
 # HANDOFF — 현재 상태와 다음 할 일
 
 > 작업이 끝날 때마다 갱신합니다 (규칙: [`CLAUDE.md`](../CLAUDE.md)).
-> **마지막 갱신: 2026-11-24** · 기준 브랜치 `main` · 테스트 180개 통과 (CI: Ubuntu Python 3.10–3.13, Windows 3.12) · 도구 버전 `devdraft 0.5.0`
+> **마지막 갱신: 2026-11-24** · 기준 브랜치 `main` · 테스트 186개 통과 (CI: Ubuntu Python 3.10–3.13, Windows 3.12) · 도구 버전 `devdraft 0.5.0`
 >
 > **프로젝트 목적: 입사 포트폴리오.** 실제 회사 도입이 아니므로 회사 SOP·사내 적격성 평가는 범위 밖입니다. 우선순위는 "검토자가 처음 1분에 보고 이해하는가"입니다.
 
@@ -21,6 +21,7 @@
 | SOP 반영 예시: 합성 SOP, 공개 SOP(Duke COMM-PAS-013) | ✅ |
 | 자동 테스트(CI) — PR·main마다 GitHub에서 테스트 실행 | ✅ Ubuntu 3.10–3.13 + Windows |
 | 영문 Windows 콘솔에서 한국어 메시지 | ✅ (이전에는 오류로 종료) |
+| 포트폴리오용 결과물 미리보기 — 현실적 합성 사례 4건의 초안 PDF·이미지, README 갤러리 | ✅ `sample_output/showcase/` |
 | 회사 실제 SOP 반영 | — 포트폴리오라 범위 밖 (공개 SOP 예시로 방법을 보여 줌) |
 
 ## 2. 머지된 작업
@@ -33,13 +34,14 @@
 | [#4](https://github.com/strawberryHunter/gmp-deviation-draft/pull/4) | 생성 근거 기록, 합성 이력 오용 방지 |
 | [#5](https://github.com/strawberryHunter/gmp-deviation-draft/pull/5) | 공개 SOP(Duke) 매핑, 용어 "deviation" 통일 |
 | [#6](https://github.com/strawberryHunter/gmp-deviation-draft/pull/6) | CLAUDE.md, 이 HANDOFF 문서 |
+| [#7](https://github.com/strawberryHunter/gmp-deviation-draft/pull/7) | CI(Ubuntu 3.10–3.13, Windows), 영문 Windows 콘솔 오류·OS별 해시 차이 수정 |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
 위에서부터 중요한 순서입니다. 끝나면 Claude에게 결과를 알려 주세요.
 
 - [ ] **① Word 초안을 실제 Word에서 열어 보기** — 작업 환경에 맑은 고딕이 없어 화면 확인을 못 했습니다.
-  1. 아래 "프롬프트 A"로 Word 초안을 만들어 달라고 하거나, 직접 `python -m devdraft.cli data/synthetic/intake/DEV-2026-2201.yaml --docx`
+  1. 바로 볼 수 있는 렌더링 결과: [`sample_output/showcase/`](../sample_output/showcase/)의 PDF (이 환경의 대체 글꼴로 렌더링됨). Word 원본이 필요하면 "프롬프트 A" 또는 `python scripts/make_showcase.py`
   2. 확인할 것: 모든 쪽 머리글의 빨간 "초안 — 승인 문서 아님" · 빈칸 노란 강조 · 한글이 맑은 고딕으로 보이는지
   3. 이상하면 화면 캡처를 Claude에게 보내기
 - [ ] **② 결정해 주기** ([`DECISIONS.md`](../DECISIONS.md) "확인 필요") — 각 항목에 "이대로" 또는 "바꿔"만 답하면 됩니다.
@@ -55,7 +57,7 @@
 - [ ] **③ CI 결과 확인** — PR 화면 아래쪽 "Checks"가 초록색 ✅인지 봐 주세요. 빨간 ❌면 Claude에게 "CI 실패 고쳐줘"
 
 - [ ] **④ GitHub 브랜치 정리** — 이 세션은 원격 브랜치를 지울 권한이 없습니다. 머지가 끝난 아래 브랜치는 지워도 내용이 사라지지 않습니다. 포트폴리오 저장소가 깔끔해 보입니다.
-  `fix/flag-validation-template`, `feat/history-check`, `feat/docx-format`, `feat/traceability`, `feat/public-sop-example`, `docs/handoff`
+  `fix/flag-validation-template`, `feat/history-check`, `feat/docx-format`, `feat/traceability`, `feat/public-sop-example`, `docs/handoff`, `ci/github-actions`
   - 지우는 곳: 저장소 → Branches → 각 줄의 휴지통 아이콘
   - 앞으로 자동으로 지우려면: Settings → General → **Automatically delete head branches** 켜기
 
@@ -96,10 +98,9 @@ CLAUDE.md와 docs/HANDOFF.md를 읽고, "다음 개선 후보" 중 맨 위 항�
 ```
 
 **다음 개선 후보** (Claude가 끝낼 때마다 이 목록을 갱신, 포트폴리오 기준 우선순위)
-1. **README를 포트폴리오 첫 화면으로** — 30초 안에 "무엇을, 왜 이렇게 만들었나"가 보이게. 설계 판단(판단 칸 비우기, SOP에 없는 등급 안 만들기, 합성 이력 차단 등)과 직접 재현해서 고친 결함을 짧게
-2. **설치 없이 보는 결과물** — Word 초안을 PDF·PNG로 렌더링해 `sample_output/`에 넣고 README에 이미지로 (검토자는 설치하지 않음)
-3. **새 판단 항목** — 예: "환자 안전 영향", "규제 신고 대상" (항목 이름은 사용자가 정해야 함)
-4. **요약표 Excel/Word 출력** — 지금은 Markdown만
+1. **README를 포트폴리오 첫 화면으로** — 30초 안에 "무엇을, 왜 이렇게 만들었나"가 보이게. 설계 판단(판단 칸 비우기, SOP에 없는 등급 안 만들기, 합성 이력 차단 등)과 직접 재현해서 고친 결함을 짧게. 결과물 갤러리는 이미 있음
+2. **새 판단 항목** — 예: "환자 안전 영향", "규제 신고 대상" (항목 이름은 사용자가 정해야 함)
+3. **요약표 Excel/Word 출력** — 지금은 Markdown만
 
 ## 5. 참고 문서
 - 사용법: [`docs/USAGE.md`](USAGE.md)

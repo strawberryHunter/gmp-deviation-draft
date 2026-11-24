@@ -1,0 +1,25 @@
+synthetic: true
+id: DEV-2026-2301
+title: SEC-HPLC 순도 시험 수동 재적분 — 사유 미기재
+site: Plant A
+area: QC Lab
+product: SYN-mAb-07 drug substance
+batch: DS-26-0418
+equipment_id: HPLC-07
+category: documentation
+detected_at: 2026-11-24T09:40
+detected_by: QC 데이터 검토자
+process_step: Release testing - SEC-HPLC purity
+description: 출하 시험 데이터 검토 중 감사추적(audit trail)에서 2026-11-20 16:42 주 피크 수동 재적분 1건 확인.
+  재적분 사유 기재 없음. 보고된 순도 98.7%, 최초 적분 결과 98.1%.
+immediate_actions: 해당 결과 보고 보류, 분석자 및 QC 책임자 통보, 원 데이터와 감사추적 사본 확보 (10:15).
+parameters:
+- name: SEC-HPLC main peak purity
+  spec: ≥ 97.0%
+  actual: 98.7% (재적분) / 98.1% (최초)
+cpp_excursion: false
+spec_oos: false
+other_batches_possibly_affected: false
+sterility_assurance_impacted: false
+released_product_affected: false
+data_integrity_concern: true

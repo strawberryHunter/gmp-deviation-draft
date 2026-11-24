@@ -1210,3 +1210,42 @@ def test_cli_messages_survive_console_encoding(tmp_path, enc):
     assert b"Traceback" not in p.stderr
     shown = enc if enc in ("cp949", "utf-8") else "utf-8"  # Hangul-capable encodings are kept
     assert "필수 항목 누락: detected_by" in p.stdout.decode(shown)
+
+
+# --- portfolio showcase (realistic synthetic cases) --------------------------------
+
+SHOWCASE = ROOT / "data/synthetic/showcase"
+SHOWCASE_OUT = ROOT / "sample_output/showcase"
+
+
+@pytest.mark.parametrize("name, level, reason", [
+    ("DEV-2026-2301", "critical", "데이터 완전성"),
+    ("DEV-2026-2302", "major", "OOS"),
+    ("DEV-2026-2303", "critical", "무균 보증"),
+    ("DEV-2026-2304", "major", "다른 배치"),
+])
+def test_showcase_cases_cover_each_risk_path(name, level, reason):
+    d = load(SHOWCASE / f"{name}.yaml", RULES)
+    assert d.synthetic
+    got, reasons = propose_class(d, RULES, len(find_recurrence(d, HISTORY, RULES, TODAY)))
+    assert got == level and any(reason in r for r in reasons)
+
+
+def test_showcase_outputs_are_up_to_date_and_complete(tmp_path):
+    """Regenerate with: python scripts/make_showcase.py (needs LibreOffice)."""
+    run_batch(sorted(SHOWCASE.glob("*.yaml")), ROOT / "config/rules.yaml",
+              ROOT / "data/synthetic/history.csv", tmp_path, TODAY, want_summary=True)
+    produced = sorted(tmp_path.glob("*.md"))
+    assert len(produced) == 5  # 4 drafts + summary
+    for f in produced:
+        assert f.read_text(encoding="utf-8") == (SHOWCASE_OUT / f.name).read_text(encoding="utf-8"), \
+            f"{f.name} is stale — run: python scripts/make_showcase.py"
+    for yml in SHOWCASE.glob("*.yaml"):
+        assert (SHOWCASE_OUT / f"{yml.stem}_draft.pdf").stat().st_size > 10_000
+        assert (SHOWCASE_OUT / f"{yml.stem}_p1.png").stat().st_size > 10_000
+
+
+def test_readme_shows_showcase_images():
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+    imgs = re.findall(r'src="([^"]+\.png)"', text)
+    assert imgs and all((ROOT / i).exists() for i in imgs)

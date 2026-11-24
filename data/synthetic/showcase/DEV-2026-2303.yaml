@@ -1,0 +1,21 @@
+synthetic: true
+id: DEV-2026-2303
+title: 무균 복장 자격 만료 작업자의 Grade B 구역 작업
+site: Plant B
+area: Aseptic Filling (Grade B)
+product: SYN-mAb-03 drug product (PFS)
+batch: DP-26-1183
+equipment_id: FIL-L2
+category: personnel
+detected_at: 2026-11-23T11:20
+detected_by: 무균 공정 감독자
+process_step: Aseptic filling - operator support
+description: 교육 기록 대조 중, 작업자 1명이 무균 복장 자격(gowning qualification) 만료일 2026-11-15 이후인
+  2026-11-22에 Grade B 구역에서 충전 지원 작업을 수행한 것을 확인.
+immediate_actions: 해당 작업자 무균 구역 출입 중지, 2026-11-22 작업자 장갑·복장 접촉판 EM 결과 검토 요청, QA 통보.
+cpp_excursion: false
+spec_oos: false
+other_batches_possibly_affected: false
+sterility_assurance_impacted: true
+released_product_affected: false
+data_integrity_concern: false
