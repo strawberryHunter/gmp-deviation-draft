@@ -66,7 +66,8 @@ def check_history(path: str | Path, rules: dict, today: date | None = None) -> H
         return rep
 
     categories = set(rules["categories"])
-    levels = set(level_ids(rules))
+    # final_class in history may follow an older or different scheme; rules can list it
+    levels = set(level_ids(rules)) | set(rules.get("history_class_labels") or [])
     seen: dict[str, int] = {}
     unknown_cat: dict[str, list[int]] = {}
     unknown_cls: dict[str, list[int]] = {}

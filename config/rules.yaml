@@ -89,6 +89,10 @@ classes:
 #       text: "CPP 이탈이 30분 이상 지속되었는가 — 해당하면 중대"
 manual_checks: []
 
+# 이력 CSV의 final_class 로 허용할 값 중 levels 에 없는 것 (SOP 개정 전 등급명 등).
+# 여기 없는 값은 --check-history 에서 경고합니다. 표시만 하고 분류 제안에는 쓰지 않습니다.
+# 예: history_class_labels: [A, B, C]
+
 # 반복성 조회.
 #   window_days : 오늘(--today) 기준 며칠 전까지 볼지
 #   match_on    : 모두 같아야 "같은 건"으로 봄. equipment_id / category / site 중에서 선택.

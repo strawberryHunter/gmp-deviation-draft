@@ -957,3 +957,97 @@ def test_markdown_to_docx_on_default_rules_sample(tmp_path):
     text = "\n".join(p.text for p in _all_paragraphs(doc))
     assert text.count(BLANK_TEXT) == md.count(BLANK_TEXT)
     assert "DEV-2026-2203" in doc.sections[0].header.paragraphs[0].text
+
+
+# --- public SOP example: Duke COMM-PAS-013 --------------------------------------
+
+DUKE_RULES = ROOT / "config/examples/rules_Duke_COMM-PAS-013.yaml"
+DUKE_MAP = ROOT / "docs/sop_mapping/Duke_COMM-PAS-013.md"
+
+
+def _duke_mapped_clauses():
+    return re.findall(r"^\| (\d+(?:\.\d+)+) \|", DUKE_MAP.read_text(encoding="utf-8"), flags=re.M)
+
+
+def test_duke_mapping_doc_cites_source_and_disclaims():
+    text = DUKE_MAP.read_text(encoding="utf-8")
+    assert "Revision 01" in text and "01 Jul 2025" in text
+    assert "COMM-PAS-013%20Deviations%20and%20Investigations.pdf" in text
+    assert "Duke University와 관련이 없고" in text and "원문은 저장소에 복사하지 않았습니다" in text
+
+
+def test_duke_every_mapped_clause_is_in_rules():
+    clauses = _duke_mapped_clauses()
+    assert {"3.4", "4.26", "8.4.2", "8.4.3.1", "8.8.1.2"} <= set(clauses)
+    text = DUKE_RULES.read_text(encoding="utf-8")
+    missing = [c for c in clauses if not re.search(rf"(?<![\d.]){re.escape(c)}(?![\d])", text)]
+    assert not missing, missing
+
+
+def test_duke_manual_checks_are_all_in_mapping_doc():
+    r = load_rules(DUKE_RULES)
+    assert {m["clause"] for m in r["manual_checks"]} <= set(_duke_mapped_clauses())
+
+
+def test_duke_invents_no_severity_tiers():
+    """The SOP has no Critical/Major/Minor; the tool must not add them."""
+    r = load_rules(DUKE_RULES)
+    ids = {lv["id"] for lv in r["levels"]}
+    labels = " ".join(lv["label"] for lv in r["levels"]).lower()
+    assert ids == {"repeat", "not_repeat"}
+    assert not ({"critical", "major", "minor"} & ids) and "critical" not in labels
+    triggers = [t for ts in r["classes"].values() for t in ts]
+    assert triggers and all(t["field"] == "recurrence_count" for t in triggers)
+    assert r["recurrence"]["window_days"] == 730
+
+
+@pytest.mark.parametrize("name, level, hits", [
+    ("DEV-2026-2201", "repeat", {"DEV-2026-1100", "DEV-2026-1003", "DEV-2026-1101", "DEV-2026-1025", "DEV-2026-1102"}),
+    ("DEV-2026-2202", "repeat", {"DEV-2025-1022"}),  # outside 365 days, inside 2 years
+    ("DEV-2026-2203", "not_repeat", set()),
+])
+def test_duke_repeat_deviation_on_samples(name, level, hits):
+    r = load_rules(DUKE_RULES)
+    d = load(INTAKE / f"{name}.yaml", r)
+    rec = find_recurrence(d, HISTORY, r, TODAY)
+    assert {h["dev_id"] for h in rec} == hits
+    assert propose_class(d, r, len(rec))[0] == level
+
+
+def test_duke_draft_leaves_risk_scoring_to_reviewer(tmp_path):
+    md = build(INTAKE / "DEV-2026-2202.yaml", DUKE_RULES, ROOT / "data/synthetic/history.csv",
+               tmp_path, TODAY).read_text(encoding="utf-8")
+    sec = md.split("## 3. 분류", 1)[1].split("## 4.", 1)[0]
+    for c in ("3.4", "8.4.2", "8.4.2.1", "8.4.3.1", "8.8.1.2", "3.7.2.1"):
+        assert f"☐ SOP {c}:" in sec
+    assert "도구는 점수를 매기지 않음" in sec
+    assert not re.search(r"(Score|점수)\s*[:=]\s*\d", md)  # no score filled in by the tool
+    assert "Duke COMM-PAS-013 Rev 01" in sec and "Duke와 무관" in sec
+
+
+def test_duke_history_check_has_no_noise():
+    rep = check_history(ROOT / "data/synthetic/history.csv", load_rules(DUKE_RULES), TODAY)
+    assert rep.ok and not rep.warnings
+
+
+def test_history_class_labels_silences_only_listed_values(tmp_path):
+    r = copy.deepcopy(RULES)
+    r["levels"] = [{"id": "a", "label": "A"}]
+    r["default_level"] = "a"
+    r["classes"] = {}
+    present = {h["final_class"] for h in HISTORY}
+    assert len(present) >= 2
+    rep = check_history(ROOT / "data/synthetic/history.csv", r, TODAY)
+    assert {w.split("'")[1] for w in rep.warnings if w.startswith("final_class")} == present
+    keep = sorted(present)[0]
+    r["history_class_labels"] = sorted(present - {keep})
+    rep = check_history(ROOT / "data/synthetic/history.csv", r, TODAY)
+    assert [w.split("'")[1] for w in rep.warnings if w.startswith("final_class")] == [keep]
+
+
+@pytest.mark.parametrize("bad", ["major", [""], [1]])
+def test_history_class_labels_must_be_strings(bad):
+    r = copy.deepcopy(RULES)
+    r["history_class_labels"] = bad
+    with pytest.raises(RulesError):
+        check_rules(r)

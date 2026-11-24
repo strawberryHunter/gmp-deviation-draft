@@ -85,6 +85,9 @@ python -m devdraft.cli --check-history --history <QMS에서 내보낸 이력.csv
 - `categories` — 허용 일탈 유형
 - `ishikawa` — 6M 조사 항목 문구
 - `manual_checks` — 도구가 평가하지 못하는 SOP 조항. 초안에 `☐ 검토자가 직접 확인` 항목으로 표시
+- `history_class_labels` — 이력의 `final_class` 중 `levels`에 없어도 되는 값
+
+공개된 실제 SOP(Duke COMM-PAS-013)를 옮긴 예시: [`docs/sop_mapping/Duke_COMM-PAS-013.md`](docs/sop_mapping/Duke_COMM-PAS-013.md) → [`config/examples/rules_Duke_COMM-PAS-013.yaml`](config/examples/rules_Duke_COMM-PAS-013.yaml). Critical/Major/Minor가 없는 SOP라 도구는 Repeat Deviation 해당 여부만 제안합니다.
 
 합성 SOP를 옮긴 완성 예시: [`data/synthetic/sop/SYN-QA-SOP-001.md`](data/synthetic/sop/SYN-QA-SOP-001.md) → [`config/examples/rules_SYN-QA-SOP-001.yaml`](config/examples/rules_SYN-QA-SOP-001.yaml) ([사용 가이드 5-2-1](docs/USAGE.md#5-2-1-끝까지-따라-해-볼-수-있는-예시-합성-sop))
 

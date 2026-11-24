@@ -213,6 +213,27 @@ python -m devdraft.cli data/synthetic/intake/*.yaml --summary --today 2026-11-24
 5.5.2(CPP 30분 이상 지속)는 입력 양식에 지속 시간 수치 칸이 없어 트리거로 옮기지 않고 `manual_checks`로 두었습니다. 그래서 모든 초안에 검토자 확인 항목으로 나옵니다.
 실제 SOP를 옮길 때도 이 파일을 복사해서 시작하면 됩니다.
 
+### 5-2-2. 공개된 실제 SOP 예시 (Duke COMM-PAS-013)
+
+실제로 공개된 deviation SOP를 옮긴 예시입니다. Duke와 관련이 없고, 원문은 저장소에 복사하지 않았습니다.
+
+- 조항별 매핑과 근거: [`docs/sop_mapping/Duke_COMM-PAS-013.md`](sop_mapping/Duke_COMM-PAS-013.md)
+- 옮긴 결과: [`config/examples/rules_Duke_COMM-PAS-013.yaml`](../config/examples/rules_Duke_COMM-PAS-013.yaml)
+
+```bash
+python -m devdraft.cli data/synthetic/intake/*.yaml --summary --today 2026-11-24 --rules config/examples/rules_Duke_COMM-PAS-013.yaml --out /tmp/duke_example
+```
+
+이 SOP에는 **Critical/Major/Minor 등급이 없습니다.** 사람이 매기는 위험 점수(Severity × Probability × Detectability)와 "2년 안에 다시 일어난 deviation(Repeat Deviation)"으로 관리합니다. 그래서:
+
+| 샘플 | 도구 제안 | 이유 |
+|---|---|---|
+| DEV-2026-2201 | Repeat Deviation | 2년 안에 같은 사업장·설비·유형 5건 |
+| DEV-2026-2202 | Repeat Deviation | 2년 안에 1건 (DEV-2025-1022) — 1년 기준이었다면 해당 없음 |
+| DEV-2026-2203 | Repeat Deviation 해당 없음 | 0건 |
+
+위험 점수, CAPA 필요 여부, 3영업일 내 개시, quarantine은 모두 `manual_checks`로 초안에 `☐` 항목으로 남습니다. **SOP에 없는 등급을 도구가 만들어 내지 않는 것**이 이 예시의 요점입니다.
+
 ### 5-3. 트리거 문법
 
 | 형식 | 의미 |
@@ -271,6 +292,7 @@ manual_checks:
 | `categories` | 허용 일탈 유형. 바꾸면 템플릿 주석의 목록도 같이 고칩니다 |
 | `ishikawa` | 조사 계획(6M) 항목 문구 |
 | `manual_checks` | 도구가 평가하지 않는 SOP 조항 (`clause`, `text`). 초안에 검토자 확인 항목으로 표시. 5-5 참고 |
+| `history_class_labels` | 이력 CSV `final_class`에 있어도 되는 값 중 `levels`에 없는 것 (SOP 개정 전 등급명, 등급 없는 SOP 등). 여기 없는 값은 이력 점검에서 경고 |
 | `recurrence.show_root_cause` | 반복 건 표에 과거 건의 근본원인(당시 기록)을 표시할지. 기본 `false` — 과거 원인을 옮겨 쓰는 것을 막기 위함 |
 
 rules.yaml을 바꾸면 사내 변경관리 절차에 따라 변경 이력(누가, 언제, 어떤 SOP 개정에 맞춰)을 남기십시오.
