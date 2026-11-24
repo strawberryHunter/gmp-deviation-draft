@@ -46,6 +46,7 @@ GxP 문서라 "그럴듯하게 채워주는" 동작이 가장 위험합니다. �
 python -m devdraft.cli data/synthetic/intake/DEV-2026-2201.yaml --docx
 python -m devdraft.cli data/synthetic/intake/*.yaml --out drafts --today 2026-11-24
 python -m devdraft.cli data/synthetic/intake/*.yaml --summary --today 2026-11-24
+python -m devdraft.cli --check-history --history <QMS에서 내보낸 이력.csv>
 ```
 
 `--summary`는 여러 건을 한 번에 처리할 때 `_summary_<날짜>.md`를 함께 만듭니다
@@ -83,8 +84,11 @@ python -m devdraft.cli data/synthetic/intake/*.yaml --summary --today 2026-11-24
 - `recurrence` — 조회 기간(`window_days`), 일치 기준(`match_on`: equipment_id / category / site), 과거 근본원인 표시 여부(`show_root_cause`, 기본 false)
 - `categories` — 허용 일탈 유형
 - `ishikawa` — 6M 조사 항목 문구
+- `manual_checks` — 도구가 평가하지 못하는 SOP 조항. 초안에 `☐ 검토자가 직접 확인` 항목으로 표시
 
-종료 코드: 전부 성공 `0`, 거부 1건 이상 `1`, rules.yaml 오류 `2` ([사용 가이드 7장](docs/USAGE.md#7-명령-옵션)).
+합성 SOP를 옮긴 완성 예시: [`data/synthetic/sop/SYN-QA-SOP-001.md`](data/synthetic/sop/SYN-QA-SOP-001.md) → [`config/examples/rules_SYN-QA-SOP-001.yaml`](config/examples/rules_SYN-QA-SOP-001.yaml) ([사용 가이드 5-2-1](docs/USAGE.md#5-2-1-끝까지-따라-해-볼-수-있는-예시-합성-sop))
+
+종료 코드: 전부 성공 `0`, 거부 1건 이상 `1`, rules.yaml·이력 파일 오류 `2` ([사용 가이드 7장](docs/USAGE.md#7-명령-옵션)).
 
 rules.yaml에 오류(없는 등급 참조, 오타 키, 따옴표 붙은 `"true"`, 필수 플래그가 아닌 트리거 등)가 있으면
 `RULES ERR`로 어디가 틀렸는지 알려주고 아무 초안도 만들지 않습니다.
@@ -101,7 +105,7 @@ rules.yaml에 오류(없는 등급 참조, 오타 키, 따옴표 붙은 `"true"`
 python scripts/make_synthetic_data.py
 ```
 
-이력 51건(설비 8종, 최근 18개월)과 입력 양식 4건을 만듭니다. `CHR-03` 설비는 반복 건이 나오도록 일부러 심어두었습니다.
+이력 51건(설비 8종, 최근 18개월)과 입력 양식 4건을 만듭니다. 합성 SOP(`data/synthetic/sop/`)는 이 스크립트가 만들지 않는 고정 파일입니다. `CHR-03` 설비는 반복 건이 나오도록 일부러 심어두었습니다.
 
 ## 테스트
 
@@ -121,9 +125,11 @@ devdraft/
   draft.py      Markdown 초안 렌더링
   docx_out.py   Word 변환 (Arial, 표 괘선)
   rules.py      rules.yaml 로드 + 검증
+  history.py    이력 CSV 점검 (--check-history)
   summary.py    일괄 처리 요약표 (--summary)
   cli.py        실행 진입점
 config/rules.yaml
+config/examples/rules_SYN-QA-SOP-001.yaml   합성 SOP를 옮긴 예시
 templates/intake_template.yaml   QA가 채우는 빈 입력 양식
 docs/USAGE.md                    사용 가이드
 data/synthetic/

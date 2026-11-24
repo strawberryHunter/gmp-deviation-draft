@@ -5,19 +5,21 @@ import argparse
 from datetime import date
 from pathlib import Path
 
-
-from .classify import find_recurrence, investigation_plan, load_history, lower_triggers, propose_class
+from .classify import find_recurrence, investigation_plan, lower_triggers, propose_class
 from .draft import render_markdown
+from .history import HistoryError, check_history, load_checked_history, render_report
 from .intake import IntakeError, check_rules, load
 from .rules import RulesError, load_rules
 from .summary import FormResult, render_summary
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# 0: every form drafted. 1: at least one form rejected (others still drafted).
-# 2: rules.yaml invalid, nothing drafted.
+# 0: every form drafted (or --check-history found no errors).
+# 1: at least one form rejected, others still drafted (or history has errors in --check-history).
+# 2: rules.yaml or history file unusable, nothing drafted.
 EXIT_REJECTED = 1
-EXIT_RULES_ERROR = 2
+EXIT_CONFIG_ERROR = 2
+EXIT_RULES_ERROR = EXIT_CONFIG_ERROR  # kept for callers of the earlier name
 
 
 def draft_one(form: Path, rules: dict, history: list[dict], out_dir: Path,
@@ -34,7 +36,8 @@ def draft_one(form: Path, rules: dict, history: list[dict], out_dir: Path,
     plan = investigation_plan(dev, rules)
     md = render_markdown(dev, level, reasons, rec, plan,
                          generated_on=(today or date.today()).isoformat(),
-                         rules=rules, also=lower_triggers(dev, rules, len(rec)))
+                         rules=rules, also=lower_triggers(dev, rules, len(rec)),
+                         self_in_history=any((h.get("dev_id") or "").strip() == dev.id for h in history))
     out_dir.mkdir(parents=True, exist_ok=True)
     md_path = out_dir / f"{dev.id}_draft.md"
     md_path.write_text(md, encoding="utf-8")
@@ -46,11 +49,19 @@ def draft_one(form: Path, rules: dict, history: list[dict], out_dir: Path,
                       draft=str(md_path))
 
 
+def _history(history_path: Path, rules: dict, today: date | None, quiet: bool = True) -> list[dict]:
+    rep = load_checked_history(history_path, rules, today)
+    if rep.warnings and not quiet:
+        print(f"HISTORY WARN {history_path.name}: 경고 {len(rep.warnings)}건 — "
+              f"--check-history 로 상세 확인 (초안은 계속 생성)")
+    return rep.rows
+
+
 def build(form: Path, rules_path: Path, history_path: Path, out_dir: Path,
           today: date | None = None, want_docx: bool = False) -> Path:
     rules = load_rules(rules_path)
     check_rules(rules)
-    history = load_history(history_path)
+    history = _history(history_path, rules, today)
     return Path(draft_one(form, rules, history, out_dir, today, want_docx).draft)
 
 
@@ -59,7 +70,7 @@ def run_batch(forms: list[Path], rules_path: Path, history_path: Path, out_dir: 
               want_summary: bool = False) -> tuple[list[FormResult], Path | None]:
     rules = load_rules(rules_path)
     check_rules(rules)
-    history = load_history(history_path)
+    history = _history(history_path, rules, today, quiet=False)
     results, seen = [], set()
     for f in forms:
         try:
@@ -81,22 +92,46 @@ def run_batch(forms: list[Path], rules_path: Path, history_path: Path, out_dir: 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="GMP deviation report drafting assistant (draft only)")
-    ap.add_argument("form", type=Path, nargs="+", help="intake YAML file(s)")
+    ap.add_argument("form", type=Path, nargs="*", help="intake YAML file(s)")
     ap.add_argument("--rules", type=Path, default=ROOT / "config/rules.yaml")
     ap.add_argument("--history", type=Path, default=ROOT / "data/synthetic/history.csv")
     ap.add_argument("--out", type=Path, default=ROOT / "drafts")
     ap.add_argument("--docx", action="store_true", help="also write a Word file")
     ap.add_argument("--summary", action="store_true",
                     help="write _summary_<date>.md listing every form: proposed class or rejection reason")
+    ap.add_argument("--check-history", action="store_true",
+                    help="only check the --history CSV against rules.yaml; no drafts are written")
     ap.add_argument("--today", help="YYYY-MM-DD, for reproducible output")
     args = ap.parse_args()
 
-    today = date.fromisoformat(args.today) if args.today else None
+    try:
+        today = date.fromisoformat(args.today) if args.today else None
+    except ValueError:
+        ap.error(f"--today 는 YYYY-MM-DD 형식이어야 합니다: {args.today}")
+
+    if args.check_history:
+        try:
+            rules = load_rules(args.rules)
+            check_rules(rules)
+            rep = check_history(args.history, rules, today)
+        except (RulesError, HistoryError) as e:
+            print(f"CONFIG ERR: {e}")
+            raise SystemExit(EXIT_CONFIG_ERROR)
+        print(render_report(args.history, rep))
+        raise SystemExit(0 if rep.ok else EXIT_REJECTED)
+
+    if not args.form:
+        ap.error("입력 양식(.yaml)을 1개 이상 지정하십시오 (또는 --check-history)")
+
     try:
         results, _ = run_batch(args.form, args.rules, args.history, args.out, today, args.docx, args.summary)
     except RulesError as e:
         print(f"RULES ERR {args.rules}: {e}")
-        raise SystemExit(EXIT_RULES_ERROR)
+        raise SystemExit(EXIT_CONFIG_ERROR)
+    except HistoryError as e:
+        print(f"HISTORY ERR {e}")
+        print("  → --check-history 로 전체 오류 목록을 확인하십시오. 초안은 만들지 않았습니다.")
+        raise SystemExit(EXIT_CONFIG_ERROR)
     if any(not r.ok for r in results):
         raise SystemExit(EXIT_REJECTED)
 
