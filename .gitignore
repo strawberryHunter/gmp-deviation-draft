@@ -1,5 +1,8 @@
 __pycache__/
 *.pyc
 .pytest_cache/
-drafts/
 .env
+
+# 실제 일탈 내용이 저장소에 들어가지 않도록 한다.
+drafts/
+*.docx

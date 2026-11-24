@@ -14,6 +14,18 @@ required_fields:
   - description
   - immediate_actions
 
+# Risk flags the reporter must answer explicitly with true or false.
+# A missing, blank or non-boolean answer ("yes", "예", "true" in quotes) is
+# rejected — an unanswered question must never be read as "no".
+# Every field used as an `equals:` trigger under `classes` must be listed here.
+required_flags:
+  - cpp_excursion
+  - spec_oos
+  - other_batches_possibly_affected
+  - sterility_assurance_impacted
+  - released_product_affected
+  - data_integrity_concern
+
 # Any one trigger is enough for the class. Checked top-down: critical, major, minor.
 classes:
   critical:
