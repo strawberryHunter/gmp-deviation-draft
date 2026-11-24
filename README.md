@@ -1,5 +1,7 @@
 # gmp-deviation-draft
 
+[![tests](https://github.com/strawberryHunter/gmp-deviation-draft/actions/workflows/tests.yml/badge.svg)](https://github.com/strawberryHunter/gmp-deviation-draft/actions/workflows/tests.yml)
+
 생산시설 품질 문서 작성 중 반복 부분을 줄이는 **GMP deviation 보고서 초안 도우미**입니다.
 
 ```

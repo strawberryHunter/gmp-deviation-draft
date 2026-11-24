@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import sys
 from datetime import date
 from pathlib import Path
 
@@ -116,7 +117,24 @@ def run_batch(forms: list[Path], rules_path: Path, history_path: Path, out_dir: 
     return results, summary_path
 
 
+def _hangul_safe_output() -> None:
+    """Keep Korean messages from crashing the CLI on a non-Korean console.
+
+    On English Windows a pipe or redirect uses cp1252, which cannot encode
+    Hangul: every message would raise UnicodeEncodeError and exit 1, the
+    same code as a rejected form. Such streams are switched to UTF-8;
+    encodings that can show Hangul (UTF-8, cp949) are left alone.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            "한글".encode(stream.encoding or "ascii")
+        except (LookupError, UnicodeEncodeError):
+            if hasattr(stream, "reconfigure"):
+                stream.reconfigure(encoding="utf-8")
+
+
 def main() -> None:
+    _hangul_safe_output()
     ap = argparse.ArgumentParser(description="GMP deviation report drafting assistant (draft only)")
     ap.add_argument("form", type=Path, nargs="*", help="intake YAML file(s)")
     ap.add_argument("--rules", type=Path, default=ROOT / "config/rules.yaml")

@@ -113,7 +113,7 @@ def main() -> None:
     hist = make_history()
     out = ROOT / "data/synthetic/history.csv"
     with out.open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=list(hist[0]))
+        w = csv.DictWriter(f, fieldnames=list(hist[0]), lineterminator="\n")
         w.writeheader()
         w.writerows(hist)
     print(f"history: {len(hist)} rows -> {out}")
