@@ -267,7 +267,7 @@ def test_summary_marks_class_as_proposal_only(tmp_path):
 def test_summary_never_repeats_historical_root_causes(tmp_path):
     _, path = _batch(tmp_path, [INTAKE / "DEV-2026-2201.yaml"])
     md = path.read_text(encoding="utf-8")
-    assert "| 6 |" in md  # recurrence count only
+    assert "| 5 |" in md  # recurrence count only (same site)
     for rc in {r["root_cause"] for r in HISTORY}:
         assert rc not in md, rc
     assert "근본원인" not in md
@@ -383,9 +383,9 @@ def test_recurrence_text_follows_window_days():
 
 def test_match_on_site_excludes_other_site_same_equipment_id():
     d = dev("DEV-2026-2201")  # Plant A
-    both = find_recurrence(d, HISTORY, RULES, TODAY)
-    r = rules_with(recurrence={"window_days": 365, "match_on": ["equipment_id", "category", "site"]})
-    same_site = find_recurrence(d, HISTORY, r, TODAY)
+    any_site = rules_with(recurrence={"window_days": 365, "match_on": ["equipment_id", "category"]})
+    both = find_recurrence(d, HISTORY, any_site, TODAY)
+    same_site = find_recurrence(d, HISTORY, RULES, TODAY)
     assert {h["site"] for h in both} == {"Plant A", "Plant B"}
     assert {h["site"] for h in same_site} == {"Plant A"}
     assert len(same_site) == len(both) - 1
@@ -625,3 +625,10 @@ def test_hash_inside_real_value_is_not_flagged(tmp_path):
     p = tmp_path / "f.yaml"
     p.write_text(text, encoding="utf-8")
     assert "lot#5531" in load(p, RULES).description
+
+
+def test_shipped_rules_match_recurrence_within_same_site():
+    assert "site" in RULES["recurrence"]["match_on"]
+    hits = find_recurrence(dev("DEV-2026-2201"), HISTORY, RULES, TODAY)
+    assert hits and {h["site"] for h in hits} == {"Plant A"}
+    assert "DEV-2026-1023" not in {h["dev_id"] for h in hits}  # Plant B, same equipment ID

@@ -79,7 +79,7 @@ classes:
       reason: "다른 배치 영향 가능성"
     - field: recurrence_count
       min: 2
-      reason: "조회 기간 내 동일 설비·유형 반복 (2회 이상)"
+      reason: "조회 기간 내 동일 사업장·설비·유형 반복 (2회 이상)"
 
 # 반복성 조회.
 #   window_days : 오늘(--today) 기준 며칠 전까지 볼지
@@ -90,7 +90,7 @@ classes:
 #                     true 로 바꿔도 도구는 원인 연관성을 판단하지 않습니다.
 recurrence:
   window_days: 365
-  match_on: [equipment_id, category]
+  match_on: [site, equipment_id, category]
   show_root_cause: false
 
 categories:
