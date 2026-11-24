@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 from datetime import date
 from pathlib import Path
 
 from .classify import find_recurrence, investigation_plan, lower_triggers, propose_class
 from .draft import render_markdown
-from .history import HistoryError, check_history, load_checked_history, render_report
+from . import __version__
+from .history import HistoryError, check_history, is_synthetic, load_checked_history, render_report
 from .intake import IntakeError, check_rules, load
 from .rules import RulesError, load_rules
 from .summary import FormResult, render_summary
@@ -22,11 +24,32 @@ EXIT_CONFIG_ERROR = 2
 EXIT_RULES_ERROR = EXIT_CONFIG_ERROR  # kept for callers of the earlier name
 
 
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def run_sources(rules: dict, rules_path: Path, history: list[dict], history_path: Path,
+                today: date | None) -> dict:
+    """Run-level provenance shared by every draft of one run."""
+    return {
+        "rules": Path(rules_path).name, "rules_sha": _sha256(rules_path),
+        "sop": rules.get("sop_reference") or "",
+        "history": Path(history_path).name, "history_sha": _sha256(history_path),
+        "history_rows": len(history), "history_synthetic": is_synthetic(history),
+        "today": (today or date.today()).isoformat(), "version": __version__,
+    }
+
+
 def draft_one(form: Path, rules: dict, history: list[dict], out_dir: Path,
               today: date | None = None, want_docx: bool = False,
-              seen_ids: set[str] | None = None) -> FormResult:
+              seen_ids: set[str] | None = None, sources: dict | None = None) -> FormResult:
     """Draft one form. Raises IntakeError if the form is rejected."""
     dev = load(form, rules)
+    if not dev.synthetic and is_synthetic(history):
+        raise IntakeError(
+            "반복성 조회 이력이 합성(가짜) 데이터입니다 — 실제 양식에 가짜 반복 건이 붙습니다. "
+            "--history 로 실제 이력 CSV를 지정하십시오. (연습용 양식이면 양식에 synthetic: true)"
+        )
     if seen_ids is not None:
         if dev.id in seen_ids:
             raise IntakeError(f"같은 일탈 번호({dev.id})의 양식이 이번 실행에 이미 있습니다 — 덮어쓰지 않습니다.")
@@ -37,7 +60,8 @@ def draft_one(form: Path, rules: dict, history: list[dict], out_dir: Path,
     md = render_markdown(dev, level, reasons, rec, plan,
                          generated_on=(today or date.today()).isoformat(),
                          rules=rules, also=lower_triggers(dev, rules, len(rec)),
-                         self_in_history=any((h.get("dev_id") or "").strip() == dev.id for h in history))
+                         self_in_history=any((h.get("dev_id") or "").strip() == dev.id for h in history),
+                         sources={**(sources or {}), "form": form.name, "form_sha": _sha256(form)} if sources else None)
     out_dir.mkdir(parents=True, exist_ok=True)
     md_path = out_dir / f"{dev.id}_draft.md"
     md_path.write_text(md, encoding="utf-8")
@@ -46,7 +70,7 @@ def draft_one(form: Path, rules: dict, history: list[dict], out_dir: Path,
         markdown_to_docx(md, out_dir / f"{dev.id}_draft.docx")
     return FormResult(file=form.name, ok=True, dev_id=dev.id, title=dev.title,
                       proposed=level, reasons=reasons, recurrence_count=len(rec),
-                      draft=str(md_path))
+                      draft=str(md_path), synthetic=dev.synthetic)
 
 
 def _history(history_path: Path, rules: dict, today: date | None, quiet: bool = True) -> list[dict]:
@@ -62,7 +86,8 @@ def build(form: Path, rules_path: Path, history_path: Path, out_dir: Path,
     rules = load_rules(rules_path)
     check_rules(rules)
     history = _history(history_path, rules, today)
-    return Path(draft_one(form, rules, history, out_dir, today, want_docx).draft)
+    src = run_sources(rules, rules_path, history, history_path, today)
+    return Path(draft_one(form, rules, history, out_dir, today, want_docx, sources=src).draft)
 
 
 def run_batch(forms: list[Path], rules_path: Path, history_path: Path, out_dir: Path,
@@ -71,10 +96,11 @@ def run_batch(forms: list[Path], rules_path: Path, history_path: Path, out_dir: 
     rules = load_rules(rules_path)
     check_rules(rules)
     history = _history(history_path, rules, today, quiet=False)
+    src = run_sources(rules, rules_path, history, history_path, today)
     results, seen = [], set()
     for f in forms:
         try:
-            r = draft_one(f, rules, history, out_dir, today, want_docx, seen)
+            r = draft_one(f, rules, history, out_dir, today, want_docx, seen, src)
             print(f"OK  {f.name} -> {r.draft}")
         except IntakeError as e:
             r = FormResult(file=f.name, ok=False, error=str(e))

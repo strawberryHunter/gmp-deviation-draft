@@ -61,9 +61,14 @@ description: |
 
 ### 2-2. 실행
 
+실제 일탈은 QMS에서 내보낸 이력 CSV를 `--history`로 함께 지정합니다 (이력 준비는 6장).
+
 ```bash
-python -m devdraft.cli drafts/DEV-2026-2301.yaml --docx --out drafts
+python -m devdraft.cli drafts/DEV-2026-2301.yaml --docx --out drafts --history /사내경로/deviation_history.csv
 ```
+
+`--history`를 빼면 기본 합성 이력이 쓰이는데, 이때 실제 양식은 가짜 반복 건이 붙지 않도록 거부됩니다.
+도구를 연습할 때는 양식 맨 위에 `synthetic: true`를 넣으면 `--history` 없이도 실행됩니다 (초안에 "합성 데이터" 표시).
 
 정상이면 아래처럼 나오고 `drafts/`에 `DEV-2026-2301_draft.md`와 `.docx`가 생깁니다.
 
@@ -86,6 +91,7 @@ OK  DEV-2026-2301.yaml -> drafts/DEV-2026-2301_draft.md
 | `YAML 문법 오류 (N행)` | N행 근처의 들여쓰기, `:` 뒤 공백, 따옴표 짝을 확인합니다. |
 | `같은 일탈 번호(...)의 양식이 이번 실행에 이미 있습니다` | 한 번 실행에 같은 `id`가 두 파일에 있습니다. 하나를 고칩니다. |
 | `RULES ERR ...` | 양식이 아니라 `config/rules.yaml` 문제입니다. 5장 참고. 이때는 아무 초안도 만들지 않습니다. |
+| `반복성 조회 이력이 합성(가짜) 데이터입니다` | 실제 양식을 기본 합성 이력으로 실행했습니다. `--history`로 실제 이력 CSV를 지정합니다 (6장). 가짜 반복 건이 실제 초안에 붙는 것을 막기 위해 거부합니다. |
 | `HISTORY ERR ...` | 이력 CSV 문제입니다. `--check-history`로 전체 목록을 보고 고칩니다 (6장). 아무 초안도 만들지 않습니다. |
 
 ---
@@ -111,6 +117,7 @@ OK  DEV-2026-2301.yaml -> drafts/DEV-2026-2301_draft.md
 | 7. 제품 품질 영향 평가 | 해당 배치·영향 가능 배치 평가, 결론과 근거 |
 | 8. CAPA | 시정·재발방지·예방조치, 담당, 기한 |
 | 9. 검토 및 승인 | 이 초안에서 하지 않습니다. 검증된 QMS에서 수행 |
+| 부록. 생성 근거 | 이 초안을 만든 입력 양식·rules.yaml·이력 파일의 파일명과 SHA-256, 기준일, 도구 버전. QMS 등록 시 초안과 함께 보관하면 어떤 입력으로 만들었는지 추적할 수 있음 |
 
 완성된 내용은 사내 QMS에 등록하고, 승인은 QMS에서 합니다. 이 도구의 출력물은 승인 문서가 아닙니다.
 
@@ -119,7 +126,7 @@ OK  DEV-2026-2301.yaml -> drafts/DEV-2026-2301_draft.md
 ## 4. 여러 건을 한 번에 처리 (`--summary`)
 
 ```bash
-python -m devdraft.cli drafts/*.yaml --docx --summary --out drafts
+python -m devdraft.cli drafts/*.yaml --docx --summary --out drafts --history /사내경로/deviation_history.csv
 ```
 
 각 건의 초안과 함께 `drafts/_summary_<날짜>.md`가 생깁니다 ([예시](../sample_output/_summary_2026-11-24.md)).
@@ -280,6 +287,8 @@ rules.yaml을 바꾸면 사내 변경관리 절차에 따라 변경 이력(누�
 ## 6. 과거 이력 파일 (반복성 조회용)
 
 기본값은 합성 데이터 `data/synthetic/history.csv`입니다. 실제 이력을 쓰려면 QMS에서 같은 열로 CSV를 내보내 **저장소 밖**에 두고 `--history`로 지정합니다.
+
+**실제 양식은 `--history` 없이 실행되지 않습니다.** 이력 파일에 `synthetic` 열이 `True`인 행이 있으면 합성 이력으로 보고, `synthetic: true`가 없는 양식은 거부합니다. 연습용 양식에는 `synthetic: true`를 적으면 합성 이력으로 실행되고, 초안 맨 위와 Word 모든 쪽 머리글에 "합성 데이터"가 표시됩니다.
 
 ```bash
 python -m devdraft.cli drafts/*.yaml --summary --out drafts --history /사내경로/deviation_history.csv

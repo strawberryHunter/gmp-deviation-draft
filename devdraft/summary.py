@@ -24,6 +24,7 @@ class FormResult:
     recurrence_count: int = 0
     draft: str = ""
     error: str = ""
+    synthetic: bool = False
 
 
 def _cell(text: str) -> str:
@@ -41,6 +42,8 @@ def render_summary(results: list[FormResult], generated_on: str, window_days: in
         "> 등급은 규칙에 따른 **제안**이며, 확정은 각 초안의 \"QA 검토자 확정 등급\"란에서 검토자가 직접 기재합니다.  ",
         "> 이 표는 처리 순서나 우선순위를 정하지 않습니다.",
         "",
+        *(["> **합성(가짜) 데이터로 만든 초안이 포함되어 있습니다 — 실제 일탈 문서로 사용 금지.**", ""]
+          if any(r.synthetic for r in done) else []),
         f"입력 {len(results)}건 · 초안 생성 {len(done)}건 · 거부 {len(rejected)}건",
         "",
         "## 초안 생성",
