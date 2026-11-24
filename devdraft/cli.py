@@ -5,11 +5,11 @@ import argparse
 from datetime import date
 from pathlib import Path
 
-import yaml
 
-from .classify import find_recurrence, investigation_plan, load_history, propose_class
+from .classify import find_recurrence, investigation_plan, load_history, lower_triggers, propose_class
 from .draft import render_markdown
-from .intake import IntakeError, load
+from .intake import IntakeError, check_rules, load
+from .rules import RulesError, load_rules
 from .summary import FormResult, render_summary
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,7 +28,8 @@ def draft_one(form: Path, rules: dict, history: list[dict], out_dir: Path,
     level, reasons = propose_class(dev, rules, len(rec))
     plan = investigation_plan(dev, rules)
     md = render_markdown(dev, level, reasons, rec, plan,
-                         generated_on=(today or date.today()).isoformat())
+                         generated_on=(today or date.today()).isoformat(),
+                         rules=rules, also=lower_triggers(dev, rules, len(rec)))
     out_dir.mkdir(parents=True, exist_ok=True)
     md_path = out_dir / f"{dev.id}_draft.md"
     md_path.write_text(md, encoding="utf-8")
@@ -42,7 +43,8 @@ def draft_one(form: Path, rules: dict, history: list[dict], out_dir: Path,
 
 def build(form: Path, rules_path: Path, history_path: Path, out_dir: Path,
           today: date | None = None, want_docx: bool = False) -> Path:
-    rules = yaml.safe_load(rules_path.read_text(encoding="utf-8"))
+    rules = load_rules(rules_path)
+    check_rules(rules)
     history = load_history(history_path)
     return Path(draft_one(form, rules, history, out_dir, today, want_docx).draft)
 
@@ -50,7 +52,8 @@ def build(form: Path, rules_path: Path, history_path: Path, out_dir: Path,
 def run_batch(forms: list[Path], rules_path: Path, history_path: Path, out_dir: Path,
               today: date | None = None, want_docx: bool = False,
               want_summary: bool = False) -> tuple[list[FormResult], Path | None]:
-    rules = yaml.safe_load(rules_path.read_text(encoding="utf-8"))
+    rules = load_rules(rules_path)
+    check_rules(rules)
     history = load_history(history_path)
     results, seen = [], set()
     for f in forms:
@@ -66,7 +69,7 @@ def run_batch(forms: list[Path], rules_path: Path, history_path: Path, out_dir: 
         stamp = (today or date.today()).isoformat()
         out_dir.mkdir(parents=True, exist_ok=True)
         summary_path = out_dir / f"_summary_{stamp}.md"
-        summary_path.write_text(render_summary(results, stamp, rules["recurrence"]["window_days"]), encoding="utf-8")
+        summary_path.write_text(render_summary(results, stamp, rules["recurrence"]["window_days"], rules), encoding="utf-8")
         print(f"SUM {summary_path}")
     return results, summary_path
 
@@ -84,7 +87,11 @@ def main() -> None:
     args = ap.parse_args()
 
     today = date.fromisoformat(args.today) if args.today else None
-    run_batch(args.form, args.rules, args.history, args.out, today, args.docx, args.summary)
+    try:
+        run_batch(args.form, args.rules, args.history, args.out, today, args.docx, args.summary)
+    except RulesError as e:
+        print(f"RULES ERR {args.rules}: {e}")
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":

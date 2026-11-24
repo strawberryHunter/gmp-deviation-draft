@@ -10,13 +10,11 @@ from pathlib import Path
 
 import yaml
 
+from .rules import RulesError, check_rules as _check_rules  # noqa: F401  (re-exported)
+
 
 class IntakeError(ValueError):
     pass
-
-
-class RulesError(ValueError):
-    """config/rules.yaml is inconsistent. Stops the whole run, not one form."""
 
 
 @dataclass
@@ -53,26 +51,7 @@ def _bool_fields() -> set[str]:
 
 
 def check_rules(rules: dict) -> None:
-    """Every `equals:` trigger must point at a flag the reporter is forced to answer.
-
-    Otherwise an omitted answer would default to False and silently drop
-    the deviation to a lower proposed class.
-    """
-    flags = rules.get("required_flags") or []
-    bad = [f for f in flags if f not in _bool_fields()]
-    if bad:
-        raise RulesError(f"required_flags에 예/아니오 항목이 아닌 것이 있습니다: {', '.join(bad)}")
-    unguarded = sorted({
-        trig["field"]
-        for triggers in rules["classes"].values()
-        for trig in triggers
-        if "equals" in trig and trig["field"] not in flags
-    })
-    if unguarded:
-        raise RulesError(
-            "분류 트리거로 쓰이지만 required_flags에 없는 항목: "
-            f"{', '.join(unguarded)} — required_flags에 추가하십시오."
-        )
+    _check_rules(rules, _bool_fields())
 
 
 def load(path: str | Path, rules: dict) -> Deviation:

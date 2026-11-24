@@ -311,3 +311,167 @@ def test_no_summary_file_without_flag(tmp_path):
     run_batch([INTAKE / "DEV-2026-2203.yaml"], ROOT / "config/rules.yaml",
               ROOT / "data/synthetic/history.csv", tmp_path, TODAY)
     assert not list(tmp_path.glob("_summary_*"))
+
+
+# --- rules.yaml structure (levels / SOP mapping) -----------------------------
+
+import copy  # noqa: E402
+
+from devdraft.classify import lower_triggers  # noqa: E402
+from devdraft.rules import load_rules  # noqa: E402
+from devdraft.intake import check_rules  # noqa: E402
+
+
+def rules_with(**changes):
+    r = copy.deepcopy(RULES)
+    r.update(changes)
+    return r
+
+
+def test_shipped_rules_file_is_valid():
+    load_rules(ROOT / "config/rules.yaml")
+
+
+def test_custom_levels_and_labels_from_sop():
+    """A 4-level SOP with Korean labels needs only rules.yaml changes."""
+    r = rules_with(
+        levels=[{"id": "l1", "label": "중대(1등급)"}, {"id": "l2", "label": "주요(2등급)"},
+                {"id": "l3", "label": "경미(3등급)"}, {"id": "l4", "label": "사건(Event)"}],
+        default_level="l4",
+        default_reason="트리거 해당 없음",
+        classes={
+            "l1": [{"field": "sterility_assurance_impacted", "equals": True, "reason": "무균"}],
+            "l2": [{"field": "cpp_excursion", "equals": True, "reason": "CPP"}],
+            "l3": [{"field": "recurrence_count", "min": 1, "reason": "반복"}],
+        },
+        sop_reference="QA-SOP-000 Rev.00 (test)",
+    )
+    check_rules(r)
+    d = dev("DEV-2026-2201")
+    n = len(find_recurrence(d, HISTORY, r, TODAY))
+    level, reasons = propose_class(d, r, n)
+    assert level == "l2" and reasons == ["CPP"]
+    md = render_markdown(d, level, reasons, [], [], "2026-11-24", rules=r,
+                         also=lower_triggers(d, r, n))
+    assert "제안 등급: 주요(2등급)" in md
+    assert "[경미(3등급)] 반복" in md
+    assert "QA-SOP-000 Rev.00 (test)" in md
+    level, _ = propose_class(dev("DEV-2026-2203"), r, 0)
+    assert level == "l4"
+
+
+def test_missing_sop_reference_is_flagged_in_draft():
+    d = dev("DEV-2026-2203")
+    md = render_markdown(d, "minor", ["x"], [], [], "2026-11-24", rules=rules_with(sop_reference=""))
+    line = [l for l in md.splitlines() if l.startswith("분류 기준 출처")][0]
+    assert "작성 필요" in line
+
+
+def test_lower_level_triggers_are_not_hidden():
+    d = dev("DEV-2026-2202")  # critical, but also other_batches_possibly_affected (major)
+    assert lower_triggers(d, RULES, 0) == [("major", "다른 배치 영향 가능성")]
+    md = (ROOT / "sample_output/DEV-2026-2202_draft.md").read_text(encoding="utf-8")
+    assert "[MAJOR] 다른 배치 영향 가능성" in md
+
+
+def test_recurrence_text_follows_window_days():
+    r = rules_with(recurrence={"window_days": 180, "match_on": ["equipment_id", "category"]})
+    d = dev("DEV-2026-2201")
+    md = render_markdown(d, "major", ["x"], [], [], "2026-11-24", rules=r)
+    assert "최근 180일" in md and "12개월" not in md
+
+
+def test_match_on_site_excludes_other_site_same_equipment_id():
+    d = dev("DEV-2026-2201")  # Plant A
+    both = find_recurrence(d, HISTORY, RULES, TODAY)
+    r = rules_with(recurrence={"window_days": 365, "match_on": ["equipment_id", "category", "site"]})
+    same_site = find_recurrence(d, HISTORY, r, TODAY)
+    assert {h["site"] for h in both} == {"Plant A", "Plant B"}
+    assert {h["site"] for h in same_site} == {"Plant A"}
+    assert len(same_site) == len(both) - 1
+
+
+def test_recurrence_trigger_can_sit_at_any_level():
+    r = copy.deepcopy(RULES)
+    r["classes"]["critical"].append({"field": "recurrence_count", "min": 5, "reason": "5회 이상 반복"})
+    level, reasons = propose_class(dev("DEV-2026-2201"), r, 6)
+    assert level == "critical" and any("5회 이상" in x for x in reasons)
+
+
+@pytest.mark.parametrize("mutate, needle", [
+    (lambda r: r["classes"].__setitem__("minor", [{"field": "_default", "reason": "x"}]), "default_level"),
+    (lambda r: r["classes"]["major"][-1].__setitem__("field", "recurrence_12m"), "recurrence_count"),
+    (lambda r: r["classes"].__setitem__("severe", []), "severe"),
+    (lambda r: r.__setitem__("default_level", "low"), "default_level"),
+    (lambda r: r.__setitem__("default_reason", ""), "default_reason"),
+    (lambda r: r["classes"]["major"][0].__setitem__("equals", "true"), "true 또는 false"),
+    (lambda r: r["classes"]["major"][0].__setitem__("equal", True), "알 수 없는 키"),
+    (lambda r: r["classes"]["major"][0].__setitem__("min", 1), "하나만"),
+    (lambda r: r["classes"]["major"].append({"field": "cpp_excursion", "min": 2, "reason": "x"}), "min 은"),
+    (lambda r: r["classes"]["major"][-1].__setitem__("min", 0), "1 이상"),
+    (lambda r: r["recurrence"].__setitem__("window_days", 0), "window_days"),
+    (lambda r: r["recurrence"].__setitem__("match_on", ["batch"]), "match_on"),
+    (lambda r: r["levels"].append({"id": "major"}), "중복"),
+    (lambda r: r.pop("levels"), "levels"),
+])
+def test_rules_mistakes_stop_the_run(mutate, needle):
+    r = copy.deepcopy(RULES)
+    mutate(r)
+    with pytest.raises(RulesError) as e:
+        check_rules(r)
+    assert needle in str(e.value)
+
+
+def test_cli_exits_on_bad_rules(tmp_path):
+    bad = tmp_path / "rules.yaml"
+    r = copy.deepcopy(RULES)
+    r["default_level"] = "nope"
+    bad.write_text(yaml.safe_dump(r, allow_unicode=True), encoding="utf-8")
+    p = subprocess.run(["python", "-m", "devdraft.cli", str(INTAKE / "DEV-2026-2203.yaml"),
+                        "--rules", str(bad), "--out", str(tmp_path / "o")],
+                       cwd=ROOT, capture_output=True, text=True)
+    assert p.returncode == 2 and "RULES ERR" in p.stdout
+    assert not (tmp_path / "o").exists()
+
+
+# --- guard rails not covered earlier ----------------------------------------
+
+import ast  # noqa: E402
+
+ALLOWED_IMPORTS = {"__future__", "argparse", "ast", "csv", "dataclasses", "datetime",
+                   "pathlib", "re", "yaml", "docx"}
+
+
+def test_package_imports_nothing_that_can_reach_a_network_or_llm():
+    for py in (ROOT / "devdraft").glob("*.py"):
+        tree = ast.parse(py.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                mods = [a.name.split(".")[0] for a in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.level == 0:
+                mods = [node.module.split(".")[0]]
+            else:
+                continue
+            for m in mods:
+                assert m in ALLOWED_IMPORTS, f"{py.name}: import {m}"
+
+
+def test_capa_and_review_fields_stay_blank():
+    d = dev("DEV-2026-2201")
+    md = render_markdown(d, "major", ["x"], [], investigation_plan(d, RULES), "2026-11-24", rules=RULES)
+    capa = md.split("## 8. CAPA", 1)[1].split("##", 1)[0]
+    assert capa.count("작성 필요") == 3
+    plan = md.split("## 5. 조사 계획", 1)[1].split("##", 1)[0]
+    assert plan.count("작성 필요") == len(RULES["ishikawa"])
+    assert "QA 검토자 확정 등급:** ☐ **작성 필요" in md
+
+
+def test_docx_keeps_placeholders(tmp_path):
+    from docx import Document
+    build(INTAKE / "DEV-2026-2201.yaml", ROOT / "config/rules.yaml",
+          ROOT / "data/synthetic/history.csv", tmp_path, TODAY, want_docx=True)
+    doc = Document(tmp_path / "DEV-2026-2201_draft.docx")
+    text = [p.text for p in doc.paragraphs] + [c.text for t in doc.tables for row in t.rows for c in row.cells]
+    joined = "\n".join(text)
+    assert joined.count("작성 필요") >= 3 + len(RULES["ishikawa"]) + 4
+    assert "승인 문서가 아닙니다" in joined

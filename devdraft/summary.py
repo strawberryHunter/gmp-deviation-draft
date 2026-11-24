@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .rules import level_label
+
 
 @dataclass
 class FormResult:
@@ -28,7 +30,8 @@ def _cell(text: str) -> str:
     return str(text).replace("|", "\\|").replace("\n", " ").strip()
 
 
-def render_summary(results: list[FormResult], generated_on: str, window_days: int) -> str:
+def render_summary(results: list[FormResult], generated_on: str, window_days: int,
+                   rules: dict | None = None) -> str:
     done = [r for r in results if r.ok]
     rejected = [r for r in results if not r.ok]
     lines = [
@@ -49,7 +52,7 @@ def render_summary(results: list[FormResult], generated_on: str, window_days: in
             "|---|---|---|---|---|---|---|",
         ]
         lines += [
-            f"| {_cell(r.dev_id)} | {_cell(r.title)} | {r.proposed.upper()} (제안) | "
+            f"| {_cell(r.dev_id)} | {_cell(r.title)} | {_cell(level_label(rules, r.proposed))} (제안) | "
             f"{_cell('; '.join(r.reasons))} | {r.recurrence_count} | {_cell(Path(r.draft).name)} | {_cell(r.file)} |"
             for r in done
         ]

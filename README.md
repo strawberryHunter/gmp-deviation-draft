@@ -6,6 +6,8 @@
 양식 입력(YAML) → 검증 → 분류 제안 + 반복성 조회 + 조사 계획 → 보고서 초안(MD/DOCX) → 사람이 검토
 ```
 
+**처음 쓰는 경우 → [사용 가이드 `docs/USAGE.md`](docs/USAGE.md)** (설치, 양식 작성, 거부 메시지 대응, 초안 검토, SOP에 맞춘 rules.yaml 수정)
+
 > **모든 데이터는 합성(가짜) 데이터입니다.** 사업장·제품·배치·설비·일탈 사례 모두 지어낸 것입니다.
 
 ## 설계 원칙 — 도구가 하지 않는 것
@@ -67,14 +69,22 @@ python -m devdraft.cli data/synthetic/intake/*.yaml --summary --today 2026-11-24
 
 ## QA가 직접 고치는 곳
 
-[`config/rules.yaml`](config/rules.yaml) 한 파일입니다.
+[`config/rules.yaml`](config/rules.yaml) 한 파일입니다. 자세한 절차와 SOP 문구 → YAML 예시는 [사용 가이드 5장](docs/USAGE.md#5-configrulesyaml을-sop에-맞추기).
 
-- `required_fields` — 필수 입력 항목
-- `required_flags` — 반드시 true/false로 답해야 하는 위험 확인 항목. `classes`에서 `equals:` 트리거로 쓰는 항목은 모두 여기에 있어야 하며, 빠지면 도구가 실행을 멈춥니다.
-- `classes` — critical / major / minor 판단 트리거와 각 근거 문구
-- `recurrence` — 조회 기간(기본 365일)과 일치 기준(설비 + 유형)
+> **현재 등급 기준은 SOP와 대조되지 않은 예시 값입니다.** 실제 사용 전에 사내 SOP에 맞추고 `sop_reference`를 기재하십시오.
+> 비어 있으면 초안의 "분류 기준 출처"에 `☐ 작성 필요`가 표시됩니다.
+
+- `sop_reference` — 근거 SOP 번호·개정 (초안에 표시)
+- `levels` — 등급 목록(높은 등급부터)과 표시 이름. 등급 수·이름은 SOP대로 바꿀 수 있습니다.
+- `default_level` / `default_reason` — 어떤 기준에도 해당하지 않을 때의 제안
+- `classes` — 등급별 트리거 (예/아니오 항목 `equals: true`, 반복 건수 `recurrence_count` + `min`)
+- `required_fields` / `required_flags` — 필수 입력 항목 / 반드시 true·false로 답할 항목
+- `recurrence` — 조회 기간(`window_days`)과 일치 기준(`match_on`: equipment_id / category / site)
 - `categories` — 허용 일탈 유형
 - `ishikawa` — 6M 조사 항목 문구
+
+rules.yaml에 오류(없는 등급 참조, 오타 키, 따옴표 붙은 `"true"`, 필수 플래그가 아닌 트리거 등)가 있으면
+`RULES ERR`로 어디가 틀렸는지 알려주고 아무 초안도 만들지 않습니다.
 
 ## 보안 / 데이터 취급
 
@@ -97,7 +107,7 @@ pip install -r requirements.txt
 python -m pytest -q
 ```
 
-분류 트리거 3종, 반복성 조회 기간, 필수/미허용 항목 검증, 위험 확인 항목 미응답·비(非)불리언 거부, rules.yaml 트리거-필수 플래그 일관성, 빈 템플릿(미작성 시 거부·판단 항목 없음), `drafts/`·`*.docx` 무시 여부, 일괄 요약표(전 건 기재·제안 표시·이력 근본원인 미기재·중복 번호/YAML 오류 거부), 판단 칸 공란 유지, 입력에 없는 수치가 초안에 들어가지 않는지, DOCX 생성까지 확인합니다.
+분류 트리거 3종, 반복성 조회 기간, 필수/미허용 항목 검증, 위험 확인 항목 미응답·비(非)불리언 거부, rules.yaml 트리거-필수 플래그 일관성, 빈 템플릿(미작성 시 거부·판단 항목 없음), `drafts/`·`*.docx` 무시 여부, 일괄 요약표(전 건 기재·제안 표시·이력 근본원인 미기재·중복 번호/YAML 오류 거부), 사용자 정의 등급(SOP 등급명·등급 수), 하위 등급 트리거 표시, rules.yaml 오류 검출, 판단 칸 공란 유지, 입력에 없는 수치가 초안에 들어가지 않는지, DOCX 생성까지 확인합니다.
 
 ## 구조
 
@@ -107,10 +117,12 @@ devdraft/
   classify.py   분류 제안, 반복성 조회, 6M 조사 계획
   draft.py      Markdown 초안 렌더링
   docx_out.py   Word 변환 (Arial, 표 괘선)
+  rules.py      rules.yaml 로드 + 검증
   summary.py    일괄 처리 요약표 (--summary)
   cli.py        실행 진입점
 config/rules.yaml
 templates/intake_template.yaml   QA가 채우는 빈 입력 양식
+docs/USAGE.md                    사용 가이드
 data/synthetic/
 scripts/make_synthetic_data.py
 tests/
