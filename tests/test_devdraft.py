@@ -1171,3 +1171,23 @@ def test_terminology_uses_deviation_everywhere(tmp_path):
     assert old not in md and old not in summary.read_text(encoding="utf-8")
     doc = _Document(tmp_path / "DEV-2026-2201_draft.docx")
     assert old not in "\n".join(p.text for p in _all_paragraphs(doc))
+
+
+# --- docs: relative links resolve ------------------------------------------------
+
+@pytest.mark.parametrize("doc", ["README.md", "CLAUDE.md", "docs/HANDOFF.md", "docs/USAGE.md",
+                                 "docs/sop_mapping/Duke_COMM-PAS-013.md"])
+def test_relative_links_in_docs_resolve(doc):
+    path = ROOT / doc
+    links = re.findall(r"\]\(([^)\s]+)\)", path.read_text(encoding="utf-8"))
+    broken = [l for l in links
+              if not l.startswith(("http://", "https://", "#", "mailto:"))
+              and not (path.parent / l.split("#", 1)[0]).exists()]
+    assert not broken, broken
+
+
+def test_handoff_has_user_todo_and_update_date():
+    text = (ROOT / "docs/HANDOFF.md").read_text(encoding="utf-8")
+    assert re.search(r"마지막 갱신: \d{4}-\d{2}-\d{2}", text)
+    assert "## 3. 사용자가 해야 할 일" in text and "## 4. 다음 작업 후보" in text
+    assert "docs/HANDOFF.md" in (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
