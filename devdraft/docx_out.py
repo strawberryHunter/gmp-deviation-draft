@@ -14,6 +14,7 @@ import re
 from pathlib import Path
 
 from docx import Document
+from docx.enum.section import WD_ORIENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_COLOR_INDEX
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -134,7 +135,7 @@ def _header_footer(doc: Document, dev_id: str, generated: str, synthetic: bool =
     r = hp.add_run("초안 — 승인 문서 아님")
     r.bold = True
     r.font.color.rgb = RGBColor(0xC0, 0x00, 0x00)
-    hp.add_run(f"  ·  {dev_id}  ·  초안 생성일 {generated}").font.size = Pt(8)
+    hp.add_run(f"  ·  {dev_id}  ·  생성일 {generated}").font.size = Pt(8)
     fp = sec.footer.paragraphs[0]
     fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
     fp.add_run("자동 생성 초안 — 검토·승인은 검증된 QMS에서  ·  ").font.size = Pt(8)
@@ -173,14 +174,28 @@ def _banner(doc: Document, lines: list[str]) -> None:
     doc.add_paragraph()
 
 
-def markdown_to_docx(md: str, out_path: str | Path) -> Path:
+# Both the draft banner and the summary banner start with this phrase.
+SYNTHETIC_PHRASE = "합성(가짜) 데이터로 만든 초안"
+
+
+def markdown_to_docx(md: str, out_path: str | Path, *, label: str | None = None,
+                     generated: str | None = None, landscape: bool = False) -> Path:
+    """Convert a draft (or, with `label`, any other report such as the batch
+    summary) to Word. `label` and `generated` go into every page header; for a
+    draft they are read from the Markdown (deviation number, 초안 생성일)."""
     doc = Document()
     _style(doc)
-    title = re.search(r"^# .*?(\S+)\s*$", md, flags=re.M)
-    gen = re.search(r"\| 초안 생성일 \| ([^|]+) \|", md)
-    from .draft import SYNTHETIC_MARK
-    _header_footer(doc, title.group(1) if title else "", gen.group(1).strip() if gen else "",
-                   synthetic=SYNTHETIC_MARK in md)
+    if landscape:  # wide tables (batch summary) need the width
+        sec = doc.sections[0]
+        sec.orientation = WD_ORIENT.LANDSCAPE
+        sec.page_width, sec.page_height = sec.page_height, sec.page_width
+    if label is None:
+        title = re.search(r"^# .*?(\S+)\s*$", md, flags=re.M)
+        label = title.group(1) if title else ""
+    if generated is None:
+        gen = re.search(r"\| 초안 생성일 \| ([^|]+) \|", md)
+        generated = gen.group(1).strip() if gen else ""
+    _header_footer(doc, label, generated, synthetic=SYNTHETIC_PHRASE in md)
 
     lines = md.splitlines()
     i = 0

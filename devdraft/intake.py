@@ -99,6 +99,10 @@ def load(path: str | Path, rules: dict) -> Deviation:
         mark = getattr(e, "problem_mark", None)
         where = f" ({mark.line + 1}행)" if mark else ""
         raise IntakeError(f"YAML 문법 오류{where}: 들여쓰기·콜론·따옴표를 확인하십시오.") from None
+    except FileNotFoundError:
+        raise IntakeError(f"파일이 없습니다: {path} — 경로와 파일 이름을 확인하십시오.") from None
+    except UnicodeDecodeError:
+        raise IntakeError("UTF-8이 아닙니다 — 메모장 등에서 'UTF-8'로 다시 저장하십시오.") from None
     if not isinstance(raw, dict):
         raise IntakeError("양식 형식 오류: '항목: 값' 형태의 YAML이어야 합니다.")
     problems = []

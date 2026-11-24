@@ -1,5 +1,7 @@
 # 사용 가이드
 
+> 처음이면 먼저 [튜토리얼](TUTORIAL.md)로 전체 흐름을 따라 해 보십시오. 이 문서는 항목별 참고서입니다.
+
 GMP deviation 보고서 **초안** 도우미 사용법입니다. QA 담당자가 처음 쓰는 경우를 기준으로 순서대로 적었습니다.
 
 ```
@@ -129,7 +131,7 @@ OK  DEV-2026-2301.yaml -> drafts/DEV-2026-2301_draft.md
 python -m devdraft.cli drafts/*.yaml --docx --summary --out drafts --history /사내경로/deviation_history.csv
 ```
 
-각 건의 초안과 함께 `drafts/_summary_<날짜>.md`가 생깁니다 ([예시](../sample_output/_summary_2026-11-24.md)).
+각 건의 초안과 함께 `drafts/_summary_<날짜>.md`가 생깁니다 (`--docx`를 함께 주면 가로 방향 Word `_summary_<날짜>.docx`도) ([예시](../sample_output/_summary_2026-11-24.md)).
 
 - **초안 생성** 표: deviation 번호, 제목, 제안 등급과 근거, 반복 건 수, 초안 파일
 - **거부** 표: 입력 파일과 거부 사유 — 보완할 목록으로 사용
