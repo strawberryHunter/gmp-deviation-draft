@@ -1,0 +1,24 @@
+synthetic: true
+id: DEV-2026-2202
+title: 충전 라인 2 아이솔레이터 장갑 리크 테스트 부적합
+site: Plant B
+area: Aseptic Filling
+product: SYN-mAb-03 drug product (PFS)
+batch: DP-26-1180
+equipment_id: FIL-L2
+category: environmental_monitoring
+detected_at: 2026-11-22T06:45
+detected_by: 무균 충전 작업자
+process_step: Pre-use glove integrity test
+description: 충전 전 장갑 무결성 시험에서 포트 4번 장갑 부적합. 직전 배치(DP-26-1179) 충전 종료 후 시험은 적합이었음.
+immediate_actions: 충전 착수 보류, 장갑 교체 및 재시험 적합, 직전 배치 EM 데이터 검토 요청.
+parameters:
+- name: Glove leak test
+  spec: Pass
+  actual: Fail (port 4)
+cpp_excursion: false
+spec_oos: false
+other_batches_possibly_affected: true
+sterility_assurance_impacted: true
+released_product_affected: false
+data_integrity_concern: false

@@ -1,0 +1,52 @@
+dev_id,opened,site,equipment_id,category,final_class,root_cause,synthetic
+DEV-2025-1026,2025-05-30,Plant A,LYO-01,utilities,minor,human error,True
+DEV-2025-1034,2025-06-07,Plant A,CF-101,equipment,minor,human error,True
+DEV-2025-1022,2025-07-01,Plant B,FIL-L2,environmental_monitoring,minor,human error,True
+DEV-2025-1011,2025-07-05,Plant A,BR-2001,process_parameter,minor,equipment wear,True
+DEV-2025-1030,2025-07-19,Plant A,LYO-01,utilities,major,supplier material,True
+DEV-2025-1033,2025-08-04,Plant B,WFI-LOOP,personnel,minor,undetermined,True
+DEV-2025-1042,2025-08-09,Plant B,BSC-14,environmental_monitoring,minor,human error,True
+DEV-2025-1000,2025-08-10,Plant A,BSC-14,material,minor,undetermined,True
+DEV-2025-1037,2025-08-20,Plant B,CHR-03,material,major,procedure gap,True
+DEV-2025-1004,2025-08-21,Plant A,BR-2001,material,minor,procedure gap,True
+DEV-2025-1024,2025-09-20,Plant B,BR-2001,process_parameter,minor,human error,True
+DEV-2025-1010,2025-09-22,Plant A,LYO-01,utilities,minor,human error,True
+DEV-2025-1044,2025-09-27,Plant B,BR-2001,process_parameter,minor,procedure gap,True
+DEV-2025-1020,2025-10-14,Plant B,UF-02,equipment,minor,supplier material,True
+DEV-2025-1018,2025-10-16,Plant A,BSC-14,documentation,minor,procedure gap,True
+DEV-2025-1017,2025-11-03,Plant B,UF-02,equipment,minor,equipment wear,True
+DEV-2025-1029,2025-11-04,Plant A,CF-101,equipment,major,equipment wear,True
+DEV-2025-1039,2025-12-26,Plant A,UF-02,equipment,minor,supplier material,True
+DEV-2025-1027,2025-12-31,Plant A,BSC-14,personnel,minor,human error,True
+DEV-2026-1028,2026-01-01,Plant B,BSC-14,environmental_monitoring,minor,human error,True
+DEV-2026-1036,2026-01-11,Plant A,FIL-L2,material,minor,equipment wear,True
+DEV-2026-1007,2026-01-22,Plant B,CF-101,equipment,minor,human error,True
+DEV-2026-1043,2026-02-01,Plant B,FIL-L2,documentation,minor,undetermined,True
+DEV-2026-1006,2026-03-25,Plant B,CF-101,material,minor,undetermined,True
+DEV-2026-1041,2026-04-10,Plant B,BSC-14,environmental_monitoring,minor,undetermined,True
+DEV-2026-1013,2026-04-12,Plant A,WFI-LOOP,utilities,minor,undetermined,True
+DEV-2026-1014,2026-04-14,Plant A,FIL-L2,documentation,minor,undetermined,True
+DEV-2026-1009,2026-04-26,Plant B,WFI-LOOP,utilities,minor,procedure gap,True
+DEV-2026-1038,2026-04-26,Plant B,WFI-LOOP,utilities,major,equipment wear,True
+DEV-2026-1046,2026-04-27,Plant A,LYO-01,personnel,major,procedure gap,True
+DEV-2026-1019,2026-05-05,Plant A,UF-02,documentation,major,undetermined,True
+DEV-2026-1001,2026-05-09,Plant A,BSC-14,environmental_monitoring,minor,equipment wear,True
+DEV-2026-1102,2026-06-03,Plant A,CHR-03,process_parameter,major,procedure gap,True
+DEV-2026-1015,2026-06-19,Plant A,CF-101,equipment,minor,human error,True
+DEV-2026-1012,2026-07-04,Plant B,BSC-14,environmental_monitoring,minor,human error,True
+DEV-2026-1025,2026-07-04,Plant A,CHR-03,process_parameter,minor,supplier material,True
+DEV-2026-1032,2026-07-20,Plant B,CF-101,equipment,major,procedure gap,True
+DEV-2026-1045,2026-07-20,Plant B,UF-02,documentation,minor,undetermined,True
+DEV-2026-1035,2026-07-23,Plant B,BSC-14,environmental_monitoring,major,supplier material,True
+DEV-2026-1101,2026-08-12,Plant A,CHR-03,process_parameter,major,procedure gap,True
+DEV-2026-1005,2026-08-20,Plant B,BSC-14,environmental_monitoring,minor,supplier material,True
+DEV-2026-1016,2026-09-01,Plant A,LYO-01,material,minor,undetermined,True
+DEV-2026-1023,2026-09-01,Plant B,CHR-03,process_parameter,minor,equipment wear,True
+DEV-2026-1040,2026-09-11,Plant B,LYO-01,documentation,major,human error,True
+DEV-2026-1003,2026-09-12,Plant A,CHR-03,process_parameter,minor,equipment wear,True
+DEV-2026-1008,2026-09-23,Plant B,BR-2001,process_parameter,minor,supplier material,True
+DEV-2026-1002,2026-10-04,Plant B,CF-101,equipment,major,undetermined,True
+DEV-2026-1021,2026-10-07,Plant B,BR-2001,process_parameter,minor,supplier material,True
+DEV-2026-1047,2026-10-09,Plant A,CHR-03,material,minor,procedure gap,True
+DEV-2026-1100,2026-10-21,Plant A,CHR-03,process_parameter,major,procedure gap,True
+DEV-2026-1031,2026-11-01,Plant B,BR-2001,personnel,minor,human error,True

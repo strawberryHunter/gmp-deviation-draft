@@ -1,0 +1,23 @@
+synthetic: true
+id: DEV-2026-2204
+title: WFI 루프 TOC 경고 수준 초과
+site: Plant B
+area: Utilities
+product: N/A (utility)
+batch: N/A
+equipment_id: WFI-LOOP
+category: utilities
+detected_at: 2026-11-23T03:30
+process_step: Routine WFI monitoring
+description: 사용 지점 POU-07 TOC 412 ppb (경고 기준 400 ppb, 조치 기준 500 ppb).
+immediate_actions: POU-07 사용 중지 표시, 재샘플링 요청.
+parameters:
+- name: TOC (POU-07)
+  spec: Alert 400 / Action 500 ppb
+  actual: 412 ppb
+cpp_excursion: false
+spec_oos: false
+other_batches_possibly_affected: false
+sterility_assurance_impacted: false
+released_product_affected: false
+data_integrity_concern: false

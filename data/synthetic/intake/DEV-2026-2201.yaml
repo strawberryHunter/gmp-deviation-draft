@@ -1,0 +1,26 @@
+synthetic: true
+id: DEV-2026-2201
+title: Protein A 크로마토그래피 용출 pH 상한 이탈
+site: Plant A
+area: Downstream Suite 3
+product: SYN-mAb-07 drug substance
+batch: DS-26-0412
+equipment_id: CHR-03
+category: process_parameter
+detected_at: 2026-11-21T14:20
+detected_by: 공정 운전원 (2교대)
+process_step: Protein A capture - elution
+description: 용출 단계 pH가 3.62로 기록됨 (허용 범위 3.40-3.60). 이탈 시간 약 6분. 용출 완충액 lot BUF-5531
+  사용.
+immediate_actions: 공정 일시 중단, 용출 분획 격리 보관(2-8°C), 교대 감독자 및 QA 통보 (15:05).
+parameters:
+- name: Elution pH
+  spec: 3.40-3.60
+  actual: '3.62'
+  duration: 6 min
+cpp_excursion: true
+spec_oos: false
+other_batches_possibly_affected: true
+sterility_assurance_impacted: false
+released_product_affected: false
+data_integrity_concern: false

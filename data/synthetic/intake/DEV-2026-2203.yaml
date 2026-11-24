@@ -1,0 +1,20 @@
+synthetic: true
+id: DEV-2026-2203
+title: 배치 기록서 서명 누락 (원료 칭량 단계)
+site: Plant A
+area: Dispensing
+product: SYN-mAb-07 drug substance
+batch: DS-26-0415
+equipment_id: ''
+category: documentation
+detected_at: 2026-11-23T10:10
+detected_by: QA 기록 검토자
+process_step: Raw material dispensing
+description: 배지 성분 칭량 단계에서 확인자(2nd person) 서명 누락. 칭량 저울 출력지는 첨부되어 있음.
+immediate_actions: 작업자 및 확인자 인터뷰 예정, 저울 출력지와 기록 대조.
+cpp_excursion: false
+spec_oos: false
+other_batches_possibly_affected: false
+sterility_assurance_impacted: false
+released_product_affected: false
+data_integrity_concern: false
