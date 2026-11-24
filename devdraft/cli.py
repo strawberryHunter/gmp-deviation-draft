@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import hashlib
 import sys
 from datetime import date
@@ -112,9 +113,37 @@ def run_batch(forms: list[Path], rules_path: Path, history_path: Path, out_dir: 
         stamp = (today or date.today()).isoformat()
         out_dir.mkdir(parents=True, exist_ok=True)
         summary_path = out_dir / f"_summary_{stamp}.md"
-        summary_path.write_text(render_summary(results, stamp, rules["recurrence"]["window_days"], rules), encoding="utf-8")
+        summary_md = render_summary(results, stamp, rules["recurrence"]["window_days"], rules)
+        summary_path.write_text(summary_md, encoding="utf-8")
         print(f"SUM {summary_path}")
+        if want_docx:
+            from .docx_out import markdown_to_docx
+            markdown_to_docx(summary_md, summary_path.with_suffix(".docx"),
+                             label="일괄 처리 요약", generated=stamp, landscape=True)
     return results, summary_path
+
+
+def expand_forms(forms: list[Path], ap: argparse.ArgumentParser | None = None) -> list[Path]:
+    """Expand wildcards the shell left alone.
+
+    bash expands `drafts/*.yaml` before Python sees it; Windows cmd and
+    PowerShell pass the `*` through, so the run used to crash with
+    FileNotFoundError. A pattern that matches nothing is a usage error.
+    """
+    out: list[Path] = []
+    for f in forms:
+        s = str(f)
+        if not f.exists() and any(ch in s for ch in "*?["):
+            hits = sorted(glob.glob(s))
+            if not hits:
+                msg = f"일치하는 양식 파일이 없습니다: {s}"
+                if ap:
+                    ap.error(msg)
+                raise ValueError(msg)
+            out.extend(Path(h) for h in hits)
+        else:
+            out.append(f)
+    return out
 
 
 def _hangul_safe_output() -> None:
@@ -166,6 +195,7 @@ def main() -> None:
 
     if not args.form:
         ap.error("입력 양식(.yaml)을 1개 이상 지정하십시오 (또는 --check-history)")
+    args.form = expand_forms(args.form, ap)
 
     try:
         results, _ = run_batch(args.form, args.rules, args.history, args.out, today, args.docx, args.summary)

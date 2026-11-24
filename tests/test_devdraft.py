@@ -438,7 +438,7 @@ def test_cli_exits_on_bad_rules(tmp_path):
 import ast  # noqa: E402
 
 ALLOWED_IMPORTS = {"__future__", "argparse", "ast", "csv", "dataclasses", "datetime",
-                   "hashlib", "pathlib", "re", "sys", "yaml", "docx"}
+                   "glob", "hashlib", "pathlib", "re", "sys", "yaml", "docx"}
 
 
 def test_package_imports_nothing_that_can_reach_a_network_or_llm():
@@ -1178,10 +1178,11 @@ def test_terminology_uses_deviation_everywhere(tmp_path):
 # --- docs: relative links resolve ------------------------------------------------
 
 @pytest.mark.parametrize("doc", ["README.md", "CLAUDE.md", "docs/HANDOFF.md", "docs/USAGE.md",
-                                 "docs/sop_mapping/Duke_COMM-PAS-013.md"])
+                                 "docs/TUTORIAL.md", "docs/sop_mapping/Duke_COMM-PAS-013.md"])
 def test_relative_links_in_docs_resolve(doc):
     path = ROOT / doc
-    links = re.findall(r"\]\(([^)\s]+)\)", path.read_text(encoding="utf-8"))
+    text = path.read_text(encoding="utf-8")
+    links = re.findall(r"\]\(([^)\s]+)\)", text) + re.findall(r'src="([^"]+)"', text)
     broken = [l for l in links
               if not l.startswith(("http://", "https://", "#", "mailto:"))
               and not (path.parent / l.split("#", 1)[0]).exists()]
@@ -1249,3 +1250,123 @@ def test_readme_shows_showcase_images():
     text = (ROOT / "README.md").read_text(encoding="utf-8")
     imgs = re.findall(r'src="([^"]+\.png)"', text)
     assert imgs and all((ROOT / i).exists() for i in imgs)
+
+
+# --- summary table as Word (--summary --docx) ------------------------------------
+
+def test_summary_docx_written_with_summary_header(tmp_path):
+    results, summary = run_batch(sorted(INTAKE.glob("*.yaml")), ROOT / "config/rules.yaml",
+                                 ROOT / "data/synthetic/history.csv", tmp_path, TODAY,
+                                 want_docx=True, want_summary=True)
+    doc = _Document(summary.with_suffix(".docx"))
+    head = doc.sections[0].header.paragraphs[0].text
+    assert "일괄 처리 요약" in head and "생성일 2026-11-24" in head
+    assert head.startswith("합성 데이터 — 실제 문서 아님")  # summary of synthetic forms
+    rows = [[c.text for c in r.cells] for t in doc.tables for r in t.rows]
+    assert any(r[0] == "DEV-2026-2201" and "MAJOR (제안)" in r[2] for r in rows)
+    assert any(r[0] == "DEV-2026-2204.yaml" and "detected_by" in r[1] for r in rows)
+    assert all("**" not in c and "`" not in c for r in rows for c in r)
+    sec = doc.sections[0]
+    assert sec.page_width > sec.page_height  # landscape for the wide table
+
+
+def test_summary_docx_only_with_docx_flag(tmp_path):
+    run_batch([INTAKE / "DEV-2026-2203.yaml"], ROOT / "config/rules.yaml",
+              ROOT / "data/synthetic/history.csv", tmp_path, TODAY, want_summary=True)
+    assert not list(tmp_path.glob("_summary_*.docx"))
+
+
+def test_draft_docx_header_still_reads_id_and_date(tmp_path):
+    build(INTAKE / "DEV-2026-2203.yaml", ROOT / "config/rules.yaml", ROOT / "data/synthetic/history.csv",
+          tmp_path, TODAY, want_docx=True)
+    head = _Document(tmp_path / "DEV-2026-2203_draft.docx").sections[0].header.paragraphs[0].text
+    assert "DEV-2026-2203" in head and "생성일 2026-11-24" in head
+
+
+# --- file arguments: unexpanded wildcards (Windows) and missing files -------------
+
+def test_cli_expands_wildcard_the_shell_left_alone(tmp_path):
+    """cmd/PowerShell pass `*.yaml` through literally; bash would expand it."""
+    p = _cli("data/synthetic/showcase/*.yaml", "--today", "2026-11-24", "--out", tmp_path)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert len(list(tmp_path.glob("*_draft.md"))) == 4 and "Traceback" not in p.stderr
+
+
+def test_cli_wildcard_without_match_is_usage_error(tmp_path):
+    p = _cli("data/synthetic/showcase/nothing_*.yaml", "--out", tmp_path)
+    assert p.returncode == 2 and "일치하는 양식 파일이 없습니다" in p.stderr and "Traceback" not in p.stderr
+
+
+def test_missing_form_file_is_a_rejection_not_a_crash(tmp_path):
+    p = _cli(INTAKE / "DEV-2026-2201.yaml", "data/synthetic/intake/typo.yaml", "--today", "2026-11-24",
+             "--out", tmp_path)
+    assert p.returncode == 1 and "파일이 없습니다" in p.stdout and "Traceback" not in p.stderr
+    assert (tmp_path / "DEV-2026-2201_draft.md").exists()
+
+
+def test_non_utf8_form_is_a_rejection(tmp_path):
+    f = tmp_path / "cp949.yaml"
+    f.write_bytes((INTAKE / "DEV-2026-2203.yaml").read_text(encoding="utf-8").encode("cp949"))
+    with pytest.raises(IntakeError) as e:
+        load(f, RULES)
+    assert "UTF-8" in str(e.value)
+
+
+# --- docs/TUTORIAL.md: every shown output is the real output ----------------------
+
+import shlex  # noqa: E402
+
+TUTORIAL = ROOT / "docs/TUTORIAL.md"
+
+
+def _tutorial():
+    return TUTORIAL.read_text(encoding="utf-8")
+
+
+_VERIFY = re.compile(r"<!-- verify exit=(\d+) -->\n```bash\n(.+?)\n```\n```text\n(.*?)\n```", re.S)
+
+
+@pytest.mark.parametrize("exit_code, command, expected",
+                         _VERIFY.findall(TUTORIAL.read_text(encoding="utf-8")) or [("0", "", "")])
+def test_tutorial_commands_print_what_the_tutorial_shows(tmp_path, exit_code, command, expected):
+    argv = shlex.split(command)
+    assert argv[:3] == ["python", "-m", "devdraft.cli"], command
+    args = argv[3:]
+    shown_out = None
+    if "--out" in args:  # write to tmp, then map tmp back to the path the tutorial shows
+        i = args.index("--out") + 1
+        shown_out, args[i] = args[i], str(tmp_path / args[i])
+    p = _cli(*args)
+    got = p.stdout.strip()
+    if shown_out:
+        got = got.replace(str(tmp_path / shown_out), shown_out)
+    # The CLI prints native paths (drafts\x.md on Windows, which cmd needs);
+    # the tutorial shows them with "/".
+    got = got.replace(os.sep, "/")
+    assert p.returncode == int(exit_code), p.stdout + p.stderr
+    assert got == expected.strip()
+
+
+def test_tutorial_has_verified_steps():
+    assert len(_VERIFY.findall(_tutorial())) >= 6
+
+
+@pytest.mark.parametrize("path, block", re.findall(r"<!-- file: (\S+) -->\n```\w*\n(.*?)\n```",
+                                                    TUTORIAL.read_text(encoding="utf-8"), re.S))
+def test_tutorial_input_files_are_shown_verbatim(path, block):
+    assert (ROOT / path).read_text(encoding="utf-8").rstrip("\n") == block
+
+
+@pytest.mark.parametrize("path, block", re.findall(r"<!-- excerpt: (\S+) -->\n```\w*\n(.*?)\n```",
+                                                    TUTORIAL.read_text(encoding="utf-8"), re.S))
+def test_tutorial_excerpts_appear_in_committed_outputs(path, block):
+    assert block in (ROOT / path).read_text(encoding="utf-8"), path
+
+
+def test_duke_sample_outputs_are_up_to_date(tmp_path):
+    run_batch(sorted(INTAKE.glob("*.yaml")), DUKE_RULES, ROOT / "data/synthetic/history.csv",
+              tmp_path, TODAY, want_summary=True)
+    out = ROOT / "sample_output/sop_examples/duke"
+    for f in tmp_path.glob("*.md"):
+        assert f.read_text(encoding="utf-8") == (out / f.name).read_text(encoding="utf-8"), \
+            f"{f.name} stale — regenerate with --rules {DUKE_RULES.relative_to(ROOT)} --out {out.relative_to(ROOT)}"

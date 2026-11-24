@@ -19,6 +19,8 @@
 
 > **모든 데이터는 합성(가짜) 데이터입니다.** 사업장·제품·배치·설비·deviation 사례 모두 지어낸 것입니다.
 
+**처음 보는 분 → [10분 튜토리얼](docs/TUTORIAL.md)** — 입력 양식 → 초안 → 틀린 양식 거부 → 요약표 → SOP 바꾸기를 실제 명령과 실제 출력으로 따라 합니다.
+
 ## 왜 이렇게 만들었나 — 핵심 설계 판단
 
 GxP 문서에서 가장 위험한 것은 **조사로 뒷받침되지 않은 그럴듯한 문장**입니다. 자동화는 시간을 줄이지만, 판단을 대신하면 감사에서 근거 없는 기록이 됩니다. 그래서 경계를 이렇게 그었습니다.
@@ -77,6 +79,7 @@ GxP 문서에서 가장 위험한 것은 **조사로 뒷받침되지 않은 그�
 | 도구가 평가 못 하는 SOP 조항 | 초안에 흔적이 없어 검토자가 모름 | `manual_checks`로 `☐` 표시 |
 | Word 2·3쪽에 초안 표시 없음 | 쪽만 떼면 완성 문서처럼 보임 | 모든 쪽 머리글 |
 | 영문 Windows 콘솔 | 한국어 메시지에서 오류로 종료 | 한글 못 쓰는 콘솔만 UTF-8로 전환 |
+| Windows `cmd`·PowerShell의 `*.yaml` | 셸이 펼치지 않아 오류로 종료 | 도구가 직접 펼침, 없는 파일은 거부로 처리 |
 
 판단 과정은 [`DECISIONS.md`](DECISIONS.md)에 한 줄씩 남겼습니다 (무엇을 · 왜 · 대안 · 확인 필요 여부).
 
@@ -88,12 +91,13 @@ python -m pytest -q
 python -m devdraft.cli data/synthetic/showcase/*.yaml --docx --summary --today 2026-11-24 --out drafts
 ```
 
-`drafts/`에 사례별 Markdown·Word 초안과 요약표가 생깁니다. 직접 양식을 쓰려면 [`templates/intake_template.yaml`](templates/intake_template.yaml)을 복사해 채웁니다.
+`drafts/`에 사례별 Markdown·Word 초안과 요약표(Markdown·Word)가 생깁니다. 단계별 설명은 [튜토리얼](docs/TUTORIAL.md). 직접 양식을 쓰려면 [`templates/intake_template.yaml`](templates/intake_template.yaml)을 복사해 채웁니다.
 설치, 거부 메시지 대응, 초안 검토 방법, rules.yaml 전체 항목, 이력 파일 준비, 종료 코드는 [사용 가이드](docs/USAGE.md)에 있습니다.
 
 ## 검증
 
-- 테스트 186개 — GitHub Actions에서 Ubuntu Python 3.10–3.13, Windows 3.12로 PR마다 실행
+- 테스트 206개 — GitHub Actions에서 Ubuntu Python 3.10–3.13, Windows 3.12로 PR마다 실행
+- 튜토리얼에 실린 명령 출력·입력 파일·초안 발췌가 실제와 같은지 테스트가 대조
 - 같은 입력이면 바이트 단위로 같은 초안 (생성 근거의 SHA-256으로 대조 가능)
 - `sample_output/`이 현재 코드의 출력과 다르면 테스트 실패
 - 외부 전송·LLM 호출 없음 — 패키지의 import 허용 목록을 테스트가 검사
@@ -121,6 +125,6 @@ config/examples/                  SOP를 옮긴 예시 (Duke 공개 SOP, 합성 
 templates/intake_template.yaml    빈 입력 양식
 data/synthetic/                   합성 이력·양식·SOP (scripts/make_synthetic_data.py로 재생성)
 sample_output/                    샘플 초안, showcase/ (PDF·이미지: scripts/make_showcase.py)
-docs/USAGE.md · docs/HANDOFF.md · DECISIONS.md
+docs/TUTORIAL.md · docs/USAGE.md · docs/HANDOFF.md · DECISIONS.md
 tests/
 ```

@@ -7,7 +7,7 @@ Outputs: sample_output/showcase/
            <id>_draft.md        what the tool writes (Markdown)
            <id>_draft.pdf       the Word draft rendered to PDF
            <id>_p<N>.png        page images for the README (no install needed)
-           _summary_<date>.md   batch summary
+           _summary_<date>.md   batch summary (+ .pdf, _p<N>.png)
 
 Needs LibreOffice (soffice) and poppler (pdftoppm) for the PDF/PNG step.
 The .docx files are not kept (*.docx is gitignored on purpose).
@@ -41,12 +41,12 @@ def main() -> None:
                         "--today", TODAY, "--out", str(tmp)], cwd=ROOT, check=True)
         for md in tmp.glob("*.md"):
             shutil.copy(md, OUT / md.name)
-        for docx in sorted(tmp.glob("*_draft.docx")):
+        for docx in sorted(tmp.glob("*.docx")):  # drafts + batch summary
             subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", str(OUT), str(docx)],
                            check=True, capture_output=True, timeout=180)
             pdf = OUT / docx.with_suffix(".pdf").name
-            dev_id = docx.name.removesuffix("_draft.docx")
-            subprocess.run(["pdftoppm", "-r", DPI, "-png", str(pdf), str(OUT / f"{dev_id}_p")], check=True)
+            stem = docx.name.removesuffix(".docx").removesuffix("_draft")
+            subprocess.run(["pdftoppm", "-r", DPI, "-png", str(pdf), str(OUT / f"{stem}_p")], check=True)
     for png in sorted(OUT.glob("*.png")):  # pdftoppm names pages -1.png / -01.png; normalize
         stem, page = png.stem.rsplit("-", 1)
         png.rename(OUT / f"{stem}{int(page)}.png")
