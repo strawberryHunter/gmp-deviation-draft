@@ -38,7 +38,8 @@ def _params_table(dev: Deviation) -> str:
 def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
                     recurrence: list[dict], plan: list[tuple[str, str]],
                     generated_on: str | None = None, *, rules: dict | None = None,
-                    also: list[tuple[str, str]] | None = None) -> str:
+                    also: list[tuple[str, str]] | None = None,
+                    self_in_history: bool = False) -> str:
     generated_on = generated_on or date.today().isoformat()
     rec_cfg = (rules or {}).get("recurrence") or {"window_days": 365, "match_on": ["equipment_id", "category"]}
     window = f"최근 {rec_cfg['window_days']}일"
@@ -57,12 +58,23 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
              "| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
             + ["| " + " | ".join(str(r.get(c, "")) for c in cols) + " |" for r in recurrence]
         )
+    if self_in_history:
+        rec_block += f"\n\n※ 이력 파일에 이번 일탈({dev.id}) 자체가 있어 반복 건에서 제외했습니다."
     sop = (rules or {}).get("sop_reference") or ""
     source = sop if sop else f"{TBD} — 분류 기준 출처 미기재 (config/rules.yaml sop_reference). 사내 SOP와 대조 필요."
     also_block = ""
     if also:
         also_block = "\n그 밖에 해당한 트리거 (하위 등급):\n" + "\n".join(
             f"- [{level_label(rules, lvl)}] {r}" for lvl, r in also) + "\n"
+    manual_block = ""
+    manual = (rules or {}).get("manual_checks") or []
+    if manual:
+        manual_block = (
+            "\n**도구가 판단하지 않은 SOP 기준 — 검토자가 직접 확인** "
+            "(해당하면 위 제안 등급과 다를 수 있음):\n\n"
+            + "\n".join(f"- ☐ SOP {m['clause']}: {m['text']}" for m in manual)
+            + "\n"
+        )
     plan_block = "\n".join(f"| {k} | {v} | {TBD} |" for k, v in plan)
 
     return f"""# 일탈 보고서 초안 — {dev.id}
@@ -101,7 +113,7 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
 {chr(10).join(f"- {r}" for r in reasons)}
 {also_block}
 분류 기준 출처: {source}
-
+{manual_block}
 | 확인 항목 | 보고자 입력 |
 |---|---|
 | 무균 보증 영향 | {"예" if dev.sterility_assurance_impacted else "아니오"} |

@@ -86,6 +86,7 @@ OK  DEV-2026-2301.yaml -> drafts/DEV-2026-2301_draft.md
 | `YAML 문법 오류 (N행)` | N행 근처의 들여쓰기, `:` 뒤 공백, 따옴표 짝을 확인합니다. |
 | `같은 일탈 번호(...)의 양식이 이번 실행에 이미 있습니다` | 한 번 실행에 같은 `id`가 두 파일에 있습니다. 하나를 고칩니다. |
 | `RULES ERR ...` | 양식이 아니라 `config/rules.yaml` 문제입니다. 5장 참고. 이때는 아무 초안도 만들지 않습니다. |
+| `HISTORY ERR ...` | 이력 CSV 문제입니다. `--check-history`로 전체 목록을 보고 고칩니다 (6장). 아무 초안도 만들지 않습니다. |
 
 ---
 
@@ -97,6 +98,7 @@ OK  DEV-2026-2301.yaml -> drafts/DEV-2026-2301_draft.md
 |---|---|
 | 상단 표, 1. 사건 경위, 2. 즉시 조치 | 입력한 내용이 그대로 옮겨졌는지 원본 기록과 대조 |
 | 3. 분류 (제안) | 제안 등급과 근거를 보고 **확정 등급**과 (다를 경우) **사유**를 직접 기재. "그 밖에 해당한 트리거"도 확인 |
+| 3. 검토자가 직접 확인 (있을 때) | 도구가 평가하지 않은 SOP 조항입니다. 하나씩 확인하고, 해당하면 확정 등급에 반영 |
 | 3. 분류 기준 출처 | SOP 번호가 표시되는지 확인. `작성 필요`이면 rules.yaml이 아직 SOP와 대조되지 않은 상태 |
 | 4. 반복성 검토 | 과거 건 **목록**(번호·개설일·등급)입니다. 과거 근본원인은 기본적으로 표시하지 않으니 필요하면 QMS에서 직접 확인합니다. 이번 건과 원인이 같은지는 도구가 판단하지 않습니다 |
 | 5. 조사 계획 (6M) | 각 항목 조사 후 결과 기재. 해당 없으면 "해당 없음"과 이유 |
@@ -187,6 +189,25 @@ recurrence:
 
 위 예시처럼 SOP에 없는 트리거(예: `data_integrity_concern`)를 `classes`에서 빼도, 입력 양식에서는 계속 true/false로 답하게 할지(`required_flags`) 따로 정합니다. 초안의 확인 항목 표에는 6개 항목이 항상 표시됩니다.
 
+### 5-2-1. 끝까지 따라 해 볼 수 있는 예시 (합성 SOP)
+
+- 합성 SOP 원문: [`data/synthetic/sop/SYN-QA-SOP-001.md`](../data/synthetic/sop/SYN-QA-SOP-001.md) (실제 SOP 아님)
+- 옮긴 결과: [`config/examples/rules_SYN-QA-SOP-001.yaml`](../config/examples/rules_SYN-QA-SOP-001.yaml)
+  — 모든 조항 번호가 트리거 근거, `manual_checks`, 또는 설명 주석 중 하나로 추적됩니다.
+
+```bash
+python -m devdraft.cli data/synthetic/intake/*.yaml --summary --today 2026-11-24 --rules config/examples/rules_SYN-QA-SOP-001.yaml --out /tmp/sop_example
+```
+
+| 샘플 | 기본 rules.yaml | 합성 SOP 적용 | 이유 |
+|---|---|---|---|
+| DEV-2026-2201 | MAJOR | **중대 (Critical)** | CPP 이탈(5.3.1)은 주요지만, 2년 내 같은 사업장·설비·유형 5건 → 반복 상향(5.5.1) |
+| DEV-2026-2202 | CRITICAL | 중대 (Critical) | 무균 보증 영향(5.2.1) |
+| DEV-2026-2203 | MINOR | 경미 (Minor) | 해당 없음(5.4.1) |
+
+5.5.2(CPP 30분 이상 지속)는 입력 양식에 지속 시간 수치 칸이 없어 트리거로 옮기지 않고 `manual_checks`로 두었습니다. 그래서 모든 초안에 검토자 확인 항목으로 나옵니다.
+실제 SOP를 옮길 때도 이 파일을 복사해서 시작하면 됩니다.
+
 ### 5-3. 트리거 문법
 
 | 형식 | 의미 |
@@ -220,7 +241,16 @@ rules.yaml에 실수가 있으면 `RULES ERR`와 함께 **어디가 왜 틀렸�
 
 ### 5-5. rules.yaml만으로 안 되는 경우
 
-다음은 코드 수정과 테스트 추가가 필요합니다. 개발 담당에게 요청하십시오.
+**우선 `manual_checks`에 적습니다.** 도구가 평가할 수 없는 SOP 조항을 그냥 빼 두면, 초안만 보는 검토자는 그 조항이 있었다는 것조차 모릅니다.
+`manual_checks`에 적은 조항은 모든 초안의 분류 절에 `☐ 검토자가 직접 확인` 항목으로 표시됩니다. 도구는 이 항목을 판단하지 않습니다.
+
+```yaml
+manual_checks:
+  - clause: "5.5.2"
+    text: "CPP 이탈이 30분 이상 지속되었는가 — 해당하면 중대"
+```
+
+도구가 직접 평가하게 하려면 코드 수정과 테스트 추가가 필요합니다. 개발 담당에게 요청하십시오.
 
 - 6개 외의 새 예/아니오 판단 항목 (예: "환자 안전 영향", "규제 신고 대상")
 - "A이고 B이면" 같은 조건 조합
@@ -235,6 +265,7 @@ rules.yaml에 실수가 있으면 `RULES ERR`와 함께 **어디가 왜 틀렸�
 | `required_flags` | 반드시 true/false로 답할 항목. 트리거에 쓰는 항목은 빼면 실행이 멈춥니다 |
 | `categories` | 허용 일탈 유형. 바꾸면 템플릿 주석의 목록도 같이 고칩니다 |
 | `ishikawa` | 조사 계획(6M) 항목 문구 |
+| `manual_checks` | 도구가 평가하지 않는 SOP 조항 (`clause`, `text`). 초안에 검토자 확인 항목으로 표시. 5-5 참고 |
 | `recurrence.show_root_cause` | 반복 건 표에 과거 건의 근본원인(당시 기록)을 표시할지. 기본 `false` — 과거 원인을 옮겨 쓰는 것을 막기 위함 |
 
 rules.yaml을 바꾸면 사내 변경관리 절차에 따라 변경 이력(누가, 언제, 어떤 SOP 개정에 맞춰)을 남기십시오.
@@ -248,6 +279,27 @@ rules.yaml을 바꾸면 사내 변경관리 절차에 따라 변경 이력(누�
 ```bash
 python -m devdraft.cli drafts/*.yaml --summary --out drafts --history /사내경로/deviation_history.csv
 ```
+
+**처음 쓰기 전에, 그리고 새로 내보낼 때마다 먼저 점검합니다.** 초안은 만들지 않고 이력 파일만 검사합니다.
+
+```bash
+python -m devdraft.cli --check-history --history /사내경로/deviation_history.csv
+```
+
+```
+이력 점검: /사내경로/deviation_history.csv
+행 51개 · 오류 0건 · 경고 0건
+결과: 사용 가능
+```
+
+| 구분 | 내용 | 초안 생성 시 |
+|---|---|---|
+| 오류 | 필수 열 없음, UTF-8 아님, 날짜가 `YYYY-MM-DD`가 아님, `dev_id` 비어 있음·중복 | `HISTORY ERR`로 중단, 아무 초안도 만들지 않음 (종료 코드 2) |
+| 경고 | 기준일 이후 날짜, `site`·`equipment_id` 빈칸, rules.yaml에 없는 `category`·`final_class` | 계속 진행, `HISTORY WARN n건` 한 줄 표시 |
+
+- Excel에서 저장할 때는 **CSV UTF-8(쉼표로 분리)** 를 고릅니다. 이 형식이 붙이는 BOM은 자동 처리됩니다.
+- 기준일(`--today`) 이후 날짜의 건과, 이력에 이미 들어 있는 **이번 일탈 자신**은 반복 건에서 뺍니다. 자신을 뺀 경우 초안에 그렇게 표시됩니다.
+- `final_class`가 rules.yaml `levels`에 없는 값이면(예: SOP 개정 전 등급명) 경고만 하고 표시는 그대로 합니다. 분류 제안에는 쓰지 않습니다.
 
 필요한 열 (첫 줄 머리글, UTF-8):
 
@@ -273,6 +325,7 @@ python -m devdraft.cli drafts/*.yaml --summary --out drafts --history /사내경
 | `--summary` | 꺼짐 | 일괄 처리 요약표 `_summary_<날짜>.md` 생성 |
 | `--rules` | `config/rules.yaml` | 분류 규칙 파일 |
 | `--history` | 합성 이력 | 반복성 조회용 이력 CSV |
+| `--check-history` | 꺼짐 | `--history` 파일만 점검하고 끝냄 (초안 없음). 양식 파일 지정 불필요 |
 | `--today` | 오늘 | `YYYY-MM-DD`. 반복성 조회 기준일과 초안 생성일 (재현·검증용) |
 
 ### 종료 코드
@@ -281,9 +334,9 @@ python -m devdraft.cli drafts/*.yaml --summary --out drafts --history /사내경
 
 | 코드 | 뜻 |
 |---|---|
-| `0` | 모든 양식의 초안을 만들었음 |
-| `1` | 1건 이상 거부됨 (나머지 건의 초안과 요약표는 만들어짐) |
-| `2` | `config/rules.yaml` 오류 — 아무 초안도 만들지 않음 |
+| `0` | 모든 양식의 초안을 만들었음 / `--check-history`: 오류 없음 |
+| `1` | 1건 이상 거부됨 (나머지 건의 초안과 요약표는 만들어짐) / `--check-history`: 오류 있음 |
+| `2` | `config/rules.yaml` 또는 이력 파일을 쓸 수 없음, 잘못된 옵션 — 아무 초안도 만들지 않음 |
 
 ---
 

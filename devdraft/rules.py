@@ -135,6 +135,16 @@ def check_rules(rules: dict, bool_fields: set[str] | None = None) -> None:
                 if not isinstance(trig["min"], int) or isinstance(trig["min"], bool) or trig["min"] < 1:
                     problems.append(f"{where}: min 은 1 이상의 정수여야 합니다")
 
+    manual = rules.get("manual_checks")
+    if manual is not None:
+        if not isinstance(manual, list):
+            problems.append("manual_checks 는 '- clause: ... / text: ...' 목록이어야 합니다")
+        else:
+            for n, m in enumerate(manual, 1):
+                if not isinstance(m, dict) or set(m) != {"clause", "text"} \
+                        or not str(m.get("clause") or "").strip() or not str(m.get("text") or "").strip():
+                    problems.append(f"manual_checks {n}번째: clause 와 text 만, 둘 다 비어 있지 않게 적으십시오")
+
     rec = rules["recurrence"] or {}
     wd = rec.get("window_days")
     if not isinstance(wd, int) or isinstance(wd, bool) or wd < 1:

@@ -6,7 +6,7 @@ reviewer confirms or overrides it, and the draft records both.
 from __future__ import annotations
 
 import csv
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from pathlib import Path
 
 from .intake import Deviation
@@ -14,20 +14,30 @@ from .rules import RECURRENCE_FIELD, level_ids
 
 
 def load_history(path: str | Path) -> list[dict]:
-    with open(path, encoding="utf-8") as f:
+    """Raw read without checks. The CLI uses history.load_checked_history."""
+    with open(path, encoding="utf-8-sig", newline="") as f:
         return list(csv.DictReader(f))
 
 
 def find_recurrence(dev: Deviation, history: list[dict], rules: dict, today: date | None = None) -> list[dict]:
+    """Past deviations in the window that match on every `match_on` key.
+
+    Excluded: rows dated after `today` (not "past"), and the deviation
+    itself if the QMS export already contains it — it must not count as its
+    own recurrence.
+    """
     today = today or date.today()
     cfg = rules["recurrence"]
     cutoff = today - timedelta(days=cfg["window_days"])
     keys = cfg["match_on"]
     hits = []
     for row in history:
-        if datetime.fromisoformat(row["opened"]).date() < cutoff:
+        opened = date.fromisoformat(row["opened"].strip())
+        if opened < cutoff or opened > today:
             continue
-        if all(row.get(k) and row[k] == (dev.get(k) or "") for k in keys):
+        if (row.get("dev_id") or "").strip() == dev.id:
+            continue
+        if all((row.get(k) or "").strip() and row[k].strip() == (dev.get(k) or "").strip() for k in keys):
             hits.append(row)
     return sorted(hits, key=lambda r: r["opened"], reverse=True)
 

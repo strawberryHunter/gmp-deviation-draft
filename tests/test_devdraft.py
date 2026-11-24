@@ -632,3 +632,217 @@ def test_shipped_rules_match_recurrence_within_same_site():
     hits = find_recurrence(dev("DEV-2026-2201"), HISTORY, RULES, TODAY)
     assert hits and {h["site"] for h in hits} == {"Plant A"}
     assert "DEV-2026-1023" not in {h["dev_id"] for h in hits}  # Plant B, same equipment ID
+
+
+# --- history CSV checks (QMS exports) ----------------------------------------
+
+from devdraft.history import HistoryError, check_history, load_checked_history  # noqa: E402
+
+HIST_SRC = (ROOT / "data/synthetic/history.csv").read_text(encoding="utf-8")
+
+
+def _hist(tmp_path, text, encoding="utf-8", name="h.csv"):
+    p = tmp_path / name
+    p.write_text(text, encoding=encoding)
+    return p
+
+
+def test_synthetic_history_is_clean():
+    rep = check_history(ROOT / "data/synthetic/history.csv", RULES, TODAY)
+    assert rep.ok and not rep.warnings and len(rep.rows) == len(HISTORY)
+
+
+def test_excel_bom_keeps_dev_id(tmp_path):
+    """Excel 'CSV UTF-8' adds a BOM; IDs must not silently go blank."""
+    p = _hist(tmp_path, HIST_SRC, encoding="utf-8-sig")
+    rep = check_history(p, RULES, TODAY)
+    assert rep.ok
+    md = build(INTAKE / "DEV-2026-2201.yaml", ROOT / "config/rules.yaml", p, tmp_path / "o", TODAY).read_text(encoding="utf-8")
+    assert "| DEV-2026-1100 |" in md
+
+
+def test_non_utf8_history_is_an_error(tmp_path):
+    p = tmp_path / "h.csv"
+    p.write_bytes(HIST_SRC.replace("Plant A", "공장 A").encode("cp949"))
+    with pytest.raises(HistoryError) as e:
+        check_history(p, RULES, TODAY)
+    assert "UTF-8" in str(e.value)
+
+
+def test_missing_column_is_an_error(tmp_path):
+    p = _hist(tmp_path, HIST_SRC.replace("equipment_id", "equipment", 1))
+    rep = check_history(p, RULES, TODAY)
+    assert not rep.ok and "equipment_id" in rep.errors[0]
+
+
+def test_root_cause_column_required_only_when_shown(tmp_path):
+    lines = [",".join(c for i, c in enumerate(l.split(",")) if i != 6) for l in HIST_SRC.splitlines()]
+    p = _hist(tmp_path, "\n".join(lines) + "\n")
+    assert check_history(p, RULES, TODAY).ok
+    r = copy.deepcopy(RULES)
+    r["recurrence"]["show_root_cause"] = True
+    assert not check_history(p, r, TODAY).ok
+
+
+@pytest.mark.parametrize("bad", ["2026/10/21", "21-10-2026", "", "2026-13-01"])
+def test_bad_date_is_an_error_with_line_number(tmp_path, bad):
+    p = _hist(tmp_path, HIST_SRC.replace("2026-10-21", bad, 1))
+    rep = check_history(p, RULES, TODAY)
+    assert not rep.ok
+    line = HIST_SRC.splitlines().index(next(l for l in HIST_SRC.splitlines() if "2026-10-21" in l)) + 1
+    assert any(e.startswith(f"{line}행: opened") for e in rep.errors)
+
+
+def test_duplicate_dev_id_is_an_error(tmp_path):
+    dup = next(l for l in HIST_SRC.splitlines() if l.startswith("DEV-2026-1100"))
+    p = _hist(tmp_path, HIST_SRC + dup + "\n")
+    rep = check_history(p, RULES, TODAY)
+    assert not rep.ok and any("중복" in e for e in rep.errors)
+
+
+def test_history_error_stops_run_with_exit_2(tmp_path):
+    p = _hist(tmp_path, HIST_SRC.replace("2026-10-21", "2026/10/21", 1))
+    r = _cli(INTAKE / "DEV-2026-2201.yaml", "--history", p, "--out", tmp_path / "o", "--today", "2026-11-24")
+    assert r.returncode == 2 and "HISTORY ERR" in r.stdout and "Traceback" not in r.stderr
+    assert not (tmp_path / "o").exists()
+
+
+def test_future_dated_rows_are_not_counted(tmp_path):
+    extra = "DEV-2026-9999,2026-12-30,Plant A,CHR-03,process_parameter,major,x,True\n"
+    p = _hist(tmp_path, HIST_SRC + extra)
+    rep = check_history(p, RULES, TODAY)
+    assert rep.ok and any("기준일" in w for w in rep.warnings)
+    hits = find_recurrence(dev("DEV-2026-2201"), rep.rows, RULES, TODAY)
+    assert "DEV-2026-9999" not in {h["dev_id"] for h in hits}
+
+
+def test_deviation_itself_in_history_is_not_its_own_recurrence(tmp_path):
+    extra = "DEV-2026-2201,2026-11-21,Plant A,CHR-03,process_parameter,major,x,True\n"
+    p = _hist(tmp_path, HIST_SRC + extra)
+    md = build(INTAKE / "DEV-2026-2201.yaml", ROOT / "config/rules.yaml", p, tmp_path / "o", TODAY).read_text(encoding="utf-8")
+    sec = md.split("## 4. 반복성 검토", 1)[1].split("##", 1)[0]
+    assert "건 5건" in sec and "| DEV-2026-2201 |" not in sec
+    assert "자체가 있어 반복 건에서 제외" in sec
+
+
+def test_unknown_category_and_class_are_warnings(tmp_path):
+    p = _hist(tmp_path, HIST_SRC + "DEV-2026-9998,2026-03-01,Plant A,CHR-03,cleaning,grade2,x,True\n")
+    rep = check_history(p, RULES, TODAY)
+    assert rep.ok
+    assert any("category 'cleaning'" in w for w in rep.warnings)
+    assert any("final_class 'grade2'" in w for w in rep.warnings)
+
+
+def test_blank_match_key_is_a_warning(tmp_path):
+    p = _hist(tmp_path, HIST_SRC + "DEV-2026-9997,2026-03-01,,CHR-03,process_parameter,minor,x,True\n")
+    rep = check_history(p, RULES, TODAY)
+    assert rep.ok and any("site 비어 있음" in w for w in rep.warnings)
+
+
+def test_check_history_cli(tmp_path):
+    ok = _cli("--check-history", "--today", "2026-11-24")
+    assert ok.returncode == 0 and "사용 가능" in ok.stdout
+    bad = _hist(tmp_path, HIST_SRC.replace("2026-10-21", "2026/10/21", 1))
+    r = _cli("--check-history", "--history", bad, "--today", "2026-11-24")
+    assert r.returncode == 1 and "ERR" in r.stdout and "사용 불가" in r.stdout
+    missing = _cli("--check-history", "--history", tmp_path / "nope.csv")
+    assert missing.returncode == 2
+
+
+def test_cli_without_forms_or_check_is_usage_error():
+    r = _cli()
+    assert r.returncode == 2 and "입력 양식" in r.stderr
+
+
+def test_bad_today_is_usage_error_not_traceback():
+    r = _cli(INTAKE / "DEV-2026-2201.yaml", "--today", "2026/11/24")
+    assert r.returncode == 2 and "YYYY-MM-DD" in r.stderr and "Traceback" not in r.stderr
+
+
+# --- synthetic SOP -> rules.yaml worked example ------------------------------
+
+SOP_MD = ROOT / "data/synthetic/sop/SYN-QA-SOP-001.md"
+SOP_RULES = ROOT / "config/examples/rules_SYN-QA-SOP-001.yaml"
+
+
+def _sop_clauses():
+    return re.findall(r"^\*\*(\d+(?:\.\d+)+)\*\*", SOP_MD.read_text(encoding="utf-8"), flags=re.M)
+
+
+def test_example_sop_is_marked_synthetic():
+    text = SOP_MD.read_text(encoding="utf-8")
+    assert "합성" in text.splitlines()[0] and "실제 사업장의 절차가 아닙니다" in text
+    assert "실제 SOP 아님" in load_rules(SOP_RULES)["sop_reference"]
+
+
+def test_example_sop_every_clause_is_traced():
+    """Each SOP clause appears in the rules file: as a trigger reason, a manual
+    check, or an explained comment. A new SOP clause without a decision fails."""
+    clauses = _sop_clauses()
+    assert len(clauses) >= 10
+    text = SOP_RULES.read_text(encoding="utf-8")
+    untraced = [c for c in clauses if not re.search(rf"(?<![\d.]){re.escape(c)}(?![\d])", text)]
+    assert not untraced, untraced
+
+
+def test_example_sop_reasons_cite_clauses():
+    r = load_rules(SOP_RULES)
+    for triggers in r["classes"].values():
+        for t in triggers:
+            assert re.search(r"\(SOP \d+(\.\d+)+\)$", t["reason"]), t["reason"]
+    assert re.search(r"\(SOP \d+(\.\d+)+\)$", r["default_reason"])
+
+
+@pytest.mark.parametrize("name, level, clause, count", [
+    ("DEV-2026-2201", "critical", "5.5.1", 5),   # CPP -> major, but 5 repeats in 2 years -> critical
+    ("DEV-2026-2202", "critical", "5.2.1", 1),
+    ("DEV-2026-2203", "minor", "5.4.1", 0),
+])
+def test_example_sop_classifies_samples(name, level, clause, count):
+    r = load_rules(SOP_RULES)
+    d = load(INTAKE / f"{name}.yaml", r)
+    n = len(find_recurrence(d, HISTORY, r, TODAY))
+    got, reasons = propose_class(d, r, n)
+    assert (got, n) == (level, count)
+    assert any(f"(SOP {clause})" in x for x in reasons)
+
+
+def test_example_sop_escalation_keeps_lower_triggers_visible(tmp_path):
+    md = build(INTAKE / "DEV-2026-2201.yaml", SOP_RULES, ROOT / "data/synthetic/history.csv",
+               tmp_path, TODAY).read_text(encoding="utf-8")
+    assert "제안 등급: 중대 (Critical)" in md
+    for c in ("5.3.1", "5.3.3", "5.3.4"):
+        assert f"(SOP {c})" in md.split("그 밖에 해당한 트리거", 1)[1].split("분류 기준 출처", 1)[0]
+
+
+def test_unmapped_sop_clause_is_shown_as_reviewer_check(tmp_path):
+    p = build(INTAKE / "DEV-2026-2201.yaml", SOP_RULES, ROOT / "data/synthetic/history.csv",
+              tmp_path, TODAY, want_docx=True)
+    md = p.read_text(encoding="utf-8")
+    sec = md.split("## 3. 분류", 1)[1].split("## 4.", 1)[0]
+    assert "검토자가 직접 확인" in sec and "☐ SOP 5.5.2" in sec
+    from docx import Document
+    doc = Document(tmp_path / "DEV-2026-2201_draft.docx")
+    assert any("SOP 5.5.2" in x.text for x in doc.paragraphs)
+
+
+def test_no_manual_checks_section_when_empty():
+    assert RULES["manual_checks"] == []
+    md = (ROOT / "sample_output/DEV-2026-2201_draft.md").read_text(encoding="utf-8")
+    assert "검토자가 직접 확인" not in md
+
+
+@pytest.mark.parametrize("bad", [
+    "x", [{"clause": "5.5.2"}], [{"clause": "", "text": "t"}], [{"clause": "1", "text": "t", "level": "major"}],
+])
+def test_malformed_manual_checks_stop_the_run(bad):
+    r = copy.deepcopy(RULES)
+    r["manual_checks"] = bad
+    with pytest.raises(RulesError) as e:
+        check_rules(r)
+    assert "manual_checks" in str(e.value)
+
+
+def test_example_sop_history_check_is_clean():
+    rep = check_history(ROOT / "data/synthetic/history.csv", load_rules(SOP_RULES), TODAY)
+    assert rep.ok and not rep.warnings
