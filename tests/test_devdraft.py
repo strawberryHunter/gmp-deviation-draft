@@ -1148,3 +1148,26 @@ def test_sample_output_is_up_to_date(tmp_path):
         assert f.read_text(encoding="utf-8") == (ROOT / "sample_output" / f.name).read_text(encoding="utf-8"), \
             f"{f.name} is stale — regenerate with: python -m devdraft.cli data/synthetic/intake/*.yaml " \
             "--summary --today 2026-11-24 --out sample_output"
+
+
+# --- terminology: "deviation" everywhere (old Korean term removed) --------------
+
+def test_terminology_uses_deviation_everywhere(tmp_path):
+    """Project decision: the term is "deviation" in all output and docs."""
+    tracked = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True).stdout.split()
+    if not tracked:
+        pytest.skip("not a git checkout")
+    old = "일" + "탈"  # split so this test file itself doesn't match
+    hits = [f for f in tracked
+            if (f.endswith((".py", ".md", ".yaml", ".csv", ".txt")) or f == ".gitignore")
+            and f != "DECISIONS.md"  # the change log names the old term on purpose
+            if old in (ROOT / f).read_text(encoding="utf-8", errors="ignore")]
+    assert not hits, hits
+    results, summary = run_batch([INTAKE / "DEV-2026-2201.yaml"], ROOT / "config/rules.yaml",
+                                 ROOT / "data/synthetic/history.csv", tmp_path, TODAY,
+                                 want_docx=True, want_summary=True)
+    md = (tmp_path / "DEV-2026-2201_draft.md").read_text(encoding="utf-8")
+    assert md.startswith("# Deviation 보고서 초안 — DEV-2026-2201")
+    assert old not in md and old not in summary.read_text(encoding="utf-8")
+    doc = _Document(tmp_path / "DEV-2026-2201_draft.docx")
+    assert old not in "\n".join(p.text for p in _all_paragraphs(doc))
