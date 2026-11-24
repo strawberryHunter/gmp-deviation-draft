@@ -15,6 +15,7 @@ python -m pytest -q
 ```
 
 Python 3.10 이상, Windows·macOS·Linux 모두 됩니다. 아래 명령의 `*.yaml`은 Windows `cmd`·PowerShell에서도 그대로 동작합니다.
+Windows에서는 출력의 경로가 `drafts\DEV-…`처럼 `\`로 보입니다 (이 문서는 `/`로 적었습니다).
 
 ## 1. 입력 양식 보기
 

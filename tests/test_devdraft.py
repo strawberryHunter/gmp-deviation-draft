@@ -1340,6 +1340,9 @@ def test_tutorial_commands_print_what_the_tutorial_shows(tmp_path, exit_code, co
     got = p.stdout.strip()
     if shown_out:
         got = got.replace(str(tmp_path / shown_out), shown_out)
+    # The CLI prints native paths (drafts\x.md on Windows, which cmd needs);
+    # the tutorial shows them with "/".
+    got = got.replace(os.sep, "/")
     assert p.returncode == int(exit_code), p.stdout + p.stderr
     assert got == expected.strip()
 
