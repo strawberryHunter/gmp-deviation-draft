@@ -114,6 +114,11 @@ def check_history(path: str | Path, rules: dict, today: date | None = None) -> H
     return rep
 
 
+def is_synthetic(rows: list[dict]) -> bool:
+    """True if any history row is marked synthetic (column `synthetic`)."""
+    return any(str(r.get("synthetic", "")).strip().lower() in ("true", "1", "yes") for r in rows)
+
+
 def load_checked_history(path: str | Path, rules: dict, today: date | None = None) -> HistoryReport:
     rep = check_history(path, rules, today)
     if not rep.ok:
