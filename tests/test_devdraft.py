@@ -5,7 +5,8 @@ import pytest
 import yaml
 
 from devdraft.classify import find_recurrence, investigation_plan, load_history, propose_class
-from devdraft.cli import build
+from devdraft.cli import build, run_batch
+from devdraft.summary import FormResult, render_summary
 from devdraft.draft import render_markdown
 import subprocess
 
@@ -233,3 +234,80 @@ def test_real_outputs_are_gitignored(path):
     if r.returncode == 128:
         pytest.skip("not a git checkout")
     assert r.returncode == 0, f"{path} is not ignored"
+
+
+# --- batch summary (--summary) --------------------------------------------
+
+def _batch(tmp_path, forms, **kw):
+    return run_batch(forms, ROOT / "config/rules.yaml", ROOT / "data/synthetic/history.csv",
+                     tmp_path, TODAY, want_summary=True, **kw)
+
+
+def test_summary_lists_every_form_drafted_or_rejected(tmp_path):
+    forms = sorted(INTAKE.glob("*.yaml"))
+    results, path = _batch(tmp_path, forms)
+    md = path.read_text(encoding="utf-8")
+    assert path.name == "_summary_2026-11-24.md"
+    assert "입력 4건 · 초안 생성 3건 · 거부 1건" in md
+    for f in forms:
+        assert f.name in md
+    rejected = md.split("## 거부", 1)[1]
+    assert "DEV-2026-2204.yaml" in rejected and "detected_by" in rejected
+
+
+def test_summary_marks_class_as_proposal_only(tmp_path):
+    _, path = _batch(tmp_path, sorted(INTAKE.glob("*.yaml")))
+    md = path.read_text(encoding="utf-8")
+    assert "판단·승인 문서가 아닙니다" in md
+    for lvl in ("MAJOR", "CRITICAL", "MINOR"):
+        assert f"{lvl} (제안)" in md
+    assert "확정 등급:" not in md  # confirmation lives only in each draft
+
+
+def test_summary_never_repeats_historical_root_causes(tmp_path):
+    _, path = _batch(tmp_path, [INTAKE / "DEV-2026-2201.yaml"])
+    md = path.read_text(encoding="utf-8")
+    assert "| 6 |" in md  # recurrence count only
+    for rc in {r["root_cause"] for r in HISTORY}:
+        assert rc not in md, rc
+    assert "근본원인" not in md
+
+
+def test_summary_contains_no_numbers_beyond_input_and_counts(tmp_path):
+    _, path = _batch(tmp_path, [INTAKE / "DEV-2026-2201.yaml"])
+    md = path.read_text(encoding="utf-8")
+    assert "3.62" not in md and "3.40-3.60" not in md  # parameters stay in the draft
+
+
+def test_summary_header_follows_rules_window(tmp_path):
+    md = render_summary([FormResult(file="a.yaml", ok=False, error="x")], "2026-11-24", 180)
+    assert "최근 180일" not in md  # no drafted rows -> no table header
+    md = render_summary([FormResult(file="a.yaml", ok=True, dev_id="D", proposed="minor")], "2026-11-24", 180)
+    assert "최근 180일" in md
+
+
+def test_summary_escapes_pipes_in_cells():
+    r = FormResult(file="a.yaml", ok=True, dev_id="D-1", title="A | B", proposed="minor", reasons=["x"])
+    row = [l for l in render_summary([r], "2026-11-24", 365).splitlines() if l.startswith("| D-1")][0]
+    assert "A \\| B" in row
+
+
+def test_duplicate_id_in_one_run_is_rejected_not_overwritten(tmp_path):
+    f = INTAKE / "DEV-2026-2203.yaml"
+    results, path = _batch(tmp_path / "out", [f, f])
+    assert [r.ok for r in results] == [True, False]
+    assert "이미 있습니다" in results[1].error
+
+
+def test_malformed_yaml_is_a_rejection_not_a_crash(tmp_path):
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("id: DEV-1\ntitle: [unclosed\n", encoding="utf-8")
+    results, path = _batch(tmp_path / "out", [bad, INTAKE / "DEV-2026-2203.yaml"])
+    assert [r.ok for r in results] == [False, True]
+    assert "YAML 문법 오류" in results[0].error
+
+
+def test_no_summary_file_without_flag(tmp_path):
+    run_batch([INTAKE / "DEV-2026-2203.yaml"], ROOT / "config/rules.yaml",
+              ROOT / "data/synthetic/history.csv", tmp_path, TODAY)
+    assert not list(tmp_path.glob("_summary_*"))

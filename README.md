@@ -42,7 +42,17 @@ GxP 문서라 "그럴듯하게 채워주는" 동작이 가장 위험합니다. �
 ```bash
 python -m devdraft.cli data/synthetic/intake/DEV-2026-2201.yaml --docx
 python -m devdraft.cli data/synthetic/intake/*.yaml --out drafts --today 2026-11-24
+python -m devdraft.cli data/synthetic/intake/*.yaml --summary --today 2026-11-24
 ```
+
+`--summary`는 여러 건을 한 번에 처리할 때 `_summary_<날짜>.md`를 함께 만듭니다
+([예시](sample_output/_summary_2026-11-24.md)).
+
+- 초안이 만들어진 건: 일탈 번호, 제목, **제안** 등급과 근거, 반복 건 수, 초안 파일
+- 거부된 건: 입력 파일과 거부 사유 (보완 후 다시 실행)
+- 확정 등급란은 두지 않습니다. 확정은 각 초안에서만 합니다. 우선순위·처리 순서도 매기지 않습니다.
+- 과거 이력의 근본원인과 공정 수치는 요약표에 옮기지 않습니다 (건수만 표시, 상세는 각 초안).
+- 한 실행에 같은 일탈 번호가 두 번 나오면 두 번째는 덮어쓰지 않고 거부합니다. YAML 문법 오류도 해당 건만 거부합니다.
 
 결과 예시(Markdown)는 [`sample_output/`](sample_output/)에 있습니다. `*.docx`는 저장소에 넣지 않으므로 `--docx`로 직접 생성해 확인하십시오.
 
@@ -87,7 +97,7 @@ pip install -r requirements.txt
 python -m pytest -q
 ```
 
-분류 트리거 3종, 반복성 조회 기간, 필수/미허용 항목 검증, 위험 확인 항목 미응답·비(非)불리언 거부, rules.yaml 트리거-필수 플래그 일관성, 빈 템플릿(미작성 시 거부·판단 항목 없음), `drafts/`·`*.docx` 무시 여부, 판단 칸 공란 유지, 입력에 없는 수치가 초안에 들어가지 않는지, DOCX 생성까지 확인합니다.
+분류 트리거 3종, 반복성 조회 기간, 필수/미허용 항목 검증, 위험 확인 항목 미응답·비(非)불리언 거부, rules.yaml 트리거-필수 플래그 일관성, 빈 템플릿(미작성 시 거부·판단 항목 없음), `drafts/`·`*.docx` 무시 여부, 일괄 요약표(전 건 기재·제안 표시·이력 근본원인 미기재·중복 번호/YAML 오류 거부), 판단 칸 공란 유지, 입력에 없는 수치가 초안에 들어가지 않는지, DOCX 생성까지 확인합니다.
 
 ## 구조
 
@@ -97,6 +107,7 @@ devdraft/
   classify.py   분류 제안, 반복성 조회, 6M 조사 계획
   draft.py      Markdown 초안 렌더링
   docx_out.py   Word 변환 (Arial, 표 괘선)
+  summary.py    일괄 처리 요약표 (--summary)
   cli.py        실행 진입점
 config/rules.yaml
 templates/intake_template.yaml   QA가 채우는 빈 입력 양식
