@@ -475,3 +475,153 @@ def test_docx_keeps_placeholders(tmp_path):
     joined = "\n".join(text)
     assert joined.count("작성 필요") >= 3 + len(RULES["ishikawa"]) + 4
     assert "승인 문서가 아닙니다" in joined
+
+
+# --- strict booleans (YAML 1.1 yes/no/on/off are NOT booleans here) ---------
+
+import re  # noqa: E402
+
+from devdraft.rules import strict_load  # noqa: E402
+
+
+@pytest.mark.parametrize("word", ["yes", "no", "on", "off", "Yes", "NO", "y", "n"])
+def test_unquoted_yes_no_flag_is_rejected(tmp_path, word):
+    text = (INTAKE / "DEV-2026-2203.yaml").read_text(encoding="utf-8")
+    text = text.replace("spec_oos: false", f"spec_oos: {word}")
+    p = tmp_path / "f.yaml"
+    p.write_text(text, encoding="utf-8")
+    with pytest.raises(IntakeError) as e:
+        load(p, RULES)
+    assert "spec_oos" in str(e.value) and "true/false" in str(e.value)
+
+
+@pytest.mark.parametrize("word, value", [("true", True), ("True", True), ("TRUE", True),
+                                         ("false", False), ("False", False), ("FALSE", False)])
+def test_true_false_spellings_are_booleans(word, value):
+    assert strict_load(f"x: {word}")["x"] is value
+
+
+def test_strict_loader_keeps_other_scalars():
+    d = strict_load("a: no\nb: '3.62'\nc: 2026-11-21T14:20\nd: N/A\n")
+    assert d == {"a": "no", "b": "3.62", "c": "2026-11-21T14:20", "d": "N/A"}
+
+
+def test_rules_equals_yes_is_rejected(tmp_path):
+    text = (ROOT / "config/rules.yaml").read_text(encoding="utf-8")
+    assert "\n      equals: true\n" in text
+    text = text.replace("\n      equals: true\n", "\n      equals: yes\n", 1)
+    p = tmp_path / "rules.yaml"
+    p.write_text(text, encoding="utf-8")
+    with pytest.raises(RulesError) as e:
+        load_rules(p)
+    assert "true 또는 false" in str(e.value)
+
+
+# --- exit codes -------------------------------------------------------------
+
+def _cli(*args, cwd=ROOT):
+    return subprocess.run(["python", "-m", "devdraft.cli", *map(str, args)],
+                          cwd=cwd, capture_output=True, text=True)
+
+
+def test_exit_code_0_when_every_form_drafted(tmp_path):
+    p = _cli(INTAKE / "DEV-2026-2201.yaml", INTAKE / "DEV-2026-2203.yaml", "--out", tmp_path, "--today", "2026-11-24")
+    assert p.returncode == 0, p.stdout
+
+
+def test_exit_code_1_when_any_form_rejected_but_others_still_drafted(tmp_path):
+    p = _cli(*sorted(INTAKE.glob("*.yaml")), "--out", tmp_path, "--today", "2026-11-24")
+    assert p.returncode == 1
+    assert len(list(tmp_path.glob("*_draft.md"))) == 3
+
+
+# (exit code 2 for invalid rules: test_cli_exits_on_bad_rules)
+
+
+# --- past root causes hidden by default ---------------------------------------
+
+def test_recurrence_table_hides_root_cause_by_default():
+    assert RULES["recurrence"]["show_root_cause"] is False
+    md = (ROOT / "sample_output/DEV-2026-2201_draft.md").read_text(encoding="utf-8")
+    sec = md.split("## 4. 반복성 검토", 1)[1].split("##", 1)[0]
+    assert "DEV-2026-1100" in sec
+    for rc in {r["root_cause"] for r in HISTORY}:
+        assert rc not in sec, rc
+    assert "근본원인" not in sec
+
+
+def test_recurrence_table_shows_root_cause_when_enabled():
+    r = copy.deepcopy(RULES)
+    r["recurrence"]["show_root_cause"] = True
+    d = dev("DEV-2026-2201")
+    rec = find_recurrence(d, HISTORY, r, TODAY)
+    md = render_markdown(d, "major", ["x"], rec, [], "2026-11-24", rules=r)
+    assert "근본원인 (당시 기록)" in md and "procedure gap" in md
+
+
+def test_history_without_root_cause_column_works_when_hidden():
+    rows = [{k: v for k, v in h.items() if k != "root_cause"} for h in HISTORY]
+    d = dev("DEV-2026-2201")
+    rec = find_recurrence(d, rows, RULES, TODAY)
+    md = render_markdown(d, "major", ["x"], rec, [], "2026-11-24", rules=RULES)
+    assert "DEV-2026-1100" in md
+
+
+def test_show_root_cause_must_be_boolean():
+    r = copy.deepcopy(RULES)
+    r["recurrence"]["show_root_cause"] = "no"
+    with pytest.raises(RulesError):
+        check_rules(r)
+
+
+# --- decision log format ------------------------------------------------------
+
+DECISION_LINE = re.compile(r"^- \[\d{4}-\d{2}-\d{2}\] .+ — .+ — .+ — \((확인 필요|확인 불필요)\)$")
+
+
+def test_decisions_log_format():
+    lines = [l for l in (ROOT / "DECISIONS.md").read_text(encoding="utf-8").splitlines() if l.startswith("- ")]
+    assert lines
+    bad = [l for l in lines if not DECISION_LINE.match(l)]
+    assert not bad, "\n".join(bad)
+
+
+# --- template comment glued to a value ---------------------------------------
+
+def _filled_template_text():
+    t = TEMPLATE.read_text(encoding="utf-8")
+    src = yaml.safe_load((INTAKE / "DEV-2026-2203.yaml").read_text(encoding="utf-8"))
+    for k, v in src.items():
+        if k in ("synthetic", "parameters"):
+            continue
+        val = ("true" if v else "false") if isinstance(v, bool) else f"'{v}'"
+        t = re.sub(rf"^{k}:( *)(''|)( *)#", lambda m: f"{k}: {val}  #", t, count=1, flags=re.M)
+    return t
+
+
+def test_template_filled_with_spaces_before_comments_is_accepted(tmp_path):
+    p = tmp_path / "f.yaml"
+    p.write_text(_filled_template_text(), encoding="utf-8")
+    d = load(p, RULES)
+    assert d.title == "배치 기록서 서명 누락 (원료 칭량 단계)"
+
+
+@pytest.mark.parametrize("key, glued", [
+    ("title", "title: 서명 누락# [필수] 한 줄 제목. 무엇이 기준과 달랐는지."),
+    ("spec_oos", "spec_oos: false# 규격 이탈(OOS) 시험 결과가 있는가"),
+])
+def test_comment_glued_to_value_is_rejected(tmp_path, key, glued):
+    text = re.sub(rf"^{key}:.*$", glued, _filled_template_text(), count=1, flags=re.M)
+    p = tmp_path / "f.yaml"
+    p.write_text(text, encoding="utf-8")
+    with pytest.raises(IntakeError) as e:
+        load(p, RULES)
+    assert "양식 주석이 붙어" in str(e.value) and key in str(e.value)
+
+
+def test_hash_inside_real_value_is_not_flagged(tmp_path):
+    text = re.sub(r"^description:.*$", "description: 'lot#5531 사용, 포트#4 확인'", _filled_template_text(),
+                  count=1, flags=re.M)
+    p = tmp_path / "f.yaml"
+    p.write_text(text, encoding="utf-8")
+    assert "lot#5531" in load(p, RULES).description

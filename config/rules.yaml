@@ -85,9 +85,13 @@ classes:
 #   window_days : 오늘(--today) 기준 며칠 전까지 볼지
 #   match_on    : 모두 같아야 "같은 건"으로 봄. equipment_id / category / site 중에서 선택.
 #                 site 를 넣으면 다른 사업장의 같은 설비 ID 건은 제외됩니다.
+#   show_root_cause : 반복 건 표에 과거 건의 근본원인(당시 기록)을 표시할지.
+#                     기본 false — 과거 원인을 그대로 옮겨 쓰는 것을 막기 위함.
+#                     true 로 바꿔도 도구는 원인 연관성을 판단하지 않습니다.
 recurrence:
   window_days: 365
   match_on: [equipment_id, category]
+  show_root_cause: false
 
 categories:
   - equipment

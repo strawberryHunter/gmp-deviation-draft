@@ -45,9 +45,17 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
     match = "·".join(_MATCH_LABEL.get(k, k) for k in rec_cfg["match_on"])
     rec_block = f"{window} 내 동일 {match} 건 없음."
     if recurrence:
+        # Past root causes are hidden unless QA opts in: listing them invites
+        # copying an old cause instead of investigating this one.
+        cols = ["dev_id", "opened", "final_class"]
+        head = ["번호", "개설일", "등급"]
+        if rec_cfg.get("show_root_cause", False):
+            cols.append("root_cause")
+            head.append("근본원인 (당시 기록)")
         rec_block = "\n".join(
-            [f"{window} 내 동일 {match} 건 {len(recurrence)}건 (목록만 표시, 원인 연관성은 판단하지 않음):", "", "| 번호 | 개설일 | 등급 | 근본원인 |", "|---|---|---|---|"]
-            + [f"| {r['dev_id']} | {r['opened']} | {r['final_class']} | {r['root_cause']} |" for r in recurrence]
+            [f"{window} 내 동일 {match} 건 {len(recurrence)}건 (목록만 표시, 원인 연관성은 판단하지 않음):", "",
+             "| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
+            + ["| " + " | ".join(str(r.get(c, "")) for c in cols) + " |" for r in recurrence]
         )
     sop = (rules or {}).get("sop_reference") or ""
     source = sop if sop else f"{TBD} — 분류 기준 출처 미기재 (config/rules.yaml sop_reference). 사내 SOP와 대조 필요."

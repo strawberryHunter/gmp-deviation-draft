@@ -14,6 +14,11 @@ from .summary import FormResult, render_summary
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# 0: every form drafted. 1: at least one form rejected (others still drafted).
+# 2: rules.yaml invalid, nothing drafted.
+EXIT_REJECTED = 1
+EXIT_RULES_ERROR = 2
+
 
 def draft_one(form: Path, rules: dict, history: list[dict], out_dir: Path,
               today: date | None = None, want_docx: bool = False,
@@ -88,10 +93,12 @@ def main() -> None:
 
     today = date.fromisoformat(args.today) if args.today else None
     try:
-        run_batch(args.form, args.rules, args.history, args.out, today, args.docx, args.summary)
+        results, _ = run_batch(args.form, args.rules, args.history, args.out, today, args.docx, args.summary)
     except RulesError as e:
         print(f"RULES ERR {args.rules}: {e}")
-        raise SystemExit(2)
+        raise SystemExit(EXIT_RULES_ERROR)
+    if any(not r.ok for r in results):
+        raise SystemExit(EXIT_REJECTED)
 
 
 if __name__ == "__main__":

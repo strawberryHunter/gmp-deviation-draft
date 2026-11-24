@@ -5,12 +5,13 @@ and so that the same file can be produced by an existing QMS export.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
 
-from .rules import RulesError, check_rules as _check_rules  # noqa: F401  (re-exported)
+from .rules import RulesError, check_rules as _check_rules, strict_load  # noqa: F401  (re-exported)
 
 
 class IntakeError(ValueError):
@@ -54,10 +55,46 @@ def check_rules(rules: dict) -> None:
     _check_rules(rules, _bool_fields())
 
 
+TEMPLATE = Path(__file__).resolve().parents[1] / "templates/intake_template.yaml"
+_COMMENT_LINE = re.compile(r"^(\w+):[^#\n]*#\s*(\S.*)$")
+
+
+def _template_comments() -> dict[str, str]:
+    """key -> inline comment text in the blank template."""
+    if not TEMPLATE.exists():
+        return {}
+    out = {}
+    for line in TEMPLATE.read_text(encoding="utf-8").splitlines():
+        m = _COMMENT_LINE.match(line)
+        if m:
+            out[m.group(1)] = m.group(2).strip()
+    return out
+
+
+def _glued_template_comments(raw: dict) -> list[str]:
+    """Keys whose value swallowed the template comment.
+
+    YAML only starts a comment at '#' preceded by whitespace, so
+    `title: 제목# [필수] 한 줄 제목...` keeps the comment inside the value and
+    it would be copied into the draft verbatim.
+    """
+    hits = []
+    for key, comment in _template_comments().items():
+        val = raw.get(key)
+        if isinstance(val, str) and comment[:8] in val:
+            hits.append(key)
+    return sorted(hits)
+
+
+def _short(v, n: int = 20) -> str:
+    s = str(v)
+    return s if len(s) <= n else s[:n] + "…"
+
+
 def load(path: str | Path, rules: dict) -> Deviation:
     check_rules(rules)
     try:
-        raw = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+        raw = strict_load(Path(path).read_text(encoding="utf-8")) or {}
     except yaml.YAMLError as e:
         mark = getattr(e, "problem_mark", None)
         where = f" ({mark.line + 1}행)" if mark else ""
@@ -79,9 +116,14 @@ def load(path: str | Path, rules: dict) -> Deviation:
     unanswered = [f for f in flags if raw.get(f) is None]
     if unanswered:
         problems.append(f"예/아니오 미응답 (true 또는 false로 기재): {', '.join(unanswered)}")
+    glued = _glued_template_comments(raw)
+    if glued:
+        problems.append(
+            f"값 뒤에 양식 주석이 붙어 값의 일부로 읽힘 ('#' 앞에 공백을 두거나 주석을 지우십시오): {', '.join(glued)}"
+        )
     not_bool = [
-        f"{f}={raw[f]!r}" for f in sorted(_bool_fields())
-        if raw.get(f) is not None and not isinstance(raw[f], bool)
+        f"{f}={_short(raw[f])!r}" for f in sorted(_bool_fields())
+        if raw.get(f) is not None and not isinstance(raw[f], bool) and f not in glued
     ]
     if not_bool:
         problems.append(f"true/false가 아닌 값: {', '.join(not_bool)}")

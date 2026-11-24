@@ -7,9 +7,35 @@ to answer, a typo in a trigger key, and so on.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import yaml
+
+
+class StrictLoader(yaml.SafeLoader):
+    """SafeLoader that treats only true/false as booleans.
+
+    PyYAML follows YAML 1.1, where unquoted yes/no/on/off are booleans too.
+    In a GxP form a habitual "no" must not silently become False, so those
+    stay strings and fail the true/false check.
+    """
+
+
+StrictLoader.yaml_implicit_resolvers = {
+    ch: [(tag, rx) for tag, rx in resolvers if tag != "tag:yaml.org,2002:bool"]
+    for ch, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
+}
+StrictLoader.add_implicit_resolver(
+    "tag:yaml.org,2002:bool",
+    re.compile(r"^(?:true|True|TRUE|false|False|FALSE)$"),
+    list("tTfF"),
+)
+
+
+def strict_load(text: str):
+    return yaml.load(text, Loader=StrictLoader)  # SafeLoader subclass: no object construction
+
 
 # Trigger on the number of matching deviations found in history.
 RECURRENCE_FIELD = "recurrence_count"
@@ -26,7 +52,7 @@ class RulesError(ValueError):
 
 def load_rules(path: str | Path) -> dict:
     try:
-        rules = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+        rules = strict_load(Path(path).read_text(encoding="utf-8"))
     except yaml.YAMLError as e:
         mark = getattr(e, "problem_mark", None)
         where = f" ({mark.line + 1}행)" if mark else ""
@@ -113,6 +139,8 @@ def check_rules(rules: dict, bool_fields: set[str] | None = None) -> None:
     wd = rec.get("window_days")
     if not isinstance(wd, int) or isinstance(wd, bool) or wd < 1:
         problems.append("recurrence.window_days 는 1 이상의 정수여야 합니다")
+    if "show_root_cause" in rec and not isinstance(rec["show_root_cause"], bool):
+        problems.append("recurrence.show_root_cause 는 true 또는 false 여야 합니다")
     allowed_match = {"equipment_id", "category", "site"}  # columns of history.csv
     bad_match = [k for k in rec.get("match_on") or [] if k not in allowed_match]
     if not rec.get("match_on") or bad_match:

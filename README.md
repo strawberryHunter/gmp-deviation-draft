@@ -21,7 +21,8 @@ GxP 문서라 "그럴듯하게 채워주는" 동작이 가장 위험합니다. �
 | 과거 이력에서 반복 건 조회 | 반복 원인 추정 |
 | 6M 기반 조사 항목 제시 | 조사 수행 여부 판단 |
 | 누락 항목 거부 | 누락 항목을 추정해서 채우기 |
-| 위험 확인 항목(true/false) 미응답 거부 | 미응답을 "아니오"로 간주하기 |
+| 위험 확인 항목(true/false) 미응답·`yes`/`no` 등 거부 | 미응답을 "아니오"로 간주하기 |
+| 반복 건 목록(번호·일자·등급) 표시 | 과거 근본원인 기본 표시 (`show_root_cause`로만 켬) |
 
 근본원인·영향평가·CAPA 칸은 전부 `☐ 작성 필요`로 비워 둡니다. 테스트가 이를 강제합니다
 (`test_draft_never_fills_judgement_sections`).
@@ -79,9 +80,11 @@ python -m devdraft.cli data/synthetic/intake/*.yaml --summary --today 2026-11-24
 - `default_level` / `default_reason` — 어떤 기준에도 해당하지 않을 때의 제안
 - `classes` — 등급별 트리거 (예/아니오 항목 `equals: true`, 반복 건수 `recurrence_count` + `min`)
 - `required_fields` / `required_flags` — 필수 입력 항목 / 반드시 true·false로 답할 항목
-- `recurrence` — 조회 기간(`window_days`)과 일치 기준(`match_on`: equipment_id / category / site)
+- `recurrence` — 조회 기간(`window_days`), 일치 기준(`match_on`: equipment_id / category / site), 과거 근본원인 표시 여부(`show_root_cause`, 기본 false)
 - `categories` — 허용 일탈 유형
 - `ishikawa` — 6M 조사 항목 문구
+
+종료 코드: 전부 성공 `0`, 거부 1건 이상 `1`, rules.yaml 오류 `2` ([사용 가이드 7장](docs/USAGE.md#7-명령-옵션)).
 
 rules.yaml에 오류(없는 등급 참조, 오타 키, 따옴표 붙은 `"true"`, 필수 플래그가 아닌 트리거 등)가 있으면
 `RULES ERR`로 어디가 틀렸는지 알려주고 아무 초안도 만들지 않습니다.
