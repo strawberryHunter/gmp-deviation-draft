@@ -94,7 +94,7 @@ def build(form: Path, rules_path: Path, history_path: Path, out_dir: Path,
 
 def run_batch(forms: list[Path], rules_path: Path, history_path: Path, out_dir: Path,
               today: date | None = None, want_docx: bool = False,
-              want_summary: bool = False) -> tuple[list[FormResult], Path | None]:
+              want_summary: bool = False, want_xlsx: bool = False) -> tuple[list[FormResult], Path | None]:
     rules = load_rules(rules_path)
     check_rules(rules)
     history = _history(history_path, rules, today, quiet=False)
@@ -120,6 +120,10 @@ def run_batch(forms: list[Path], rules_path: Path, history_path: Path, out_dir: 
             from .docx_out import markdown_to_docx
             markdown_to_docx(summary_md, summary_path.with_suffix(".docx"),
                              label="일괄 처리 요약", generated=stamp, landscape=True)
+        if want_xlsx:
+            from .summary_xlsx import write_summary_xlsx
+            write_summary_xlsx(results, stamp, rules["recurrence"]["window_days"], rules,
+                               summary_path.with_suffix(".xlsx"))
     return results, summary_path
 
 
@@ -172,6 +176,8 @@ def main() -> None:
     ap.add_argument("--docx", action="store_true", help="also write a Word file")
     ap.add_argument("--summary", action="store_true",
                     help="write _summary_<date>.md listing every form: proposed class or rejection reason")
+    ap.add_argument("--xlsx", action="store_true",
+                    help="with --summary: also write the summary as an Excel workbook")
     ap.add_argument("--check-history", action="store_true",
                     help="only check the --history CSV against rules.yaml; no drafts are written")
     ap.add_argument("--today", help="YYYY-MM-DD, for reproducible output")
@@ -196,9 +202,12 @@ def main() -> None:
     if not args.form:
         ap.error("입력 양식(.yaml)을 1개 이상 지정하십시오 (또는 --check-history)")
     args.form = expand_forms(args.form, ap)
+    if args.xlsx and not args.summary:
+        ap.error("--xlsx 는 --summary 와 함께 쓰십시오 (요약표를 Excel로 만드는 옵션)")
 
     try:
-        results, _ = run_batch(args.form, args.rules, args.history, args.out, today, args.docx, args.summary)
+        results, _ = run_batch(args.form, args.rules, args.history, args.out, today, args.docx, args.summary,
+                               args.xlsx)
     except RulesError as e:
         print(f"RULES ERR {args.rules}: {e}")
         raise SystemExit(EXIT_CONFIG_ERROR)

@@ -131,11 +131,12 @@ OK  DEV-2026-2301.yaml -> drafts/DEV-2026-2301_draft.md
 python -m devdraft.cli drafts/*.yaml --docx --summary --out drafts --history /사내경로/deviation_history.csv
 ```
 
-각 건의 초안과 함께 `drafts/_summary_<날짜>.md`가 생깁니다 (`--docx`를 함께 주면 가로 방향 Word `_summary_<날짜>.docx`도) ([예시](../sample_output/_summary_2026-11-24.md)).
+각 건의 초안과 함께 `drafts/_summary_<날짜>.md`가 생깁니다 (`--docx`를 함께 주면 가로 방향 Word `_summary_<날짜>.docx`도, `--xlsx`를 주면 Excel `_summary_<날짜>.xlsx`도) ([예시](../sample_output/_summary_2026-11-24.md)).
 
 - **초안 생성** 표: deviation 번호, 제목, 제안 등급과 근거, 반복 건 수, 초안 파일
 - **거부** 표: 입력 파일과 거부 사유 — 보완할 목록으로 사용
 - 확정 등급란, 우선순위, 과거 근본원인, 공정 수치는 요약표에 넣지 않습니다.
+- Excel 요약표에서 입력값이 `=`·`+`·`-`·`@`로 시작해도 **수식이 아닌 글자**로 저장됩니다 (수식 주입 방지).
 
 `drafts/*.yaml`에는 이미 만든 `_draft.md`가 섞이지 않습니다 (확장자가 다름). 단, 한 폴더에 같은 `id`의 양식이 두 개 있으면 두 번째는 거부됩니다.
 
@@ -363,6 +364,7 @@ python -m devdraft.cli --check-history --history /사내경로/deviation_history
 | `--out` | `drafts` | 초안·요약표를 저장할 폴더 |
 | `--docx` | 꺼짐 | Word 파일도 생성 |
 | `--summary` | 꺼짐 | 일괄 처리 요약표 `_summary_<날짜>.md` 생성 |
+| `--xlsx` | 꺼짐 | `--summary`와 함께: 요약표를 Excel `_summary_<날짜>.xlsx`로도 (시트 "초안 생성"·"거부", 머리 행 고정·필터) |
 | `--rules` | `config/rules.yaml` | 분류 규칙 파일 |
 | `--history` | 합성 이력 | 반복성 조회용 이력 CSV |
 | `--check-history` | 꺼짐 | `--history` 파일만 점검하고 끝냄 (초안 없음). 양식 파일 지정 불필요 |

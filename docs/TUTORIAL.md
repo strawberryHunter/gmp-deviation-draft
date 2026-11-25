@@ -137,7 +137,7 @@ OK  DEV-2026-2304.yaml -> drafts/DEV-2026-2304_draft.md
 SUM drafts/_summary_2026-11-24.md
 ```
 
-요약표(`_summary_2026-11-24.md`, `--docx`면 가로 방향 Word도)는 작업 목록입니다. 등급은 모두 "(제안)"이고, 확정란·우선순위·과거 근본원인은 넣지 않습니다.
+요약표(`_summary_2026-11-24.md`, `--docx`면 가로 방향 Word도, `--xlsx`를 더하면 Excel도)는 작업 목록입니다. 등급은 모두 "(제안)"이고, 확정란·우선순위·과거 근본원인은 넣지 않습니다.
 
 <img src="../sample_output/showcase/_summary_2026-11-24_p1.png" width="760" alt="요약표 Word 1쪽">
 

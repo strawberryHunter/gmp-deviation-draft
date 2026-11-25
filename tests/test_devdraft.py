@@ -438,7 +438,7 @@ def test_cli_exits_on_bad_rules(tmp_path):
 import ast  # noqa: E402
 
 ALLOWED_IMPORTS = {"__future__", "argparse", "ast", "csv", "dataclasses", "datetime",
-                   "glob", "hashlib", "io", "pathlib", "re", "sys", "types", "yaml", "docx"}
+                   "glob", "hashlib", "io", "pathlib", "re", "sys", "types", "yaml", "docx", "openpyxl"}
 
 
 def test_package_imports_nothing_that_can_reach_a_network_or_llm():
@@ -1564,3 +1564,69 @@ def test_regulatory_report_is_never_a_grade_trigger_in_shipped_rules():
         fields = {t["field"] for ts in r["classes"].values() for t in ts}
         assert "regulatory_report_required" not in fields, rules_path.name
         assert {"patient_safety_impact", "regulatory_report_required"} <= set(r["required_flags"])
+
+
+# --- summary as Excel (--summary --xlsx, user-approved openpyxl) --------------------
+
+import openpyxl  # noqa: E402
+
+from devdraft.summary_xlsx import write_summary_xlsx  # noqa: E402
+
+
+def _header_row(ws, first: str) -> int:
+    return next(r for r in range(1, ws.max_row + 1) if ws.cell(r, 1).value == first)
+
+
+def test_summary_xlsx_contents(tmp_path):
+    results, summary = run_batch(sorted(INTAKE.glob("*.yaml")), ROOT / "config/rules.yaml",
+                                 ROOT / "data/synthetic/history.csv", tmp_path, TODAY,
+                                 want_summary=True, want_xlsx=True)
+    wb = openpyxl.load_workbook(summary.with_suffix(".xlsx"))
+    assert wb.sheetnames == ["초안 생성", "거부"]
+    ws = wb["초안 생성"]
+    notes = " ".join(str(ws.cell(r, 1).value) for r in range(1, 5))
+    assert "판단·승인 문서가 아닙니다" in notes and "합성(가짜) 데이터" in notes
+    h = _header_row(ws, "Deviation 번호")
+    rows = [[c.value for c in r] for r in ws.iter_rows(min_row=h + 1)]
+    assert [r[0] for r in rows] == ["DEV-2026-2201", "DEV-2026-2202", "DEV-2026-2203"]
+    assert rows[0][2] == "MAJOR (제안)" and rows[0][4] == 5
+    assert all("(제안)" in r[2] for r in rows)
+    assert ws.freeze_panes == f"A{h + 1}" and ws.auto_filter.ref.startswith(f"A{h}")
+    header = [c.value for c in ws[h]]
+    assert not any("확정" in str(v) or "근본원인" in str(v) for v in header)  # no confirmation, no root cause
+    rej = wb["거부"]
+    hr = _header_row(rej, "입력 파일")
+    assert rej.cell(hr + 1, 1).value == "DEV-2026-2204.yaml" and "detected_by" in rej.cell(hr + 1, 2).value
+
+
+@pytest.mark.parametrize("evil", ['=HYPERLINK("http://x","클릭")', "=1+1", "+1+1", "-2+3", "@SUM(A1)"])
+def test_summary_xlsx_never_writes_formulas(tmp_path, evil):
+    """Entered text that looks like a formula must stay text (formula injection)."""
+    rs = [FormResult(file="f.yaml", ok=True, dev_id="D-1", title=evil, proposed="minor", reasons=[evil],
+                     draft="D-1_draft.md"),
+          FormResult(file=evil + ".yaml", ok=False, error=evil)]
+    wb = openpyxl.load_workbook(write_summary_xlsx(rs, "2026-11-24", 365, None, tmp_path / "s.xlsx"))
+    cells = [c for ws in wb.worksheets for row in ws.iter_rows() for c in row
+             if isinstance(c.value, str) and evil in c.value]
+    assert len(cells) >= 4
+    for c in cells:
+        assert c.data_type == "s", (c.coordinate, c.data_type)
+        if c.value.startswith(("=", "+", "-", "@")):
+            assert c.quotePrefix, c.coordinate
+
+
+def test_summary_xlsx_only_with_flag(tmp_path):
+    run_batch([INTAKE / "DEV-2026-2203.yaml"], ROOT / "config/rules.yaml",
+              ROOT / "data/synthetic/history.csv", tmp_path, TODAY, want_summary=True)
+    assert not list(tmp_path.glob("*.xlsx"))
+
+
+def test_xlsx_without_summary_is_usage_error(tmp_path):
+    p = _cli(INTAKE / "DEV-2026-2203.yaml", "--xlsx", "--out", tmp_path)
+    assert p.returncode == 2 and "--summary" in p.stderr
+    assert not list(tmp_path.glob("*"))
+
+
+def test_openpyxl_is_a_declared_dependency():
+    reqs = (ROOT / "requirements.txt").read_text(encoding="utf-8")
+    assert re.search(r"^openpyxl>=", reqs, flags=re.M)
