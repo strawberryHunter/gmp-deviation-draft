@@ -169,6 +169,13 @@ SHOWCASE = [
 ]
 
 
+NEW_FLAGS = {"patient_safety_impact": False, "regulatory_report_required": False}
+
+
+def _with_new_flags(form: dict) -> dict:
+    return {**form, **{k: form.get(k, v) for k, v in NEW_FLAGS.items()}}
+
+
 def main() -> None:
     hist = make_history()
     out = ROOT / "data/synthetic/history.csv"
@@ -179,13 +186,13 @@ def main() -> None:
     print(f"history: {len(hist)} rows -> {out}")
     for form in INTAKE:
         p = ROOT / "data/synthetic/intake" / f"{form['id']}.yaml"
-        p.write_text(yaml.safe_dump({"synthetic": True, **form}, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        p.write_text(yaml.safe_dump({"synthetic": True, **_with_new_flags(form)}, allow_unicode=True, sort_keys=False), encoding="utf-8")
         print(f"intake: {p.name}")
     showcase_dir = ROOT / "data/synthetic/showcase"
     showcase_dir.mkdir(parents=True, exist_ok=True)
     for form in SHOWCASE:
         p = showcase_dir / f"{form['id']}.yaml"
-        p.write_text(yaml.safe_dump({"synthetic": True, **form}, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        p.write_text(yaml.safe_dump({"synthetic": True, **_with_new_flags(form)}, allow_unicode=True, sort_keys=False), encoding="utf-8")
         print(f"showcase: {p.name}")
 
 

@@ -26,6 +26,18 @@ BANNER = (
 )
 
 
+# Reporter's yes/no answers, in the order shown in the draft.
+FLAG_LABELS = [
+    ("sterility_assurance_impacted", "무균 보증 영향"),
+    ("released_product_affected", "출하 제품 영향"),
+    ("data_integrity_concern", "데이터 완전성 우려"),
+    ("patient_safety_impact", "환자 안전 영향"),
+    ("cpp_excursion", "CPP 이탈"),
+    ("spec_oos", "규격 이탈(OOS)"),
+    ("other_batches_possibly_affected", "타 배치 영향 가능성"),
+    ("regulatory_report_required", "규제 신고 대상 가능성"),
+]
+
 SYNTHETIC_MARK = "합성(가짜) 데이터로 만든 초안 — 실제 deviation 문서로 사용 금지"
 
 
@@ -108,6 +120,14 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
             + "\n"
         )
     plan_block = "\n".join(f"| {inline(k)} | {inline(v)} | {TBD} |" for k, v in plan)
+    flag_rows = "\n".join(f"| {label} | {'예' if dev.get(field) else '아니오'} |" for field, label in FLAG_LABELS)
+    report_block = ""
+    if dev.regulatory_report_required:
+        # Reporting is a separate decision from severity: shown, never decided.
+        report_block = (
+            "\n**보고자 입력: 규제기관 신고 대상 가능성 \"예\"** — 도구는 신고 여부를 판단하지 않습니다.\n\n"
+            f"- {TBD} 신고 필요 여부·기한·신고처 확인 (사내 절차)\n"
+        )
     banner = BANNER
     if dev.synthetic:
         banner = f"> **{SYNTHETIC_MARK}**  \n" + banner
@@ -154,13 +174,8 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
 {manual_block}
 | 확인 항목 | 보고자 입력 |
 |---|---|
-| 무균 보증 영향 | {"예" if dev.sterility_assurance_impacted else "아니오"} |
-| 출하 제품 영향 | {"예" if dev.released_product_affected else "아니오"} |
-| 데이터 완전성 우려 | {"예" if dev.data_integrity_concern else "아니오"} |
-| CPP 이탈 | {"예" if dev.cpp_excursion else "아니오"} |
-| 규격 이탈(OOS) | {"예" if dev.spec_oos else "아니오"} |
-| 타 배치 영향 가능성 | {"예" if dev.other_batches_possibly_affected else "아니오"} |
-
+{flag_rows}
+{report_block}
 **QA 검토자 확정 등급:** {TBD}
 
 **제안과 다를 경우 사유:** {TBD}

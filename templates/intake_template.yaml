@@ -68,3 +68,5 @@ other_batches_possibly_affected:  # 다른 배치에 영향이 있을 가능성�
 sterility_assurance_impacted:     # 무균 보증에 영향 가능성이 있는가               → critical 제안 트리거
 released_product_affected:        # 이미 출하된 제품에 영향 가능성이 있는가        → critical 제안 트리거
 data_integrity_concern:           # 데이터 완전성(ALCOA+) 우려가 있는가            → critical 제안 트리거
+patient_safety_impact:            # 환자 안전에 영향을 줄 가능성이 있는가          → critical 제안 트리거
+regulatory_report_required:       # 규제기관 신고 대상일 가능성이 있는가 (등급과 별개 — true면 초안에 신고 검토 항목)

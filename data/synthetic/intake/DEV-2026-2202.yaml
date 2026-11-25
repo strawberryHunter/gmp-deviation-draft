@@ -22,3 +22,5 @@ other_batches_possibly_affected: true
 sterility_assurance_impacted: true
 released_product_affected: false
 data_integrity_concern: false
+patient_safety_impact: false
+regulatory_report_required: false
