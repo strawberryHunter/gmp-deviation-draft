@@ -31,6 +31,22 @@ class FormResult:
     synthetic: bool = False
 
 
+# Shared by the Markdown and Excel summaries. Kept out of f-strings: nesting
+# quotes inside an f-string needs Python 3.12+ and this project supports 3.10.
+def grade_text(r: FormResult, rules: dict | None) -> str:
+    caveat = "" if r.recurrence_evaluated else ", 반복 기준 미평가"
+    return f"{level_label(rules, r.proposed)} (제안{caveat})"
+
+
+def reason_lines(r: FormResult) -> list[str]:
+    extra = ["※ 규칙에 없는 '예' 답변: " + ", ".join(r.unused_yes)] if r.unused_yes else []
+    return [*r.reasons, *extra]
+
+
+def recurrence_text(r: FormResult):
+    return r.recurrence_count if r.recurrence_checked else "조회 안 함"
+
+
 def _cell(text: str) -> str:
     # Rejection messages may span lines; a table cell may not.
     return inline(" ".join(str(text).split("\n")).strip())
@@ -60,8 +76,8 @@ def render_summary(results: list[FormResult], generated_on: str, window_days: in
             "|---|---|---|---|---|---|---|",
         ]
         lines += [
-            f"| {_cell(r.dev_id)} | {_cell(r.title)} | {_cell(level_label(rules, r.proposed))} (제안{'' if r.recurrence_evaluated else ', 반복 기준 미평가'}) | "
-            f"{_cell('; '.join(r.reasons + ([f"※ 규칙에 없는 '예' 답변: {', '.join(r.unused_yes)}"] if r.unused_yes else [])))} | {r.recurrence_count if r.recurrence_checked else '조회 안 함'} | {_cell(Path(r.draft).name)} | {_cell(r.file)} |"
+            f"| {_cell(r.dev_id)} | {_cell(r.title)} | {_cell(grade_text(r, rules))} | "
+            f"{_cell('; '.join(reason_lines(r)))} | {recurrence_text(r)} | {_cell(Path(r.draft).name)} | {_cell(r.file)} |"
             for r in done
         ]
     else:

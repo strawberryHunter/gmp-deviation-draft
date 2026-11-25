@@ -23,6 +23,8 @@ GxP 문서이므로 **"그럴듯하게 채워주는" 동작이 가장 위험합�
 ## 작업 방식
 - 용어는 **deviation** (문장·표 첫머리는 Deviation). 옛 한국어 용어를 쓰지 않습니다 (테스트가 강제).
 - 기능을 추가하면 테스트도 같이. 커밋 전 `python -m pytest -q` 통과 필수.
+- 지원 버전은 Python 3.10 이상입니다. 로컬 기본 파이썬(3.13)에서는 3.12 이상 문법(예: f-string 안에 같은 따옴표 중첩)이 통과하므로, 푸시 전에
+  `uv run --no-project --python 3.10 --with-requirements requirements.txt python -m pytest -q`로 3.10도 확인합니다.
 - 고치기 전에 문제를 **직접 재현**하고, 고친 뒤 새 테스트가 이전 코드에서 실패하는지 확인합니다.
 - 출력이 바뀌면 샘플을 다시 만듭니다 (테스트 `test_sample_output_is_up_to_date`가 강제):
   `python -m devdraft.cli data/synthetic/intake/*.yaml --summary --today 2026-11-24 --out sample_output`
