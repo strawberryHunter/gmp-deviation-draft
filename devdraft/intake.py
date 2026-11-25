@@ -132,6 +132,17 @@ def load(path: str | Path, rules: dict) -> Deviation:
     if not_bool:
         problems.append(f"true/false가 아닌 값: {', '.join(not_bool)}")
 
+    multiline_ok = {"description", "immediate_actions"}
+    broken = sorted(
+        k for k, v in raw.items()
+        if k not in multiline_ok and isinstance(v, str) and ("\n" in v.strip() or "\r" in v)
+    )
+    if broken:
+        problems.append(f"한 줄로 적어야 하는 항목에 줄바꿈이 있음: {', '.join(broken)}")
+    for n, prm in enumerate(raw.get("parameters") or [], 1):
+        if isinstance(prm, dict) and any(isinstance(v, str) and "\n" in v.strip() for v in prm.values()):
+            problems.append(f"parameters {n}번째 항목에 줄바꿈이 있음 — 한 줄로 적으십시오")
+
     cat = raw.get("category")
     if cat and cat not in rules["categories"]:
         problems.append(f"category는 {rules['categories']} 중 하나여야 합니다: {cat}")
