@@ -1,7 +1,7 @@
 # HANDOFF — 현재 상태와 다음 할 일
 
 > 작업이 끝날 때마다 갱신합니다 (규칙: [`CLAUDE.md`](../CLAUDE.md)).
-> **마지막 갱신: 2026-11-25** · 기준 브랜치 `main` · 테스트 279개 통과 · **CI 통과 시 Claude가 자동 머지** (CI: Ubuntu Python 3.10–3.13, Windows 3.12) · 도구 버전 `devdraft 0.5.0`
+> **마지막 갱신: 2026-11-25** · 기준 브랜치 `main` · 테스트 282개 통과 · **CI 통과 시 Claude가 자동 머지** (CI: Ubuntu Python 3.10–3.13, Windows 3.12) · 도구 버전 `devdraft 0.5.0`
 >
 > **프로젝트 목적: 입사 포트폴리오.** 실제 회사 도입이 아니므로 회사 SOP·사내 적격성 평가는 범위 밖입니다. 우선순위는 "검토자가 처음 1분에 보고 이해하는가"입니다.
 
@@ -33,6 +33,7 @@
 | 한국어 Excel 기본 "CSV"(CP949) 이력 파일 | ✅ 경고와 함께 읽음 (사용자 결정) |
 | 위험 질문 8개 — "환자 안전 영향"(CRITICAL 트리거), "규제 신고 대상"(등급과 별개, ☐ 신고 검토 항목) | ✅ (사용자 결정) |
 | 입력 문장이 Markdown 기호를 포함해도 입력 그대로 표시 (`\|` 때문에 표 열이 밀리던 문제 포함) | ✅ |
+| 처음 쓰는 사람용 화면: 한국어 `--help`(예시·종료 코드), 만든 파일 전부 표시, 마지막에 건수·저장 위치·다음 할 일 | ✅ |
 | 회사 실제 SOP 반영 | — 포트폴리오라 범위 밖 (공개 SOP 예시로 방법을 보여 줌) |
 
 ## 2. 머지된 작업
@@ -57,12 +58,13 @@
 | [#16](https://github.com/strawberryHunter/gmp-deviation-draft/pull/16) | 반복성 조회를 못 한 경우 "없음" 대신 "조회 안 함" |
 | [#17](https://github.com/strawberryHunter/gmp-deviation-draft/pull/17) | 규칙에 없는 기준에 "예"로 답한 항목을 제안 아래에 명시 |
 | [#18](https://github.com/strawberryHunter/gmp-deviation-draft/pull/18) | HANDOFF 갱신 (포트폴리오 공개 준비 할 일) |
+| [#19](https://github.com/strawberryHunter/gmp-deviation-draft/pull/19) | 처음 쓰는 사람 기준 화면 개선: 한국어 도움말, 만든 파일 전부 표시, 실행 끝 요약 줄 |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
 위에서부터 중요한 순서입니다. 끝나면 Claude에게 결과를 알려 주세요.
 
-- [ ] **⓪ 저장소를 공개(Public)로 전환** — 지금은 비공개라 면접관이 링크를 열면 404입니다. 이 세션은 저장소 설정을 바꿀 권한이 없습니다(2026-11-25 시도, 403).
+- [ ] **⓪ (선택) 저장소를 공개(Public)로 전환** — 지원서에는 포트폴리오 PDF(대화에서 받은 파일)만 첨부해도 됩니다. 면접관이 코드를 보고 싶어 할 때 전환하십시오. 비공개 상태에서는 링크가 404입니다. 이 세션은 저장소 설정을 바꿀 권한이 없습니다(2026-11-25 시도, 403).
   - Settings → General → 맨 아래 Danger Zone → **Change visibility** → Public
   - 공개 전 점검 완료: 추적 파일에 비밀값·개인 이메일 없음, 커밋 이메일은 GitHub noreply 주소
   - 같은 화면에서 함께: About(오른쪽 톱니)에 주제 태그 `gmp` `gxp` `deviation-management` `data-integrity` `quality-assurance` `python` 추가, 프로필에서 **Pin**
