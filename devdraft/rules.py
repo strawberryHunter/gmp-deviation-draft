@@ -22,8 +22,12 @@ class StrictLoader(yaml.SafeLoader):
     """
 
 
+# Booleans are re-added below (true/false only). Timestamps are dropped so a
+# typed date-time such as 2026-11-25 03:15:00 stays the text that was typed,
+# rather than becoming a datetime that is later re-printed differently.
 StrictLoader.yaml_implicit_resolvers = {
-    ch: [(tag, rx) for tag, rx in resolvers if tag != "tag:yaml.org,2002:bool"]
+    ch: [(tag, rx) for tag, rx in resolvers
+         if tag not in ("tag:yaml.org,2002:bool", "tag:yaml.org,2002:timestamp")]
     for ch, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
 }
 StrictLoader.add_implicit_resolver(
