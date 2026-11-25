@@ -1925,3 +1925,19 @@ def test_form_made_with_new_then_filled_in_becomes_a_draft(tmp_path):
     p = _cli(form, "--docx", "--today", "2026-11-24", "--out", tmp_path)
     assert p.returncode == 0, p.stdout
     assert (tmp_path / "DEV-2026-9001_draft.md").exists() and (tmp_path / "DEV-2026-9001_draft.docx").exists()
+
+
+def test_paths_inside_the_current_folder_are_shown_short(tmp_path):
+    """Run from the repo folder without --out (what a user does): no
+    C:\\Users\\...\\gmp-deviation-draft-main\\ prefix repeated on every line."""
+    out = ROOT / "drafts"
+    created = not out.exists()
+    p = _cli("--new", "ZZ-SHORT-PATH-TEST")
+    try:
+        assert p.returncode == 0
+        assert str(ROOT) not in p.stdout
+        assert f"NEW {Path('drafts') / 'ZZ-SHORT-PATH-TEST.yaml'}" in p.stdout
+    finally:
+        (out / "ZZ-SHORT-PATH-TEST.yaml").unlink(missing_ok=True)
+        if created and out.exists() and not any(out.iterdir()):
+            out.rmdir()
