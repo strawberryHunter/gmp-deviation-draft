@@ -53,6 +53,19 @@ def qualify_for_unchecked_recurrence(dev: Deviation, rules: dict, level: str,
     return [*reasons, note]
 
 
+# Reporting is a separate decision with its own ☐ item in the draft.
+_NOT_A_GRADE_QUESTION = {"regulatory_report_required"}
+
+
+def unused_yes_answers(dev: Deviation, rules: dict) -> list[str]:
+    """Questions answered "yes" that no classification criterion of these
+    rules uses. The tool must not invent a criterion for them, but a serious
+    "yes" (e.g. 출하 제품 영향) must not vanish silently from the proposal."""
+    used = {t["field"] for ts in rules["classes"].values() for t in ts or [] if "equals" in t}
+    return [f for f in rules.get("required_flags") or []
+            if dev.get(f) is True and f not in used and f not in _NOT_A_GRADE_QUESTION]
+
+
 def find_recurrence(dev: Deviation, history: list[dict], rules: dict, today: date | None = None) -> list[dict]:
     """Past deviations in the window that match on every `match_on` key.
 

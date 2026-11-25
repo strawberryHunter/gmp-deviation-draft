@@ -190,6 +190,10 @@ OK  DEV-2026-2202.yaml -> drafts/duke/DEV-2026-2202_draft.md
 근거:
 - 최근 2년 내 같은 사업장·설비·유형 deviation 재발 (SOP 4.26) — 유사 건 1건
 
+**보고자가 "예"로 답했지만 이 규칙의 분류 기준이 아닌 항목: 타 배치 영향 가능성, 무균 보증 영향** — 제안 등급에 반영되지 않았습니다. 도구는 기준을 만들지 않습니다.
+
+- ☐ **작성 필요** SOP에 따라 이 답변이 등급에 영향을 주는지 확인
+
 분류 기준 출처: Duke COMM-PAS-013 Rev 01 (eff. 2025-07-01) — 공개 SOP 기반 예시, Duke와 무관
 
 **도구가 판단하지 않은 SOP 기준 — 검토자가 직접 확인** (해당하면 위 제안 등급과 다를 수 있음):
@@ -200,6 +204,7 @@ OK  DEV-2026-2202.yaml -> drafts/duke/DEV-2026-2202_draft.md
 
 - 같은 양식이 기본 규칙에서는 CRITICAL, 이 SOP에서는 "Repeat Deviation"으로 제안됩니다. **SOP에 없는 등급을 도구가 만들지 않습니다.**
 - 도구가 평가할 수 없는 조항(위험 점수 등)은 `☐` 확인 항목으로 남습니다.
+- 보고자가 "예"로 답했지만 이 SOP의 기준이 아닌 항목(여기서는 무균 보증 영향 등)은 **반영되지 않았다고 명시**하고 `☐` 확인 항목으로 남깁니다. 도구가 기준을 만들어 내지도, 조용히 버리지도 않습니다.
 - 조항별 매핑: [`docs/sop_mapping/Duke_COMM-PAS-013.md`](sop_mapping/Duke_COMM-PAS-013.md) · 전체 결과: [`sample_output/sop_examples/duke/`](../sample_output/sop_examples/duke/)
 
 ## 8. 다음

@@ -78,7 +78,7 @@ def write_summary_xlsx(results: list[FormResult], generated_on: str, window_days
     header = ["Deviation 번호", "제목", "제안 등급", "제안 근거", f"반복 건 (최근 {window_days}일)", "초안", "입력 파일"]
     start = _notes(ws, notes, len(header))
     _table(ws, start, header, [
-        [r.dev_id, r.title, f"{level_label(rules, r.proposed)} (제안{'' if r.recurrence_evaluated else ', 반복 기준 미평가'})", "\n".join(r.reasons),
+        [r.dev_id, r.title, f"{level_label(rules, r.proposed)} (제안{'' if r.recurrence_evaluated else ', 반복 기준 미평가'})", "\n".join(r.reasons + ([f"※ 규칙에 없는 '예' 답변: {', '.join(r.unused_yes)}"] if r.unused_yes else [])),
          r.recurrence_count if r.recurrence_checked else "조회 안 함", Path(r.draft).name, r.file]
         for r in done
     ], [16, 40, 18, 50, 14, 26, 24])

@@ -1774,3 +1774,45 @@ def test_empty_category_also_counts_as_not_checked(tmp_path):
     md = build(p, ROOT / "config/rules.yaml", ROOT / "data/synthetic/history.csv",
                tmp_path / "o", TODAY).read_text(encoding="utf-8")
     assert "유형 값이 비어" in md and "(반복 기준 미평가" in md
+
+
+# --- a "yes" answer the rules don't use must not vanish silently ----------------------
+
+def test_unused_yes_answers_are_named_under_rules_without_that_criterion(tmp_path):
+    f = yaml.safe_load((INTAKE / "DEV-2026-2203.yaml").read_text(encoding="utf-8"))
+    f.update(released_product_affected=True, patient_safety_impact=True, regulatory_report_required=True)
+    p = tmp_path / "f.yaml"
+    p.write_text(yaml.safe_dump(f, allow_unicode=True), encoding="utf-8")
+    md = build(p, DUKE_RULES, ROOT / "data/synthetic/history.csv", tmp_path / "o", TODAY).read_text(encoding="utf-8")
+    sec = md.split("## 3. 분류", 1)[1].split("## 4.", 1)[0]
+    assert "이 규칙의 분류 기준이 아닌 항목: 출하 제품 영향, 환자 안전 영향" in sec
+    assert "☐ **작성 필요** SOP에 따라 이 답변이 등급에 영향을 주는지 확인" in sec
+    note = sec.split("분류 기준이 아닌 항목", 1)[1].split("\n", 1)[0]
+    assert "규제 신고" not in note  # reporting has its own item, not a grade question
+
+
+def test_no_unused_note_when_rules_use_the_answer(tmp_path):
+    f = yaml.safe_load((INTAKE / "DEV-2026-2203.yaml").read_text(encoding="utf-8"))
+    f.update(released_product_affected=True, patient_safety_impact=True)
+    p = tmp_path / "f.yaml"
+    p.write_text(yaml.safe_dump(f, allow_unicode=True), encoding="utf-8")
+    md = build(p, ROOT / "config/rules.yaml", ROOT / "data/synthetic/history.csv",
+               tmp_path / "o", TODAY).read_text(encoding="utf-8")
+    assert "분류 기준이 아닌 항목" not in md and "제안 등급: CRITICAL" in md
+
+
+def test_duke_sample_surfaces_sterility_yes():
+    """DEV-2026-2202 answered sterility 'yes'; the Duke SOP has no such criterion."""
+    md = (ROOT / "sample_output/sop_examples/duke/DEV-2026-2202_draft.md").read_text(encoding="utf-8")
+    assert "분류 기준이 아닌 항목: 타 배치 영향 가능성, 무균 보증 영향" in md
+    row = next(l for l in (ROOT / "sample_output/sop_examples/duke/_summary_2026-11-24.md").read_text(
+        encoding="utf-8").splitlines() if l.startswith("| DEV-2026-2202"))
+    assert "※ 규칙에 없는 '예' 답변: 타 배치 영향 가능성, 무균 보증 영향" in row
+
+
+def test_unused_yes_in_excel_summary(tmp_path):
+    results, summary = run_batch([INTAKE / "DEV-2026-2202.yaml"], DUKE_RULES, ROOT / "data/synthetic/history.csv",
+                                 tmp_path, TODAY, want_summary=True, want_xlsx=True)
+    ws = openpyxl.load_workbook(summary.with_suffix(".xlsx"))["초안 생성"]
+    h = _header_row(ws, "Deviation 번호")
+    assert "규칙에 없는 '예' 답변: 타 배치 영향 가능성, 무균 보증 영향" in ws.cell(h + 1, 4).value

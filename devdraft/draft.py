@@ -12,6 +12,7 @@ from types import SimpleNamespace
 
 from .intake import Deviation
 from .mdtext import block, inline
+from .classify import unused_yes_answers
 from .rules import level_label
 
 TBD = "☐ **작성 필요**"
@@ -132,6 +133,15 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
         )
     plan_block = "\n".join(f"| {inline(k)} | {inline(v)} | {TBD} |" for k, v in plan)
     flag_rows = "\n".join(f"| {label} | {'예' if dev.get(field) else '아니오'} |" for field, label in FLAG_LABELS)
+    flag_label = dict(FLAG_LABELS)
+    unused = [flag_label.get(f, f) for f in (unused_yes_answers(dev, rules) if rules else [])]
+    unused_block = ""
+    if unused:
+        unused_block = (
+            f"\n**보고자가 \"예\"로 답했지만 이 규칙의 분류 기준이 아닌 항목: {', '.join(unused)}** — "
+            "제안 등급에 반영되지 않았습니다. 도구는 기준을 만들지 않습니다.\n\n"
+            f"- {TBD} SOP에 따라 이 답변이 등급에 영향을 주는지 확인\n"
+        )
     report_block = ""
     if dev.regulatory_report_required:
         # Reporting is a separate decision from severity: shown, never decided.
@@ -180,7 +190,7 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
 
 근거:
 {chr(10).join(f"- {inline(r)}" for r in reasons)}
-{also_block}
+{also_block}{unused_block}
 분류 기준 출처: {source}
 {manual_block}
 | 확인 항목 | 보고자 입력 |

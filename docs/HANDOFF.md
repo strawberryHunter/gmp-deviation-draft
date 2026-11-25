@@ -1,7 +1,7 @@
 # HANDOFF — 현재 상태와 다음 할 일
 
 > 작업이 끝날 때마다 갱신합니다 (규칙: [`CLAUDE.md`](../CLAUDE.md)).
-> **마지막 갱신: 2026-11-25** · 기준 브랜치 `main` · 테스트 275개 통과 · **CI 통과 시 Claude가 자동 머지** (CI: Ubuntu Python 3.10–3.13, Windows 3.12) · 도구 버전 `devdraft 0.5.0`
+> **마지막 갱신: 2026-11-25** · 기준 브랜치 `main` · 테스트 279개 통과 · **CI 통과 시 Claude가 자동 머지** (CI: Ubuntu Python 3.10–3.13, Windows 3.12) · 도구 버전 `devdraft 0.5.0`
 >
 > **프로젝트 목적: 입사 포트폴리오.** 실제 회사 도입이 아니므로 회사 SOP·사내 적격성 평가는 범위 밖입니다. 우선순위는 "검토자가 처음 1분에 보고 이해하는가"입니다.
 
@@ -28,6 +28,7 @@
 | 요약표 Excel 출력 (`--summary --xlsx`, 수식 주입 방지) | ✅ (openpyxl, 사용자 승인) |
 | 템플릿을 직접 채워 본 결과 (안내 문구가 사건 경위에 섞임, 발견 일시 검증 없음) | ✅ 수정 |
 | 반복성 조회를 못 한 경우 "없음" 대신 "조회 안 함"으로 표시 | ✅ |
+| 규칙에 없는 기준에 "예"로 답한 항목을 제안 아래에 명시 | ✅ |
 | Windows `cmd`·PowerShell의 `*.yaml`, 없는 파일 | ✅ (이전에는 오류로 종료) |
 | 한국어 Excel 기본 "CSV"(CP949) 이력 파일 | ✅ 경고와 함께 읽음 (사용자 결정) |
 | 위험 질문 8개 — "환자 안전 영향"(CRITICAL 트리거), "규제 신고 대상"(등급과 별개, ☐ 신고 검토 항목) | ✅ (사용자 결정) |
@@ -53,6 +54,7 @@
 | [#13](https://github.com/strawberryHunter/gmp-deviation-draft/pull/13) | 위험 질문 2개 추가: 환자 안전 영향(CRITICAL), 규제 신고 대상(검토 항목) |
 | [#14](https://github.com/strawberryHunter/gmp-deviation-draft/pull/14) | 요약표 Excel 출력 (수식 주입 방지) |
 | [#15](https://github.com/strawberryHunter/gmp-deviation-draft/pull/15) | 템플릿 안내 문구가 사건 경위에 섞이던 문제, 발견 일시 검증 |
+| [#16](https://github.com/strawberryHunter/gmp-deviation-draft/pull/16) | 반복성 조회를 못 한 경우 "없음" 대신 "조회 안 함" |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
@@ -65,7 +67,7 @@
 - [ ] **② CI 결과 확인** — PR 화면 아래쪽 "Checks"가 초록색 ✅인지 봐 주세요. 빨간 ❌면 Claude에게 "CI 실패 고쳐줘"
 
 - [ ] **③ GitHub 브랜치 정리** — 이 세션은 원격 브랜치를 지울 권한이 없습니다. 머지가 끝난 아래 브랜치는 지워도 내용이 사라지지 않습니다. 포트폴리오 저장소가 깔끔해 보입니다.
-  `fix/flag-validation-template`, `feat/history-check`, `feat/docx-format`, `feat/traceability`, `feat/public-sop-example`, `docs/handoff`, `ci/github-actions`, `feat/showcase`, `docs/readme-portfolio`, `feat/summary-docx`, `fix/verbatim-facts`, `decisions/resolve-open-items`, `feat/new-risk-questions`, `feat/summary-xlsx`, `fix/template-comment-leak`, `fix/recurrence-not-checked`
+  `fix/flag-validation-template`, `feat/history-check`, `feat/docx-format`, `feat/traceability`, `feat/public-sop-example`, `docs/handoff`, `ci/github-actions`, `feat/showcase`, `docs/readme-portfolio`, `feat/summary-docx`, `fix/verbatim-facts`, `decisions/resolve-open-items`, `feat/new-risk-questions`, `feat/summary-xlsx`, `fix/template-comment-leak`, `fix/recurrence-not-checked`, `fix/unused-yes-answers`
   - 지우는 곳: 저장소 → Branches → 각 줄의 휴지통 아이콘
   - 앞으로 자동으로 지우려면: Settings → General → **Automatically delete head branches** 켜기
 
