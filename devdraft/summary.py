@@ -23,6 +23,8 @@ class FormResult:
     proposed: str = ""
     reasons: list[str] = field(default_factory=list)
     recurrence_count: int = 0
+    recurrence_checked: bool = True
+    recurrence_evaluated: bool = True  # False: rules have a recurrence criterion that was not checked
     draft: str = ""
     error: str = ""
     synthetic: bool = False
@@ -57,8 +59,8 @@ def render_summary(results: list[FormResult], generated_on: str, window_days: in
             "|---|---|---|---|---|---|---|",
         ]
         lines += [
-            f"| {_cell(r.dev_id)} | {_cell(r.title)} | {_cell(level_label(rules, r.proposed))} (제안) | "
-            f"{_cell('; '.join(r.reasons))} | {r.recurrence_count} | {_cell(Path(r.draft).name)} | {_cell(r.file)} |"
+            f"| {_cell(r.dev_id)} | {_cell(r.title)} | {_cell(level_label(rules, r.proposed))} (제안{'' if r.recurrence_evaluated else ', 반복 기준 미평가'}) | "
+            f"{_cell('; '.join(r.reasons))} | {r.recurrence_count if r.recurrence_checked else '조회 안 함'} | {_cell(Path(r.draft).name)} | {_cell(r.file)} |"
             for r in done
         ]
     else:

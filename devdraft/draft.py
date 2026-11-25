@@ -89,7 +89,18 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
     window = f"최근 {rec_cfg['window_days']}일"
     match = "·".join(_MATCH_LABEL.get(k, k) for k in rec_cfg["match_on"])
     rec_block = f"{window} 내 동일 {match} 건 없음."
-    if recurrence:
+    missing = [k for k in rec_cfg["match_on"] if not str(dev.get(k) or "").strip()]
+    rec_trigger = any(t.get("field") == "recurrence_count"
+                      for ts in ((rules or {}).get("classes") or {}).values() for t in ts or [])
+    grade_note = " (반복 기준 미평가 — 반복성 조회를 하지 않음)" if missing and rec_trigger else ""
+    if missing:
+        labels = "·".join(_MATCH_LABEL.get(k, k) for k in missing)
+        rec_block = (
+            f"**반복성 조회를 하지 않았습니다** — {labels} 값이 비어 있어 같은 건을 찾을 수 없습니다 "
+            "(\"반복 없음\"이 아닙니다).\n\n"
+            f"- {TBD} QMS에서 반복 여부 직접 확인 ({window}, 동일 {match} 기준)"
+        )
+    elif recurrence:
         # Past root causes are hidden unless QA opts in: listing them invites
         # copying an old cause instead of investigating this one.
         cols = ["dev_id", "opened", "final_class"]
@@ -165,7 +176,7 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
 
 ## 3. 분류 (제안)
 
-**제안 등급: {level_label(rules, proposed)}**
+**제안 등급: {inline(level_label(rules, proposed))}**{grade_note}
 
 근거:
 {chr(10).join(f"- {inline(r)}" for r in reasons)}

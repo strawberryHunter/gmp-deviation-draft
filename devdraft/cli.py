@@ -8,7 +8,8 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from .classify import find_recurrence, investigation_plan, lower_triggers, propose_class
+from .classify import (find_recurrence, investigation_plan, lower_triggers, propose_class,
+                       has_recurrence_trigger, qualify_for_unchecked_recurrence, unmatched_keys)
 from .draft import render_markdown
 from . import __version__
 from .history import HistoryError, check_history, is_synthetic, load_checked_history, render_report
@@ -64,6 +65,7 @@ def draft_one(form: Path, rules: dict, history: list[dict], out_dir: Path,
         seen_ids.add(dev.id)
     rec = find_recurrence(dev, history, rules, today)
     level, reasons = propose_class(dev, rules, len(rec))
+    reasons = qualify_for_unchecked_recurrence(dev, rules, level, reasons)
     plan = investigation_plan(dev, rules)
     md = render_markdown(dev, level, reasons, rec, plan,
                          generated_on=(today or date.today()).isoformat(),
@@ -78,6 +80,8 @@ def draft_one(form: Path, rules: dict, history: list[dict], out_dir: Path,
         markdown_to_docx(md, out_dir / f"{dev.id}_draft.docx")
     return FormResult(file=form.name, ok=True, dev_id=dev.id, title=dev.title,
                       proposed=level, reasons=reasons, recurrence_count=len(rec),
+                      recurrence_checked=not unmatched_keys(dev, rules),
+                      recurrence_evaluated=not (unmatched_keys(dev, rules) and has_recurrence_trigger(rules)),
                       draft=str(md_path), synthetic=dev.synthetic)
 
 
