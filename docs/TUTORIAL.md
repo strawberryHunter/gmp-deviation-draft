@@ -63,7 +63,9 @@ regulatory_report_required: false
 python -m devdraft.cli data/synthetic/showcase/DEV-2026-2301.yaml --docx --today 2026-11-24 --out drafts
 ```
 ```text
-OK  DEV-2026-2301.yaml -> drafts/DEV-2026-2301_draft.md
+OK  DEV-2026-2301.yaml -> drafts/DEV-2026-2301_draft.md, drafts/DEV-2026-2301_draft.docx
+완료: 입력 1건 · 초안 1건 · 거부 0건 (저장 위치: drafts)
+  → 초안의 '☐ 작성 필요' 칸과 등급 확정은 담당자가 작성합니다.
 ```
 
 `drafts/`에 Markdown 초안과 Word 초안(`.docx`)이 생깁니다. `--today`는 결과를 똑같이 재현하려고 날짜를 고정한 것입니다 (빼면 오늘 날짜).
@@ -116,6 +118,8 @@ python -m devdraft.cli data/synthetic/tutorial/broken_form.yaml --today 2026-11-
 ```
 ```text
 ERR broken_form.yaml: 알 수 없는 항목: root_cause / 필수 항목 누락: detected_by / true/false가 아닌 값: spec_oos='no'
+완료: 입력 1건 · 초안 0건 · 거부 1건 (저장 위치: drafts)
+  → ERR 줄의 양식을 보완한 뒤 다시 실행하십시오. 거부된 양식은 초안을 만들지 않았습니다.
 ```
 
 - 초안을 만들지 않고, 문제를 **한 번에 모두** 알려 줍니다.
@@ -130,11 +134,13 @@ ERR broken_form.yaml: 알 수 없는 항목: root_cause / 필수 항목 누락: 
 python -m devdraft.cli data/synthetic/showcase/*.yaml --docx --summary --today 2026-11-24 --out drafts
 ```
 ```text
-OK  DEV-2026-2301.yaml -> drafts/DEV-2026-2301_draft.md
-OK  DEV-2026-2302.yaml -> drafts/DEV-2026-2302_draft.md
-OK  DEV-2026-2303.yaml -> drafts/DEV-2026-2303_draft.md
-OK  DEV-2026-2304.yaml -> drafts/DEV-2026-2304_draft.md
-SUM drafts/_summary_2026-11-24.md
+OK  DEV-2026-2301.yaml -> drafts/DEV-2026-2301_draft.md, drafts/DEV-2026-2301_draft.docx
+OK  DEV-2026-2302.yaml -> drafts/DEV-2026-2302_draft.md, drafts/DEV-2026-2302_draft.docx
+OK  DEV-2026-2303.yaml -> drafts/DEV-2026-2303_draft.md, drafts/DEV-2026-2303_draft.docx
+OK  DEV-2026-2304.yaml -> drafts/DEV-2026-2304_draft.md, drafts/DEV-2026-2304_draft.docx
+SUM drafts/_summary_2026-11-24.md, drafts/_summary_2026-11-24.docx
+완료: 입력 4건 · 초안 4건 · 거부 0건 (저장 위치: drafts)
+  → 초안의 '☐ 작성 필요' 칸과 등급 확정은 담당자가 작성합니다.
 ```
 
 요약표(`_summary_2026-11-24.md`, `--docx`면 가로 방향 Word도, `--xlsx`를 더하면 Excel도)는 작업 목록입니다. 등급은 모두 "(제안)"이고, 확정란·우선순위·과거 근본원인은 넣지 않습니다.
@@ -151,6 +157,8 @@ python -m devdraft.cli data/synthetic/tutorial/no_synthetic_flag.yaml --today 20
 ```
 ```text
 ERR no_synthetic_flag.yaml: 반복성 조회 이력이 합성(가짜) 데이터입니다 — 실제 양식에 가짜 반복 건이 붙습니다. --history 로 실제 이력 CSV를 지정하십시오. (연습용 양식이면 양식에 synthetic: true)
+완료: 입력 1건 · 초안 0건 · 거부 1건 (저장 위치: drafts)
+  → ERR 줄의 양식을 보완한 뒤 다시 실행하십시오. 거부된 양식은 초안을 만들지 않았습니다.
 ```
 
 실제로는 QMS에서 내보낸 이력 CSV를 `--history`로 줍니다.
@@ -181,6 +189,8 @@ python -m devdraft.cli data/synthetic/intake/DEV-2026-2202.yaml --rules config/e
 ```
 ```text
 OK  DEV-2026-2202.yaml -> drafts/duke/DEV-2026-2202_draft.md
+완료: 입력 1건 · 초안 1건 · 거부 0건 (저장 위치: drafts/duke)
+  → 초안의 '☐ 작성 필요' 칸과 등급 확정은 담당자가 작성합니다.
 ```
 
 <!-- excerpt: sample_output/sop_examples/duke/DEV-2026-2202_draft.md -->

@@ -72,11 +72,15 @@ python -m devdraft.cli drafts/DEV-2026-2301.yaml --docx --out drafts --history /
 `--history`를 빼면 기본 합성 이력이 쓰이는데, 이때 실제 양식은 가짜 반복 건이 붙지 않도록 거부됩니다.
 도구를 연습할 때는 양식 맨 위에 `synthetic: true`를 넣으면 `--history` 없이도 실행됩니다 (초안에 "합성 데이터" 표시).
 
-정상이면 아래처럼 나오고 `drafts/`에 `DEV-2026-2301_draft.md`와 `.docx`가 생깁니다.
+정상이면 아래처럼 나옵니다. 만든 파일과 저장 위치, 다음에 할 일이 함께 표시됩니다.
 
 ```
-OK  DEV-2026-2301.yaml -> drafts/DEV-2026-2301_draft.md
+OK  DEV-2026-2301.yaml -> drafts/DEV-2026-2301_draft.md, drafts/DEV-2026-2301_draft.docx
+완료: 입력 1건 · 초안 1건 · 거부 0건 (저장 위치: drafts)
+  → 초안의 '☐ 작성 필요' 칸과 등급 확정은 담당자가 작성합니다.
 ```
+
+옵션 설명과 예시는 `python -m devdraft.cli --help`로 언제든 볼 수 있습니다.
 
 ### 2-3. 거부되었을 때
 

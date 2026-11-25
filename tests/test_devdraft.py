@@ -1816,3 +1816,32 @@ def test_unused_yes_in_excel_summary(tmp_path):
     ws = openpyxl.load_workbook(summary.with_suffix(".xlsx"))["초안 생성"]
     h = _header_row(ws, "Deviation 번호")
     assert "규칙에 없는 '예' 답변: 타 배치 영향 가능성, 무균 보증 영향" in ws.cell(h + 1, 4).value
+
+
+# --- console output a first-time user reads ------------------------------------
+
+def test_help_is_korean_and_explains_every_option():
+    p = _cli("--help")
+    assert p.returncode == 0
+    assert "positional arguments" not in p.stdout and "show this help" not in p.stdout
+    for opt in ("--rules", "--history", "--out", "--docx", "--summary", "--xlsx", "--check-history", "--today"):
+        line = next(l for l in p.stdout.splitlines() if l.strip().startswith(opt))
+        assert re.search(r"[가-힣]", line), f"{opt} 설명 없음: {line}"
+    assert "예:" in p.stdout and "templates/intake_template.yaml" in p.stdout and "종료 코드" in p.stdout
+
+
+def test_run_lists_every_file_written_and_ends_with_counts(tmp_path):
+    forms = [ROOT / f"data/synthetic/intake/DEV-2026-220{i}.yaml" for i in (1, 4)]
+    p = _cli(*map(str, forms), "--summary", "--docx", "--xlsx", "--today", "2026-11-24", "--out", str(tmp_path))
+    assert p.returncode == 1
+    for written in tmp_path.iterdir():  # nothing is created silently
+        assert str(written) in p.stdout, f"화면에 안 나온 파일: {written.name}"
+    last = p.stdout.strip().splitlines()
+    assert any(l.startswith("완료: 입력 2건 · 초안 1건 · 거부 1건") for l in last[-3:])
+    assert any("ERR 줄의 양식을 보완" in l for l in last[-3:])
+
+
+def test_successful_run_does_not_tell_user_to_fix_forms(tmp_path):
+    p = _cli(str(ROOT / "data/synthetic/intake/DEV-2026-2201.yaml"), "--today", "2026-11-24", "--out", str(tmp_path))
+    assert p.returncode == 0
+    assert "거부 0건" in p.stdout and "보완" not in p.stdout and "작성 필요" in p.stdout

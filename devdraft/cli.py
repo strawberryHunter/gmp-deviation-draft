@@ -115,7 +115,8 @@ def run_batch(forms: list[Path], rules_path: Path, history_path: Path, out_dir: 
     for f in forms:
         try:
             r = draft_one(f, rules, history, out_dir, today, want_docx, seen, src)
-            print(f"OK  {f.name} -> {r.draft}")
+            made = r.draft + (f", {Path(r.draft).with_suffix('.docx')}" if want_docx else "")
+            print(f"OK  {f.name} -> {made}")
         except IntakeError as e:
             r = FormResult(file=f.name, ok=False, error=str(e))
             print(f"ERR {f.name}: {e}")
@@ -127,7 +128,8 @@ def run_batch(forms: list[Path], rules_path: Path, history_path: Path, out_dir: 
         summary_path = out_dir / f"_summary_{stamp}.md"
         summary_md = render_summary(results, stamp, rules["recurrence"]["window_days"], rules)
         summary_path.write_text(summary_md, encoding="utf-8")
-        print(f"SUM {summary_path}")
+        extra = [summary_path.with_suffix(x) for x, on in ((".docx", want_docx), (".xlsx", want_xlsx)) if on]
+        print("SUM " + ", ".join(str(x) for x in [summary_path, *extra]))
         if want_docx:
             from .docx_out import markdown_to_docx
             markdown_to_docx(summary_md, summary_path.with_suffix(".docx"),
@@ -178,21 +180,49 @@ def _hangul_safe_output() -> None:
                 stream.reconfigure(encoding="utf-8")
 
 
+def batch_footer(results: list[FormResult], out_dir: Path) -> str:
+    """Last lines of a run: counts, where the files are, what to do next."""
+    done = sum(r.ok for r in results)
+    lines = [f"완료: 입력 {len(results)}건 · 초안 {done}건 · 거부 {len(results) - done}건 (저장 위치: {out_dir})"]
+    if done < len(results):
+        lines.append("  → ERR 줄의 양식을 보완한 뒤 다시 실행하십시오. 거부된 양식은 초안을 만들지 않았습니다.")
+    if done:
+        lines.append("  → 초안의 '☐ 작성 필요' 칸과 등급 확정은 담당자가 작성합니다.")
+    return "\n".join(lines)
+
+
+HELP_EPILOG = """\
+예:
+  python -m devdraft.cli my_form.yaml                     초안 1건 (drafts/ 에 Markdown)
+  python -m devdraft.cli forms/*.yaml --summary --docx    여러 건 + 요약표, Word 파일도
+  python -m devdraft.cli --check-history --history qms.csv  이력 CSV만 점검
+
+빈 양식: templates/intake_template.yaml · 사용법: docs/USAGE.md · 따라하기: docs/TUTORIAL.md
+종료 코드: 0 모두 생성 / 1 거부된 양식 있음 / 2 규칙·이력 파일 오류"""
+
+
 def main() -> None:
     _hangul_safe_output()
-    ap = argparse.ArgumentParser(description="GMP deviation report drafting assistant (draft only)")
-    ap.add_argument("form", type=Path, nargs="*", help="intake YAML file(s)")
-    ap.add_argument("--rules", type=Path, default=ROOT / "config/rules.yaml")
-    ap.add_argument("--history", type=Path, default=ROOT / "data/synthetic/history.csv")
-    ap.add_argument("--out", type=Path, default=ROOT / "drafts")
-    ap.add_argument("--docx", action="store_true", help="also write a Word file")
-    ap.add_argument("--summary", action="store_true",
-                    help="write _summary_<date>.md listing every form: proposed class or rejection reason")
-    ap.add_argument("--xlsx", action="store_true",
-                    help="with --summary: also write the summary as an Excel workbook")
-    ap.add_argument("--check-history", action="store_true",
-                    help="only check the --history CSV against rules.yaml; no drafts are written")
-    ap.add_argument("--today", help="YYYY-MM-DD, for reproducible output")
+    ap = argparse.ArgumentParser(
+        description="GMP deviation 보고서 초안 도우미 — 초안만 만듭니다. 근본원인·영향 평가·CAPA·등급 확정은 담당자가 씁니다.",
+        epilog=HELP_EPILOG, formatter_class=argparse.RawDescriptionHelpFormatter, add_help=False,
+        prog="python -m devdraft.cli")
+    inp = ap.add_argument_group("입력")
+    opt = ap.add_argument_group("옵션")
+    inp.add_argument("form", type=Path, nargs="*", help="입력 양식 YAML 파일 (여러 개 가능, *.yaml 가능)")
+    opt.add_argument("--rules", type=Path, default=ROOT / "config/rules.yaml",
+                    help="등급 기준 파일 (기본: config/rules.yaml)")
+    opt.add_argument("--history", type=Path, default=ROOT / "data/synthetic/history.csv",
+                    help="반복성 조회용 QMS 이력 CSV (기본: 합성 예시 — 실제 양식에는 실제 이력을 지정)")
+    opt.add_argument("--out", type=Path, default=ROOT / "drafts", help="초안 저장 폴더 (기본: drafts/)")
+    opt.add_argument("--docx", action="store_true", help="Word 파일(.docx)도 만듭니다")
+    opt.add_argument("--summary", action="store_true",
+                    help="여러 건의 제안 등급·거부 사유를 모은 요약표 _summary_<날짜>.md 를 만듭니다")
+    opt.add_argument("--xlsx", action="store_true", help="--summary 와 함께: 요약표를 Excel로도 만듭니다")
+    opt.add_argument("--check-history", action="store_true",
+                    help="--history CSV만 점검합니다 (초안은 만들지 않음)")
+    opt.add_argument("--today", metavar="YYYY-MM-DD", help="기준일을 고정합니다 (같은 결과를 다시 만들 때)")
+    opt.add_argument("-h", "--help", action="help", help="이 도움말을 보여 줍니다")
     args = ap.parse_args()
 
     try:
@@ -212,7 +242,7 @@ def main() -> None:
         raise SystemExit(0 if rep.ok else EXIT_REJECTED)
 
     if not args.form:
-        ap.error("입력 양식(.yaml)을 1개 이상 지정하십시오 (또는 --check-history)")
+        ap.error("입력 양식(.yaml)을 1개 이상 지정하십시오 (또는 --check-history). 사용법: python -m devdraft.cli --help")
     args.form = expand_forms(args.form, ap)
     if args.xlsx and not args.summary:
         ap.error("--xlsx 는 --summary 와 함께 쓰십시오 (요약표를 Excel로 만드는 옵션)")
@@ -227,6 +257,7 @@ def main() -> None:
         print(f"HISTORY ERR {e}")
         print("  → --check-history 로 전체 오류 목록을 확인하십시오. 초안은 만들지 않았습니다.")
         raise SystemExit(EXIT_CONFIG_ERROR)
+    print(batch_footer(results, args.out))
     if any(not r.ok for r in results):
         raise SystemExit(EXIT_REJECTED)
 
