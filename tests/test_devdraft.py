@@ -1229,8 +1229,41 @@ def test_cli_messages_survive_console_encoding(tmp_path, enc):
                         "--out", str(tmp_path)], cwd=ROOT, capture_output=True, env=env)
     assert p.returncode == 1, p.stderr.decode("utf-8", "replace")  # rejected form, not a crash
     assert b"Traceback" not in p.stderr
-    shown = enc if enc in ("cp949", "utf-8") else "utf-8"  # Hangul-capable encodings are kept
+    shown = "utf-8"  # only UTF-8 can show every symbol the CLI prints; others are switched to it
     assert "필수 항목 누락: detected_by" in p.stdout.decode(shown)
+
+
+@pytest.mark.parametrize("enc", ["cp1252", "ascii", "cp949", "utf-8"])
+@pytest.mark.parametrize("args, code, text", [
+    # success: the last line says "☐ 작성 필요" (cp949 has no ☐)
+    (["data/synthetic/intake/DEV-2026-2201.yaml", "--today", "2026-11-24"], 0, "☐ 작성 필요"),
+    # rejection whose message contains "—" (cp949 has no —)
+    (["data/synthetic/tutorial/no_synthetic_flag.yaml", "--today", "2026-11-24"], 1, "합성(가짜) 데이터입니다 —"),
+    (["--help"], 0, "초안 도우미 —"),
+    (["--check-history", "--today", "2026-11-24"], 0, "사용 가능"),
+])
+def test_every_kind_of_output_survives_korean_and_english_windows_encodings(tmp_path, enc, args, code, text):
+    """Korean Windows writes redirected output (> log.txt, pipes) as cp949,
+    English Windows as cp1252. A message the encoding cannot hold must not
+    crash the run (that would also exit 1, the same code as a rejection)."""
+    out = ["--out", str(tmp_path)] if "--help" not in args and "--check-history" not in args else []
+    p = subprocess.run([sys.executable, "-m", "devdraft.cli", *args, *out], cwd=ROOT, capture_output=True,
+                       env={**os.environ, "PYTHONIOENCODING": enc})
+    assert b"Traceback" not in p.stderr, p.stderr.decode("utf-8", "replace")
+    assert p.returncode == code
+    assert text in p.stdout.decode("utf-8")
+
+
+def test_printed_symbols_probe_covers_what_the_cli_prints():
+    """Any non-ASCII character in a CLI message must be in the encoding probe,
+    or a console that lacks it would crash on that message."""
+    import devdraft.cli as cli_mod
+    src = "".join(Path(m.__file__).read_text(encoding="utf-8") for m in (cli_mod, __import__("devdraft.history").history,
+                                                                         __import__("devdraft.intake").intake))
+    strings = re.findall(r'f?"(?:[^"\\\n]|\\.)*"', src)
+    used = {ch for st in strings for ch in st if ord(ch) > 127 and not ("\uac00" <= ch <= "\ud7a3")}
+    missing = sorted(ch for ch in used if ch not in cli_mod._PRINTED_SYMBOLS)
+    assert not missing, f"_PRINTED_SYMBOLS에 없는 출력 문자: {missing}"
 
 
 # --- portfolio showcase (realistic synthetic cases) --------------------------------
@@ -1845,3 +1878,50 @@ def test_successful_run_does_not_tell_user_to_fix_forms(tmp_path):
     p = _cli(str(ROOT / "data/synthetic/intake/DEV-2026-2201.yaml"), "--today", "2026-11-24", "--out", str(tmp_path))
     assert p.returncode == 0
     assert "거부 0건" in p.stdout and "보완" not in p.stdout and "작성 필요" in p.stdout
+
+
+# --- --new: a blank form without OS-specific copy commands -----------------------
+
+def test_new_creates_blank_form_with_id_and_next_steps(tmp_path):
+    p = _cli("--new", "DEV-2026-9001", "--out", tmp_path)
+    assert p.returncode == 0, p.stdout
+    made = tmp_path / "DEV-2026-9001.yaml"
+    text = made.read_text(encoding="utf-8")
+    assert re.search(r"^id: 'DEV-2026-9001'", text, re.M)
+    assert text.replace("'DEV-2026-9001'", "''", 1) == (ROOT / "templates/intake_template.yaml").read_text(encoding="utf-8")
+    assert str(made) in p.stdout and "--docx" in p.stdout and "synthetic: true" in p.stdout
+    assert not list(tmp_path.glob("*_draft.md"))  # no draft is made
+
+
+def test_new_never_overwrites_a_form(tmp_path):
+    form = tmp_path / "DEV-2026-9001.yaml"
+    form.write_text("이미 적은 사실", encoding="utf-8")
+    p = _cli("--new", "DEV-2026-9001", "--out", tmp_path)
+    assert p.returncode == 1 and "덮어쓰지 않습니다" in p.stdout
+    assert form.read_text(encoding="utf-8") == "이미 적은 사실"
+
+
+@pytest.mark.parametrize("bad", ["../escape", "a/b", "a\\b", "", "DEV 2026", ".hidden"])
+def test_new_rejects_ids_that_are_not_plain_file_names(tmp_path, bad):
+    p = _cli("--new", bad, "--out", tmp_path / "out")
+    assert p.returncode in (1, 2) and "Traceback" not in p.stderr
+    assert not (tmp_path / "out").exists() or not any((tmp_path / "out").iterdir())
+    assert not (tmp_path / "escape.yaml").exists()
+
+
+def test_form_made_with_new_then_filled_in_becomes_a_draft(tmp_path):
+    """The whole first-time path: --new, fill in every field, run."""
+    _cli("--new", "DEV-2026-9001", "--out", tmp_path)
+    form = tmp_path / "DEV-2026-9001.yaml"
+    sample = yaml.safe_load((INTAKE / "DEV-2026-2201.yaml").read_text(encoding="utf-8"))
+    text = form.read_text(encoding="utf-8")
+    for key, val in sample.items():
+        if key in ("id", "parameters", "synthetic"):
+            continue
+        lit = ("true" if val else "false") if isinstance(val, bool) else "'" + str(val).replace("'", "''") + "'"
+        text, n = re.subn(rf"^{key}:[^\n#]*", f"{key}: {lit}  ", text, count=1, flags=re.M)
+        assert n == 1, key
+    form.write_text("synthetic: true\n" + text, encoding="utf-8")
+    p = _cli(form, "--docx", "--today", "2026-11-24", "--out", tmp_path)
+    assert p.returncode == 0, p.stdout
+    assert (tmp_path / "DEV-2026-9001_draft.md").exists() and (tmp_path / "DEV-2026-9001_draft.docx").exists()

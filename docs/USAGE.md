@@ -15,21 +15,45 @@ GMP deviation 보고서 **초안** 도우미 사용법입니다. QA 담당자가
 
 ## 1. 설치 (최초 1회)
 
-Python 3.10 이상이 필요합니다. 인터넷 연결은 설치할 때만 필요하고, 실행 중에는 외부로 아무것도 보내지 않습니다.
+인터넷 연결은 설치할 때만 필요하고, 실행 중에는 외부로 아무것도 보내지 않습니다.
+
+**① Python 3.10 이상 설치**
+
+- Windows: [python.org](https://www.python.org/downloads/)에서 설치합니다. 설치 첫 화면에서 **"Add python.exe to PATH"를 꼭 체크**합니다.
+- macOS: [python.org](https://www.python.org/downloads/)에서 설치합니다.
+- 확인: 터미널(Windows는 PowerShell)에서 `python --version` → `Python 3.10` 이상이면 됩니다.
+  - Windows에서 Microsoft Store가 열리거나 `python`을 못 찾으면 `py --version`을 써 보고, 되면 이 문서의 `python`을 모두 `py`로 바꿔 씁니다.
+  - macOS에서 `python`을 못 찾으면 `python3`로 바꿔 씁니다.
+
+**② 저장소 내려받기** — 둘 중 하나
+
+- Git이 없으면: GitHub 저장소 화면의 초록색 **Code → Download ZIP**, 압축을 풀면 `gmp-deviation-draft-main` 폴더가 생깁니다.
+- Git이 있으면: `git clone https://github.com/strawberryHunter/gmp-deviation-draft.git`
+
+**③ 그 폴더에서 설치·확인** — 아래 명령은 모두 **저장소 폴더 안에서** 실행합니다 (다른 폴더에서 실행하면 `No module named devdraft`가 나옵니다).
 
 ```bash
 cd gmp-deviation-draft
 ```
 
+(ZIP으로 받았으면 `cd gmp-deviation-draft-main`)
+
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 ```bash
 python -m pytest -q
 ```
 
-마지막 줄이 `N passed`로 끝나면 준비된 것입니다.
+마지막 줄에 `passed`가 있고 `failed`가 없으면 준비된 것입니다. ZIP으로 받았으면 git 저장소에서만 의미 있는 검사 4개가 `skipped`로 나오는데 정상입니다.
+
+| 이런 메시지가 나오면 | 할 일 |
+|---|---|
+| `'python'은(는) ... 인식되지 않습니다` / `command not found` | ①의 `py` 또는 `python3`를 씁니다. 그래도 안 되면 Python을 다시 설치하며 "Add python.exe to PATH" 체크 |
+| `No module named devdraft` | 저장소 폴더 안에서 실행하지 않은 것입니다. `cd`로 폴더에 들어갑니다 |
+| `No module named yaml` / `docx` / `openpyxl` | ③의 `python -m pip install -r requirements.txt`를 다시 실행합니다 |
+| `externally-managed-environment` (macOS·Linux) | 가상환경을 만들어 씁니다: `python3 -m venv .venv` → `source .venv/bin/activate` → ③ 다시 |
 
 ---
 
@@ -37,13 +61,19 @@ python -m pytest -q
 
 ### 2-1. 양식 작성
 
-빈 템플릿을 복사합니다. **복사본은 `drafts/`에 둡니다.** `drafts/`는 git에 올라가지 않습니다.
+빈 양식을 만듭니다. Windows·macOS 모두 같은 명령입니다. `drafts/`에 생기고, `drafts/`는 git에 올라가지 않습니다.
 
 ```bash
-mkdir -p drafts && cp templates/intake_template.yaml drafts/DEV-2026-2301.yaml
+python -m devdraft.cli --new DEV-2026-2301
+```
+```text
+NEW drafts/DEV-2026-2301.yaml
+  → 이 파일을 메모장·VS Code 등으로 열어 채웁니다 (항목마다 '#' 뒤에 설명이 있습니다).
+  → 다 채운 뒤: python -m devdraft.cli drafts/DEV-2026-2301.yaml --docx
+  → 연습용(가짜) 내용이면 파일 맨 위에 synthetic: true 를 넣어야 이력 파일 없이 실행됩니다.
 ```
 
-복사한 파일을 텍스트 편집기(메모장, VS Code 등)로 열어 채웁니다. 항목마다 주석(`#` 뒤)에 무엇을 쓰는지 적혀 있습니다.
+같은 이름의 파일이 이미 있으면 덮어쓰지 않습니다. 만든 파일을 텍스트 편집기(메모장, VS Code 등)로 열어 채웁니다. 항목마다 주석(`#` 뒤)에 무엇을 쓰는지 적혀 있습니다.
 
 | 구분 | 규칙 |
 |---|---|

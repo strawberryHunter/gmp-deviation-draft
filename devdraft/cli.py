@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import glob
 import hashlib
+import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -14,7 +15,7 @@ from .classify import (find_recurrence, investigation_plan, lower_triggers, prop
 from .draft import FLAG_LABELS, render_markdown
 from . import __version__
 from .history import HistoryError, check_history, is_synthetic, load_checked_history, render_report
-from .intake import IntakeError, check_rules, detected_datetime, load
+from .intake import TEMPLATE, IntakeError, check_rules, detected_datetime, load
 from .rules import RulesError, load_rules
 from .summary import FormResult, render_summary
 
@@ -164,20 +165,50 @@ def expand_forms(forms: list[Path], ap: argparse.ArgumentParser | None = None) -
     return out
 
 
+# Every non-ASCII kind of character the CLI prints (messages, help, reports).
+_PRINTED_SYMBOLS = "한글☐—·→…✅⚠↓─"
+
+
 def _hangul_safe_output() -> None:
     """Keep Korean messages from crashing the CLI on a non-Korean console.
 
     On English Windows a pipe or redirect uses cp1252, which cannot encode
     Hangul: every message would raise UnicodeEncodeError and exit 1, the
     same code as a rejected form. Such streams are switched to UTF-8;
-    encodings that can show Hangul (UTF-8, cp949) are left alone.
+    encodings that can show everything the CLI prints are left alone.
+
+    Hangul alone is not enough: Korean Windows writes redirected output as
+    cp949, which has Hangul but not "☐" or "—", and both appear in the
+    messages. So the probe includes them.
     """
     for stream in (sys.stdout, sys.stderr):
         try:
-            "한글".encode(stream.encoding or "ascii")
+            _PRINTED_SYMBOLS.encode(stream.encoding or "ascii")
         except (LookupError, UnicodeEncodeError):
             if hasattr(stream, "reconfigure"):
                 stream.reconfigure(encoding="utf-8")
+
+
+_FORM_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def new_form(dev_id: str, out_dir: Path) -> Path:
+    """Copy the blank template to <out_dir>/<dev_id>.yaml with the id filled in.
+
+    The same on every OS (no mkdir/cp/copy). Never overwrites: a form may
+    already hold facts someone typed.
+    """
+    if not _FORM_ID.match(dev_id):
+        raise ValueError(f"deviation 번호에는 영문·숫자·'-'·'_'·'.'만 쓸 수 있습니다: {dev_id!r} (예: DEV-2026-2301)")
+    target = out_dir / f"{dev_id}.yaml"
+    if target.exists():
+        raise FileExistsError(f"이미 있는 파일입니다: {target} — 덮어쓰지 않습니다. 그 파일을 열어 이어서 쓰십시오.")
+    text = TEMPLATE.read_text(encoding="utf-8")
+    filled = re.sub(r"^id: ''", f"id: '{dev_id}'", text, count=1, flags=re.M)
+    assert filled != text, "템플릿의 id 줄을 찾지 못했습니다"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    target.write_text(filled, encoding="utf-8", newline="\n")
+    return target
 
 
 def batch_footer(results: list[FormResult], out_dir: Path) -> str:
@@ -193,6 +224,7 @@ def batch_footer(results: list[FormResult], out_dir: Path) -> str:
 
 HELP_EPILOG = """\
 예:
+  python -m devdraft.cli --new DEV-2026-2301              빈 양식 만들기 (drafts/DEV-2026-2301.yaml)
   python -m devdraft.cli my_form.yaml                     초안 1건 (drafts/ 에 Markdown)
   python -m devdraft.cli forms/*.yaml --summary --docx    여러 건 + 요약표, Word 파일도
   python -m devdraft.cli --check-history --history qms.csv  이력 CSV만 점검
@@ -219,6 +251,8 @@ def main() -> None:
     opt.add_argument("--summary", action="store_true",
                     help="여러 건의 제안 등급·거부 사유를 모은 요약표 _summary_<날짜>.md 를 만듭니다")
     opt.add_argument("--xlsx", action="store_true", help="--summary 와 함께: 요약표를 Excel로도 만듭니다")
+    opt.add_argument("--new", metavar="번호",
+                     help="빈 양식을 --out 폴더(기본 drafts/)에 <번호>.yaml 로 만듭니다 (초안은 만들지 않음)")
     opt.add_argument("--check-history", action="store_true",
                     help="--history CSV만 점검합니다 (초안은 만들지 않음)")
     opt.add_argument("--today", metavar="YYYY-MM-DD", help="기준일을 고정합니다 (같은 결과를 다시 만들 때)")
@@ -229,6 +263,18 @@ def main() -> None:
         today = date.fromisoformat(args.today) if args.today else None
     except ValueError:
         ap.error(f"--today 는 YYYY-MM-DD 형식이어야 합니다: {args.today}")
+
+    if args.new:
+        try:
+            made = new_form(args.new, args.out)
+        except (ValueError, FileExistsError) as e:
+            print(f"ERR {e}")
+            raise SystemExit(EXIT_REJECTED)
+        print(f"NEW {made}")
+        print("  → 이 파일을 메모장·VS Code 등으로 열어 채웁니다 (항목마다 '#' 뒤에 설명이 있습니다).")
+        print(f"  → 다 채운 뒤: python -m devdraft.cli {made} --docx")
+        print("  → 연습용(가짜) 내용이면 파일 맨 위에 synthetic: true 를 넣어야 이력 파일 없이 실행됩니다.")
+        raise SystemExit(0)
 
     if args.check_history:
         try:
@@ -242,7 +288,7 @@ def main() -> None:
         raise SystemExit(0 if rep.ok else EXIT_REJECTED)
 
     if not args.form:
-        ap.error("입력 양식(.yaml)을 1개 이상 지정하십시오 (또는 --check-history). 사용법: python -m devdraft.cli --help")
+        ap.error("입력 양식(.yaml)을 1개 이상 지정하십시오 (빈 양식은 --new 번호, 이력 점검은 --check-history). 사용법: python -m devdraft.cli --help")
     args.form = expand_forms(args.form, ap)
     if args.xlsx and not args.summary:
         ap.error("--xlsx 는 --summary 와 함께 쓰십시오 (요약표를 Excel로 만드는 옵션)")
