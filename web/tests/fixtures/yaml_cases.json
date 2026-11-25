@@ -255,9 +255,7 @@
   "name": "duplicate key",
   "text": "a: 1\na: 2\n",
   "web": "refuse",
-  "value": {
-   "a": "2"
-  }
+  "error": true
  },
  {
   "name": "folded block",

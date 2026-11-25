@@ -1991,3 +1991,52 @@ def test_web_reference_files_match_the_cli():
     p = subprocess.run([sys.executable, str(ROOT / "web/tools/make_fixtures.py"), "--check"],
                        cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
     assert p.returncode == 0, p.stdout + p.stderr
+
+
+# --- the same key written twice must not silently win or lose --------------------
+
+from devdraft.rules import DuplicateKeyError  # noqa: E402
+
+
+def test_a_repeated_answer_in_a_form_is_rejected_not_silently_overwritten(tmp_path):
+    """Before: a second `sterility_assurance_impacted: false` at the end of the form
+    turned the CRITICAL proposal into MAJOR without a word."""
+    text = (INTAKE / "DEV-2026-2202.yaml").read_text(encoding="utf-8")
+    assert "sterility_assurance_impacted: true" in text
+    form = tmp_path / "DEV-2026-2202.yaml"
+    form.write_text(text + "sterility_assurance_impacted: false\n", encoding="utf-8")
+    with pytest.raises(IntakeError) as e:
+        load(form, RULES)
+    assert "같은 항목이 두 번" in str(e.value) and "sterility_assurance_impacted" in str(e.value)
+    p = _cli(form, "--today", "2026-11-24", "--out", tmp_path)
+    assert p.returncode == 1 and "ERR" in p.stdout and "Traceback" not in p.stderr
+    assert not list(tmp_path.glob("*_draft.md"))
+
+
+def test_a_repeated_key_inside_a_parameter_is_rejected(tmp_path):
+    text = (INTAKE / "DEV-2026-2201.yaml").read_text(encoding="utf-8")
+    form = tmp_path / "f.yaml"
+    form.write_text(text.replace("  actual: '3.62'\n", "  actual: '3.62'\n  actual: '3.58'\n"), encoding="utf-8")
+    with pytest.raises(IntakeError) as e:
+        load(form, RULES)
+    assert "actual" in str(e.value)
+
+
+def test_a_repeated_block_in_rules_stops_the_run(tmp_path):
+    """Two `major:` blocks: YAML kept only the second, dropping the first block's triggers."""
+    text = (ROOT / "config/rules.yaml").read_text(encoding="utf-8")
+    rules = tmp_path / "rules.yaml"
+    rules.write_text(text + "\nrecurrence:\n  window_days: 30\n  match_on: [site]\n", encoding="utf-8")
+    with pytest.raises(RulesError) as e:
+        load_rules(rules)
+    assert "같은 항목이 두 번" in str(e.value) and "recurrence" in str(e.value)
+    p = _cli(INTAKE / "DEV-2026-2201.yaml", "--rules", rules, "--today", "2026-11-24", "--out", tmp_path)
+    assert p.returncode == 2 and "RULES ERR" in p.stdout and not list(tmp_path.glob("*_draft.md"))
+
+
+def test_duplicate_check_does_not_disturb_ordinary_files():
+    with pytest.raises(DuplicateKeyError):
+        strict_load("a: 1\na: 2\n")
+    assert strict_load("a: {x: 1}\nb: {x: 2}\n") == {"a": {"x": 1}, "b": {"x": 2}}
+    for f in list(INTAKE.glob("*.yaml")) + [ROOT / "config/rules.yaml", ROOT / "templates/intake_template.yaml"]:
+        form_load(f.read_text(encoding="utf-8"))

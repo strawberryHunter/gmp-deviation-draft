@@ -37,6 +37,31 @@ StrictLoader.add_implicit_resolver(
 )
 
 
+class DuplicateKeyError(yaml.YAMLError):
+    """The same key is written twice in one mapping."""
+
+    def __init__(self, key: str, line: int):
+        super().__init__(f"duplicate key {key!r} at line {line}")
+        self.key, self.line = key, line
+
+
+def _mapping_without_duplicates(loader, node, deep=False):
+    """YAML keeps the last of two equal keys and says nothing. In a form that
+    turns an answered "true" into a later "false"; in rules.yaml it drops a
+    whole block of triggers. Either way the proposal changes silently, so a
+    repeated key stops the load."""
+    seen = set()
+    for key_node, _ in node.value:
+        if isinstance(key_node, yaml.ScalarNode):
+            if key_node.value in seen:
+                raise DuplicateKeyError(key_node.value, key_node.start_mark.line + 1)
+            seen.add(key_node.value)
+    return yaml.SafeLoader.construct_mapping(loader, node, deep)
+
+
+StrictLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _mapping_without_duplicates)
+
+
 def strict_load(text: str):
     return yaml.load(text, Loader=StrictLoader)  # SafeLoader subclass: no object construction
 
@@ -79,6 +104,8 @@ class RulesError(ValueError):
 def load_rules(path: str | Path) -> dict:
     try:
         rules = strict_load(Path(path).read_text(encoding="utf-8"))
+    except DuplicateKeyError as e:
+        raise RulesError(f"rules.yaml에 같은 항목이 두 번 있습니다: {e.key} ({e.line}행) — 하나로 합치십시오.") from None
     except yaml.YAMLError as e:
         mark = getattr(e, "problem_mark", None)
         where = f" ({mark.line + 1}행)" if mark else ""
