@@ -438,7 +438,7 @@ def test_cli_exits_on_bad_rules(tmp_path):
 import ast  # noqa: E402
 
 ALLOWED_IMPORTS = {"__future__", "argparse", "ast", "csv", "dataclasses", "datetime",
-                   "glob", "hashlib", "pathlib", "re", "sys", "types", "yaml", "docx"}
+                   "glob", "hashlib", "io", "pathlib", "re", "sys", "types", "yaml", "docx"}
 
 
 def test_package_imports_nothing_that_can_reach_a_network_or_llm():
@@ -662,12 +662,32 @@ def test_excel_bom_keeps_dev_id(tmp_path):
     assert "| DEV-2026-1100 |" in md
 
 
-def test_non_utf8_history_is_an_error(tmp_path):
+def test_cp949_history_is_read_with_a_warning(tmp_path):
+    """User decision 2026-11-25: read Korean Excel's default "CSV" (CP949)."""
     p = tmp_path / "h.csv"
     p.write_bytes(HIST_SRC.replace("Plant A", "공장 A").encode("cp949"))
+    rep = check_history(p, RULES, TODAY)
+    assert rep.ok and any("CP949" in w for w in rep.warnings)
+    assert {r["site"] for r in rep.rows} >= {"공장 A"}  # Korean decoded correctly, not garbled
+    form = yaml.safe_load((INTAKE / "DEV-2026-2201.yaml").read_text(encoding="utf-8"))
+    form["site"] = "공장 A"
+    fp = tmp_path / "f.yaml"
+    fp.write_text(yaml.safe_dump(form, allow_unicode=True), encoding="utf-8")
+    hits = find_recurrence(load(fp, RULES), rep.rows, RULES, TODAY)
+    assert len(hits) == 5  # same recurrences as the UTF-8 file with "Plant A"
+
+
+def test_utf8_history_has_no_encoding_warning():
+    rep = check_history(ROOT / "data/synthetic/history.csv", RULES, TODAY)
+    assert not any("CP949" in w for w in rep.warnings)
+
+
+def test_other_encoding_history_is_an_error(tmp_path):
+    p = tmp_path / "h.csv"
+    p.write_bytes(HIST_SRC.encode("utf-8").replace(b"Plant A", "Usine été A".encode("latin-1")))
     with pytest.raises(HistoryError) as e:
         check_history(p, RULES, TODAY)
-    assert "UTF-8" in str(e.value)
+    assert "UTF-8도 CP949도 아닙니다" in str(e.value)
 
 
 def test_missing_column_is_an_error(tmp_path):

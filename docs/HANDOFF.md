@@ -1,7 +1,7 @@
 # HANDOFF — 현재 상태와 다음 할 일
 
 > 작업이 끝날 때마다 갱신합니다 (규칙: [`CLAUDE.md`](../CLAUDE.md)).
-> **마지막 갱신: 2026-11-25** · 기준 브랜치 `main` · 테스트 233개 통과 · **CI 통과 시 Claude가 자동 머지** (CI: Ubuntu Python 3.10–3.13, Windows 3.12) · 도구 버전 `devdraft 0.5.0`
+> **마지막 갱신: 2026-11-25** · 기준 브랜치 `main` · 테스트 235개 통과 · **CI 통과 시 Claude가 자동 머지** (CI: Ubuntu Python 3.10–3.13, Windows 3.12) · 도구 버전 `devdraft 0.5.0`
 >
 > **프로젝트 목적: 입사 포트폴리오.** 실제 회사 도입이 아니므로 회사 SOP·사내 적격성 평가는 범위 밖입니다. 우선순위는 "검토자가 처음 1분에 보고 이해하는가"입니다.
 
@@ -26,6 +26,7 @@
 | 튜토리얼 [`docs/TUTORIAL.md`](TUTORIAL.md) — 실제 명령·출력, 테스트로 대조 | ✅ |
 | 요약표 Word 출력 (`--summary --docx`, 가로 방향) | ✅ |
 | Windows `cmd`·PowerShell의 `*.yaml`, 없는 파일 | ✅ (이전에는 오류로 종료) |
+| 한국어 Excel 기본 "CSV"(CP949) 이력 파일 | ✅ 경고와 함께 읽음 (사용자 결정) |
 | 입력 문장이 Markdown 기호를 포함해도 입력 그대로 표시 (`\|` 때문에 표 열이 밀리던 문제 포함) | ✅ |
 | 회사 실제 SOP 반영 | — 포트폴리오라 범위 밖 (공개 SOP 예시로 방법을 보여 줌) |
 
@@ -52,20 +53,10 @@
   1. 바로 볼 수 있는 렌더링 결과: [`sample_output/showcase/`](../sample_output/showcase/)의 PDF (이 환경의 대체 글꼴로 렌더링됨). Word 원본이 필요하면 "프롬프트 A" 또는 `python scripts/make_showcase.py`
   2. 확인할 것: 모든 쪽 머리글의 빨간 "초안 — 승인 문서 아님" · 빈칸 노란 강조 · 한글이 맑은 고딕으로 보이는지
   3. 이상하면 화면 캡처를 Claude에게 보내기
-- [ ] **② 결정해 주기** ([`DECISIONS.md`](../DECISIONS.md) "확인 필요") — 각 항목에 "이대로" 또는 "바꿔"만 답하면 됩니다.
+- [ ] **② CI 결과 확인** — PR 화면 아래쪽 "Checks"가 초록색 ✅인지 봐 주세요. 빨간 ❌면 Claude에게 "CI 실패 고쳐줘"
 
-  | 질문 | 지금 상태 |
-  |---|---|
-  | "같은 deviation"을 무엇으로 볼까? | 같은 사업장 + 설비 + 유형 |
-  | 기본 rules.yaml을 합성 SOP로 바꿀까? | 안 바꿈 (분류 기준 출처 "작성 필요" 표시 유지) |
-  | Excel 기본 저장(CP949) 이력 파일을 자동으로 읽을까? | 안 읽음, "CSV UTF-8로 다시 저장" 안내 |
-  | 반복 건 표에 과거 근본원인을 보일까? | 숨김 |
-  | 거부 건이 있으면 종료 코드 1 | 1 |
-
-- [ ] **③ CI 결과 확인** — PR 화면 아래쪽 "Checks"가 초록색 ✅인지 봐 주세요. 빨간 ❌면 Claude에게 "CI 실패 고쳐줘"
-
-- [ ] **④ GitHub 브랜치 정리** — 이 세션은 원격 브랜치를 지울 권한이 없습니다. 머지가 끝난 아래 브랜치는 지워도 내용이 사라지지 않습니다. 포트폴리오 저장소가 깔끔해 보입니다.
-  `fix/flag-validation-template`, `feat/history-check`, `feat/docx-format`, `feat/traceability`, `feat/public-sop-example`, `docs/handoff`, `ci/github-actions`, `feat/showcase`, `docs/readme-portfolio`, `feat/summary-docx`, `fix/verbatim-facts`
+- [ ] **③ GitHub 브랜치 정리** — 이 세션은 원격 브랜치를 지울 권한이 없습니다. 머지가 끝난 아래 브랜치는 지워도 내용이 사라지지 않습니다. 포트폴리오 저장소가 깔끔해 보입니다.
+  `fix/flag-validation-template`, `feat/history-check`, `feat/docx-format`, `feat/traceability`, `feat/public-sop-example`, `docs/handoff`, `ci/github-actions`, `feat/showcase`, `docs/readme-portfolio`, `feat/summary-docx`, `fix/verbatim-facts`, `decisions/resolve-open-items`
   - 지우는 곳: 저장소 → Branches → 각 줄의 휴지통 아이콘
   - 앞으로 자동으로 지우려면: Settings → General → **Automatically delete head branches** 켜기
 
@@ -106,11 +97,8 @@ CLAUDE.md와 docs/HANDOFF.md를 읽고, "다음 개선 후보" 중 맨 위 항�
 ```
 
 **다음 개선 후보** (Claude가 끝낼 때마다 이 목록을 갱신, 포트폴리오 기준 우선순위)
-1. **새 판단 항목** — 예: "환자 안전 영향", "규제 신고 대상" (**항목 이름은 사용자가 정해야 함** → 정해 주면 진행)
-2. **요약표 Excel 출력** — openpyxl이 새 의존성이라 **사용자 승인 필요**
-3. **"확인 필요" 결정 반영** — 사용자가 3장 ② 표에 답하면 진행
-
-사용자 결정 없이 Claude가 할 수 있는 후보는 지금 없습니다.
+1. **새 판단 항목 2개** — "환자 안전 영향"(CRITICAL 트리거), "규제 신고 대상"(등급과 별개, 초안에 ☐ 신고 검토 항목) — 사용자가 2026-11-25에 정함, **진행 중**
+2. **요약표 Excel 출력** — openpyxl 추가를 사용자가 2026-11-25에 승인, **진행 중**
 
 ## 5. 참고 문서
 - 사용법: [`docs/USAGE.md`](USAGE.md)

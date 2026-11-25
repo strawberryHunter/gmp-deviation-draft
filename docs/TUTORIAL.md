@@ -167,7 +167,7 @@ python -m devdraft.cli --check-history --history data/synthetic/history.csv --to
 결과: 사용 가능
 ```
 
-날짜 형식 오류·중복 번호·필수 열 누락은 오류(초안 생성 중단), 미래 날짜·빈 설비 ID 등은 경고입니다. Excel에서는 "CSV UTF-8"로 저장합니다.
+날짜 형식 오류·중복 번호·필수 열 누락은 오류(초안 생성 중단), 미래 날짜·빈 설비 ID 등은 경고입니다. Excel에서는 "CSV UTF-8"로 저장하는 것을 권장합니다 (한국어 Excel 기본 "CSV"도 경고와 함께 읽습니다).
 
 ## 7. SOP를 바꿔 보기 — 공개 SOP(Duke COMM-PAS-013)
 
