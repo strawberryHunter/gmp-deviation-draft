@@ -1,0 +1,79 @@
+{
+ "DEV-2026-2201.yaml": {
+  "rejected": false,
+  "grade": "MAJOR",
+  "reasons": [
+   "주요 공정 변수(CPP) 기준 이탈",
+   "다른 배치 영향 가능성",
+   "조회 기간 내 동일 사업장·설비·유형 반복 (2회 이상) — 유사 건 5건"
+  ],
+  "rec": [
+   "DEV-2026-1100",
+   "DEV-2026-1003",
+   "DEV-2026-1101",
+   "DEV-2026-1025",
+   "DEV-2026-1102"
+  ],
+  "recUnchecked": false
+ },
+ "DEV-2026-2202.yaml": {
+  "rejected": false,
+  "grade": "CRITICAL",
+  "reasons": [
+   "무균 보증에 영향 가능성"
+  ],
+  "rec": [],
+  "recUnchecked": false
+ },
+ "DEV-2026-2203.yaml": {
+  "rejected": false,
+  "grade": "MINOR",
+  "reasons": [
+   "반복성 조회를 하지 않음(설비 미기재) — 반복 기준은 평가되지 않았습니다. 검토자가 QMS에서 직접 확인 필요",
+   "그 밖의 분류 기준에는 해당 없음 (보고자 입력 기준) — 검토자 확인 필요"
+  ],
+  "rec": [],
+  "recUnchecked": true
+ },
+ "DEV-2026-2204.yaml": {
+  "rejected": true,
+  "error": "ERR DEV-2026-2204.yaml: 필수 항목 누락: detected_by"
+ },
+ "DEV-2026-2301.yaml": {
+  "rejected": false,
+  "grade": "CRITICAL",
+  "reasons": [
+   "데이터 완전성(ALCOA+) 우려"
+  ],
+  "rec": [],
+  "recUnchecked": false
+ },
+ "DEV-2026-2302.yaml": {
+  "rejected": false,
+  "grade": "MAJOR",
+  "reasons": [
+   "규격 이탈(OOS) 결과",
+   "반복성 조회를 하지 않음(설비 미기재) — 반복 기준은 평가되지 않았습니다. 검토자가 QMS에서 직접 확인 필요"
+  ],
+  "rec": [],
+  "recUnchecked": true
+ },
+ "DEV-2026-2303.yaml": {
+  "rejected": false,
+  "grade": "CRITICAL",
+  "reasons": [
+   "무균 보증에 영향 가능성"
+  ],
+  "rec": [],
+  "recUnchecked": false
+ },
+ "DEV-2026-2304.yaml": {
+  "rejected": false,
+  "grade": "MAJOR",
+  "reasons": [
+   "다른 배치 영향 가능성"
+  ],
+  "rec": [],
+  "recUnchecked": false
+ }
+}

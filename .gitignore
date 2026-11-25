@@ -6,3 +6,8 @@ __pycache__/
 # 실제 deviation 내용이 저장소에 들어가지 않도록 한다.
 drafts/
 *.docx
+
+# web/: 설치물·빌드 결과·스크린샷은 다시 만들 수 있음
+web/node_modules/
+web/dist/
+web/shots/

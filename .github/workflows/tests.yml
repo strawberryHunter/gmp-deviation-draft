@@ -64,3 +64,28 @@ jobs:
           if (-not (Test-Path drafts\_summary_2026-11-24.xlsx)) { throw 'xlsx missing' }
           python -m devdraft.cli data/synthetic/intake/DEV-2026-2201.yaml --out drafts\redir > drafts\log.txt 2>&1
           if ($LASTEXITCODE -ne 0) { Get-Content drafts\log.txt; throw "redirected run failed" }
+
+  # The browser app in web/ must give the same results as the CLI.
+  web:
+    name: web (Node 22, Chrome)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - name: The web reference files are what the CLI gives today
+        run: python web/tools/make_fixtures.py --check
+      - name: Build, engine tests, real-input job tests, screen checks
+        run: npm run check
+        working-directory: web

@@ -1,0 +1,292 @@
+[
+ {
+  "file": "DEV-2026-2201.yaml",
+  "form": {
+   "synthetic": true,
+   "today": "2026-11-24",
+   "flags": {
+    "cpp_excursion": true,
+    "spec_oos": false,
+    "other_batches_possibly_affected": true,
+    "sterility_assurance_impacted": false,
+    "released_product_affected": false,
+    "data_integrity_concern": false,
+    "patient_safety_impact": false,
+    "regulatory_report_required": false
+   },
+   "parameters": [
+    {
+     "name": "Elution pH",
+     "spec": "3.40-3.60",
+     "actual": "3.62",
+     "duration": "6 min"
+    }
+   ],
+   "id": "DEV-2026-2201",
+   "title": "Protein A 크로마토그래피 용출 pH 상한 이탈",
+   "site": "Plant A",
+   "area": "Downstream Suite 3",
+   "product": "SYN-mAb-07 drug substance",
+   "batch": "DS-26-0412",
+   "equipment_id": "CHR-03",
+   "category": "process_parameter",
+   "detected_at": "2026-11-21T14:20",
+   "detected_by": "공정 운전원 (2교대)",
+   "process_step": "Protein A capture - elution",
+   "description": "용출 단계 pH가 3.62로 기록됨 (허용 범위 3.40-3.60). 이탈 시간 약 6분. 용출 완충액 lot BUF-5531 사용.",
+   "immediate_actions": "공정 일시 중단, 용출 분획 격리 보관(2-8°C), 교대 감독자 및 QA 통보 (15:05)."
+  }
+ },
+ {
+  "file": "DEV-2026-2202.yaml",
+  "form": {
+   "synthetic": true,
+   "today": "2026-11-24",
+   "flags": {
+    "cpp_excursion": false,
+    "spec_oos": false,
+    "other_batches_possibly_affected": true,
+    "sterility_assurance_impacted": true,
+    "released_product_affected": false,
+    "data_integrity_concern": false,
+    "patient_safety_impact": false,
+    "regulatory_report_required": false
+   },
+   "parameters": [
+    {
+     "name": "Glove leak test",
+     "spec": "Pass",
+     "actual": "Fail (port 4)",
+     "duration": ""
+    }
+   ],
+   "id": "DEV-2026-2202",
+   "title": "충전 라인 2 아이솔레이터 장갑 리크 테스트 부적합",
+   "site": "Plant B",
+   "area": "Aseptic Filling",
+   "product": "SYN-mAb-03 drug product (PFS)",
+   "batch": "DP-26-1180",
+   "equipment_id": "FIL-L2",
+   "category": "environmental_monitoring",
+   "detected_at": "2026-11-22T06:45",
+   "detected_by": "무균 충전 작업자",
+   "process_step": "Pre-use glove integrity test",
+   "description": "충전 전 장갑 무결성 시험에서 포트 4번 장갑 부적합. 직전 배치(DP-26-1179) 충전 종료 후 시험은 적합이었음.",
+   "immediate_actions": "충전 착수 보류, 장갑 교체 및 재시험 적합, 직전 배치 EM 데이터 검토 요청."
+  }
+ },
+ {
+  "file": "DEV-2026-2203.yaml",
+  "form": {
+   "synthetic": true,
+   "today": "2026-11-24",
+   "flags": {
+    "cpp_excursion": false,
+    "spec_oos": false,
+    "other_batches_possibly_affected": false,
+    "sterility_assurance_impacted": false,
+    "released_product_affected": false,
+    "data_integrity_concern": false,
+    "patient_safety_impact": false,
+    "regulatory_report_required": false
+   },
+   "parameters": [],
+   "id": "DEV-2026-2203",
+   "title": "배치 기록서 서명 누락 (원료 칭량 단계)",
+   "site": "Plant A",
+   "area": "Dispensing",
+   "product": "SYN-mAb-07 drug substance",
+   "batch": "DS-26-0415",
+   "equipment_id": "",
+   "category": "documentation",
+   "detected_at": "2026-11-23T10:10",
+   "detected_by": "QA 기록 검토자",
+   "process_step": "Raw material dispensing",
+   "description": "배지 성분 칭량 단계에서 확인자(2nd person) 서명 누락. 칭량 저울 출력지는 첨부되어 있음.",
+   "immediate_actions": "작업자 및 확인자 인터뷰 예정, 저울 출력지와 기록 대조."
+  }
+ },
+ {
+  "file": "DEV-2026-2204.yaml",
+  "form": {
+   "synthetic": true,
+   "today": "2026-11-24",
+   "flags": {
+    "cpp_excursion": false,
+    "spec_oos": false,
+    "other_batches_possibly_affected": false,
+    "sterility_assurance_impacted": false,
+    "released_product_affected": false,
+    "data_integrity_concern": false,
+    "patient_safety_impact": false,
+    "regulatory_report_required": false
+   },
+   "parameters": [
+    {
+     "name": "TOC (POU-07)",
+     "spec": "Alert 400 / Action 500 ppb",
+     "actual": "412 ppb",
+     "duration": ""
+    }
+   ],
+   "id": "DEV-2026-2204",
+   "title": "WFI 루프 TOC 경고 수준 초과",
+   "site": "Plant B",
+   "area": "Utilities",
+   "product": "N/A (utility)",
+   "batch": "N/A",
+   "equipment_id": "WFI-LOOP",
+   "category": "utilities",
+   "detected_at": "2026-11-23T03:30",
+   "detected_by": "",
+   "process_step": "Routine WFI monitoring",
+   "description": "사용 지점 POU-07 TOC 412 ppb (경고 기준 400 ppb, 조치 기준 500 ppb).",
+   "immediate_actions": "POU-07 사용 중지 표시, 재샘플링 요청."
+  }
+ },
+ {
+  "file": "DEV-2026-2301.yaml",
+  "form": {
+   "synthetic": true,
+   "today": "2026-11-24",
+   "flags": {
+    "cpp_excursion": false,
+    "spec_oos": false,
+    "other_batches_possibly_affected": false,
+    "sterility_assurance_impacted": false,
+    "released_product_affected": false,
+    "data_integrity_concern": true,
+    "patient_safety_impact": false,
+    "regulatory_report_required": false
+   },
+   "parameters": [
+    {
+     "name": "SEC-HPLC main peak purity",
+     "spec": "≥ 97.0%",
+     "actual": "98.7% (재적분) / 98.1% (최초)",
+     "duration": ""
+    }
+   ],
+   "id": "DEV-2026-2301",
+   "title": "SEC-HPLC 순도 시험 수동 재적분 — 사유 미기재",
+   "site": "Plant A",
+   "area": "QC Lab",
+   "product": "SYN-mAb-07 drug substance",
+   "batch": "DS-26-0418",
+   "equipment_id": "HPLC-07",
+   "category": "documentation",
+   "detected_at": "2026-11-24T09:40",
+   "detected_by": "QC 데이터 검토자",
+   "process_step": "Release testing - SEC-HPLC purity",
+   "description": "출하 시험 데이터 검토 중 감사추적(audit trail)에서 2026-11-20 16:42 주 피크 수동 재적분 1건 확인. 재적분 사유 기재 없음. 보고된 순도 98.7%, 최초 적분 결과 98.1%.",
+   "immediate_actions": "해당 결과 보고 보류, 분석자 및 QC 책임자 통보, 원 데이터와 감사추적 사본 확보 (10:15)."
+  }
+ },
+ {
+  "file": "DEV-2026-2302.yaml",
+  "form": {
+   "synthetic": true,
+   "today": "2026-11-24",
+   "flags": {
+    "cpp_excursion": false,
+    "spec_oos": true,
+    "other_batches_possibly_affected": false,
+    "sterility_assurance_impacted": false,
+    "released_product_affected": false,
+    "data_integrity_concern": false,
+    "patient_safety_impact": false,
+    "regulatory_report_required": false
+   },
+   "parameters": [
+    {
+     "name": "Endotoxin",
+     "spec": "≤ 0.50 EU/mg",
+     "actual": "0.62 EU/mg",
+     "duration": ""
+    }
+   ],
+   "id": "DEV-2026-2302",
+   "title": "Poloxamer 188 입고 시험 엔도톡신 규격 초과 (OOS)",
+   "site": "Plant A",
+   "area": "QC Lab / Warehouse",
+   "product": "SYN-mAb-07 drug substance",
+   "batch": "RM-26-0933 (원료 입고 lot)",
+   "equipment_id": "",
+   "category": "material",
+   "detected_at": "2026-11-23T15:05",
+   "detected_by": "QC 시험자",
+   "process_step": "Incoming raw material testing - Poloxamer 188",
+   "description": "Poloxamer 188 입고 lot RM-26-0933의 엔도톡신 1차 시험 결과 0.62 EU/mg (규격 ≤ 0.50 EU/mg). 재시험 전 결과.",
+   "immediate_actions": "lot RM-26-0933 부적합 보류 라벨 부착 및 격리, OOS 조사 개시 통보, 공급업체 CoA 확보 요청."
+  }
+ },
+ {
+  "file": "DEV-2026-2303.yaml",
+  "form": {
+   "synthetic": true,
+   "today": "2026-11-24",
+   "flags": {
+    "cpp_excursion": false,
+    "spec_oos": false,
+    "other_batches_possibly_affected": false,
+    "sterility_assurance_impacted": true,
+    "released_product_affected": false,
+    "data_integrity_concern": false,
+    "patient_safety_impact": false,
+    "regulatory_report_required": false
+   },
+   "parameters": [],
+   "id": "DEV-2026-2303",
+   "title": "무균 복장 자격 만료 작업자의 Grade B 구역 작업",
+   "site": "Plant B",
+   "area": "Aseptic Filling (Grade B)",
+   "product": "SYN-mAb-03 drug product (PFS)",
+   "batch": "DP-26-1183",
+   "equipment_id": "FIL-L2",
+   "category": "personnel",
+   "detected_at": "2026-11-23T11:20",
+   "detected_by": "무균 공정 감독자",
+   "process_step": "Aseptic filling - operator support",
+   "description": "교육 기록 대조 중, 작업자 1명이 무균 복장 자격(gowning qualification) 만료일 2026-11-15 이후인 2026-11-22에 Grade B 구역에서 충전 지원 작업을 수행한 것을 확인.",
+   "immediate_actions": "해당 작업자 무균 구역 출입 중지, 2026-11-22 작업자 장갑·복장 접촉판 EM 결과 검토 요청, QA 통보."
+  }
+ },
+ {
+  "file": "DEV-2026-2304.yaml",
+  "form": {
+   "synthetic": true,
+   "today": "2026-11-24",
+   "flags": {
+    "cpp_excursion": false,
+    "spec_oos": false,
+    "other_batches_possibly_affected": true,
+    "sterility_assurance_impacted": false,
+    "released_product_affected": false,
+    "data_integrity_concern": false,
+    "patient_safety_impact": false,
+    "regulatory_report_required": false
+   },
+   "parameters": [
+    {
+     "name": "Storage temperature",
+     "spec": "2-8°C",
+     "actual": "max 8.6°C",
+     "duration": "25 min"
+    }
+   ],
+   "id": "DEV-2026-2304",
+   "title": "2-8°C 보관실 온도 상한 초과 (25분)",
+   "site": "Plant A",
+   "area": "Cold Room 2",
+   "product": "SYN-mAb-07 drug substance",
+   "batch": "DS-26-0409, DS-26-0410",
+   "equipment_id": "CR-02",
+   "category": "equipment",
+   "detected_at": "2026-11-24T02:12",
+   "detected_by": "창고 담당자 (야간)",
+   "process_step": "Intermediate storage (2-8°C)",
+   "description": "보관실 온도 모니터링 알람. 02:10–02:35 동안 최고 8.6°C 기록. 해당 시간 문 개폐 기록 없음. 냉각기 압축기 재기동 후 02:35 정상 범위 복귀.",
+   "immediate_actions": "보관 중 배치 2건 격리 표시, 온도 로그 출력 보관, 설비팀 냉각기 점검 요청, QA 통보 (03:00)."
+  }
+ }
+]

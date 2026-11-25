@@ -1,0 +1,40 @@
+<title>Deviation 초안 데스크</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/*{{CSS}}*/
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<!--{{ICONS}}-->
+</defs></svg>
+
+<div class="shell" id="shell">
+  <aside class="side" id="side" aria-label="메뉴"></aside>
+  <div class="main">
+    <header class="top">
+      <button type="button" class="btn icon" id="menuBtn" aria-label="메뉴"><svg class="ic"><use href="#i-menu"/></svg></button>
+      <div class="search">
+        <svg class="ic"><use href="#i-search"/></svg>
+        <input type="search" id="q" placeholder="번호, 제목, 설비, 배치, 제품 검색" aria-label="초안 검색" autocomplete="off">
+      </div>
+      <div class="right">
+        <span class="chip tint local" title="입력과 파일은 이 브라우저 안에서만 처리됨. 외부 전송 없음"><svg class="ic"><use href="#i-lock"/></svg>로컬 처리</span>
+        <div class="seg icons" role="radiogroup" aria-label="화면 테마" id="themeSeg">
+          <button type="button" role="radio" data-theme-pick="light" aria-label="라이트" title="라이트"><svg class="ic"><use href="#i-sun"/></svg></button>
+          <button type="button" role="radio" data-theme-pick="dark" aria-label="다크" title="다크"><svg class="ic"><use href="#i-moon"/></svg></button>
+          <button type="button" role="radio" data-theme-pick="system" aria-label="시스템" title="시스템"><svg class="ic"><use href="#i-monitor"/></svg></button>
+        </div>
+        <button type="button" class="btn icon" id="moreBtn" aria-label="더보기" aria-haspopup="menu"><svg class="ic"><use href="#i-ellipsis"/></svg></button>
+      </div>
+    </header>
+    <main class="content" id="view"></main>
+  </div>
+</div>
+<div class="editor" id="editor" hidden></div>
+<input type="file" id="yamlFile" accept=".yaml,.yml" multiple hidden aria-label="YAML 양식 파일">
+<div id="layer"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="vendor/docx-8.5.0.umd.js" defer></script>
+<script>
+/*{{JS}}*/
+</script>

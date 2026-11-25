@@ -1979,3 +1979,15 @@ def test_a_form_with_only_a_number_in_a_required_field_is_not_missing(tmp_path):
     form = tmp_path / "f.yaml"
     form.write_text(re.sub(r"^batch: .*$", "batch: 0", text, flags=re.M), encoding="utf-8")
     assert load(form, RULES).batch == "0"
+
+
+# --- web/: the browser app is tested against what the CLI gives ---------------------
+
+def test_web_reference_files_match_the_cli():
+    """web/tests/fixtures and web/src/sample.js are generated from the CLI and the
+    synthetic data. If a rule, a sample form or the form loader changes, they must be
+    regenerated (python web/tools/make_fixtures.py) and the web tests rerun, so the
+    browser app cannot drift from the CLI unnoticed."""
+    p = subprocess.run([sys.executable, str(ROOT / "web/tools/make_fixtures.py"), "--check"],
+                       cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+    assert p.returncode == 0, p.stdout + p.stderr

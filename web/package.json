@@ -1,0 +1,15 @@
+{
+  "name": "gmp-deviation-desk",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "e2e": "node tools/e2e.mjs",
+    "shots": "node tools/shots.mjs",
+    "check": "node tools/build.mjs && node --test tests/*.test.mjs && node tools/e2e.mjs && node tools/shots.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.65.0"
+  }
+}
