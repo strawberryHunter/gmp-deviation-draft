@@ -11,6 +11,8 @@ blanks the table if not caught. So:
 from __future__ import annotations
 
 import csv
+import io
+import re
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -35,26 +37,45 @@ class HistoryReport:
         return not self.errors
 
 
-def _read(path: Path) -> tuple[list[str], list[dict]]:
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def _read(path: Path) -> tuple[list[str], list[dict], str]:
+    """Read the CSV as UTF-8, or else as CP949 (Korean Excel's default "CSV").
+
+    utf-8-sig: Excel's "CSV UTF-8" starts with a BOM that would otherwise
+    become part of the first column name. CP949 is decoded strictly, so a
+    file in some other encoding is an error rather than garbled site or
+    equipment names that silently match nothing.
+    """
     try:
-        # utf-8-sig: Excel's "CSV UTF-8" starts with a BOM that would
-        # otherwise become part of the first column name.
-        with open(path, encoding="utf-8-sig", newline="") as f:
-            reader = csv.DictReader(f)
-            return list(reader.fieldnames or []), list(reader)
-    except UnicodeDecodeError:
-        raise HistoryError(
-            f"{path.name}: UTF-8이 아닙니다. Excel에서 'CSV UTF-8(쉼표로 분리)'로 다시 저장하십시오."
-        ) from None
+        raw = path.read_bytes()
     except FileNotFoundError:
         raise HistoryError(f"이력 파일이 없습니다: {path}") from None
+    for encoding in ("utf-8-sig", "cp949"):
+        try:
+            text = raw.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+        if _CONTROL.search(text):
+            continue
+        reader = csv.DictReader(io.StringIO(text, newline=""))
+        return list(reader.fieldnames or []), list(reader), encoding
+    raise HistoryError(
+        f"{path.name}: UTF-8도 CP949도 아닙니다. Excel에서 'CSV UTF-8(쉼표로 분리)'로 다시 저장하십시오."
+    )
 
 
 def check_history(path: str | Path, rules: dict, today: date | None = None) -> HistoryReport:
     path = Path(path)
     today = today or date.today()
-    columns, rows = _read(path)
+    columns, rows, encoding = _read(path)
     rep = HistoryReport()
+    if encoding == "cp949":
+        rep.warnings.append(
+            "CP949(Excel 기본 'CSV')로 읽었습니다 — 한글 사업장·설비 이름이 양식과 같은지 확인하십시오. "
+            "'CSV UTF-8'로 저장하면 이 경고가 없어집니다"
+        )
 
     need = REQUIRED_COLUMNS + (["root_cause"] if rules["recurrence"].get("show_root_cause") else [])
     missing = [c for c in need if c not in columns]

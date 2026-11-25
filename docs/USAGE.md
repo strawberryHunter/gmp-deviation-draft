@@ -332,10 +332,10 @@ python -m devdraft.cli --check-history --history /사내경로/deviation_history
 
 | 구분 | 내용 | 초안 생성 시 |
 |---|---|---|
-| 오류 | 필수 열 없음, UTF-8 아님, 날짜가 `YYYY-MM-DD`가 아님, `dev_id` 비어 있음·중복 | `HISTORY ERR`로 중단, 아무 초안도 만들지 않음 (종료 코드 2) |
-| 경고 | 기준일 이후 날짜, `site`·`equipment_id` 빈칸, rules.yaml에 없는 `category`·`final_class` | 계속 진행, `HISTORY WARN n건` 한 줄 표시 |
+| 오류 | 필수 열 없음, UTF-8도 CP949도 아님, 날짜가 `YYYY-MM-DD`가 아님, `dev_id` 비어 있음·중복 | `HISTORY ERR`로 중단, 아무 초안도 만들지 않음 (종료 코드 2) |
+| 경고 | CP949로 읽음, 기준일 이후 날짜, `site`·`equipment_id` 빈칸, rules.yaml에 없는 `category`·`final_class` | 계속 진행, `HISTORY WARN n건` 한 줄 표시 |
 
-- Excel에서 저장할 때는 **CSV UTF-8(쉼표로 분리)** 를 고릅니다. 이 형식이 붙이는 BOM은 자동 처리됩니다.
+- Excel의 **CSV UTF-8(쉼표로 분리)** 를 권장합니다 (BOM은 자동 처리). 한국어 Windows Excel의 기본 **CSV(쉼표로 분리)** (CP949)도 읽지만, 경고를 띄우니 한글 사업장·설비 이름이 양식과 같은지 확인하십시오. 둘 다 아닌 인코딩은 오류입니다.
 - 기준일(`--today`) 이후 날짜의 건과, 이력에 이미 들어 있는 **이번 deviation 자신**은 반복 건에서 뺍니다. 자신을 뺀 경우 초안에 그렇게 표시됩니다.
 - `final_class`가 rules.yaml `levels`에 없는 값이면(예: SOP 개정 전 등급명) 경고만 하고 표시는 그대로 합니다. 분류 제안에는 쓰지 않습니다.
 
