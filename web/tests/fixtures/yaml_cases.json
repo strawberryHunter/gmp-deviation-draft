@@ -1,0 +1,704 @@
+[
+ {
+  "name": "plain and comments",
+  "text": "a: text  # note\nb: C# 코드\nc: 3.40-3.60\n# whole line\nd:    spaced   \n",
+  "web": "same",
+  "value": {
+   "a": "text",
+   "b": "C# 코드",
+   "c": "3.40-3.60",
+   "d": "spaced"
+  }
+ },
+ {
+  "name": "numbers stay text",
+  "text": "batch: 0412\nstep: 1:30\nph: 3.40\nn: 12\nneg: -5\nexp: 1.5e3\nhex: 0x1F\ninf: .inf\n",
+  "web": "same",
+  "value": {
+   "batch": "0412",
+   "step": "1:30",
+   "ph": "3.40",
+   "n": "12",
+   "neg": "-5",
+   "exp": "1.5e3",
+   "hex": "0x1F",
+   "inf": ".inf"
+  }
+ },
+ {
+  "name": "booleans and empties",
+  "text": "t: true\nT: True\nF: FALSE\ny: yes\nn: no\non: on\nq: 'true'\ne:\nz: ~\nnu: null\ns: ''\n",
+  "web": "same",
+  "value": {
+   "t": true,
+   "T": true,
+   "F": false,
+   "y": "yes",
+   "n": "no",
+   "on": "on",
+   "q": "true",
+   "e": null,
+   "z": null,
+   "nu": null,
+   "s": ""
+  }
+ },
+ {
+  "name": "dates stay text",
+  "text": "a: 2026-11-21T14:20\nb: 2026-11-21 14:20\nc: 2026-11-21\n",
+  "web": "same",
+  "value": {
+   "a": "2026-11-21T14:20",
+   "b": "2026-11-21 14:20",
+   "c": "2026-11-21"
+  }
+ },
+ {
+  "name": "single quotes",
+  "text": "a: 'it''s'\nb: 'x # not a comment'   # comment\nc: 'a: b'\nd: ' padded '\n",
+  "web": "same",
+  "value": {
+   "a": "it's",
+   "b": "x # not a comment",
+   "c": "a: b",
+   "d": " padded "
+  }
+ },
+ {
+  "name": "double quotes",
+  "text": "a: \"say \\\"hi\\\"\"\nb: \"tab\\there\"\nc: \"line\\nbreak\"\nd: \"u\\u00e9 x\\x41\"\ne: \"a: b # c\"\n",
+  "web": "same",
+  "value": {
+   "a": "say \"hi\"",
+   "b": "tab\there",
+   "c": "line\nbreak",
+   "d": "ué xA",
+   "e": "a: b # c"
+  }
+ },
+ {
+  "name": "quoted over lines",
+  "text": "a: 'first\n  second\n\n  third'\nb: \"one\n  two\\\n  three\"\nc: x\n",
+  "web": "same",
+  "value": {
+   "a": "first second\nthird",
+   "b": "one twothree",
+   "c": "x"
+  }
+ },
+ {
+  "name": "wrapped plain",
+  "text": "description: 용출 단계 pH가 3.62로 기록됨 (허용 범위 3.40-3.60). 이탈 시간 약 6분.\n  용출 완충액 lot BUF-5531\n  사용.\ntitle: x\n",
+  "web": "same",
+  "value": {
+   "description": "용출 단계 pH가 3.62로 기록됨 (허용 범위 3.40-3.60). 이탈 시간 약 6분. 용출 완충액 lot BUF-5531 사용.",
+   "title": "x"
+  }
+ },
+ {
+  "name": "wrapped plain with gap",
+  "text": "a: one\n  two\n\n  three\nb: y\n",
+  "web": "same",
+  "value": {
+   "a": "one two\nthree",
+   "b": "y"
+  }
+ },
+ {
+  "name": "value on next line",
+  "text": "a:\n  starts below\n  and wraps\nb: y\n",
+  "web": "same",
+  "value": {
+   "a": "starts below and wraps",
+   "b": "y"
+  }
+ },
+ {
+  "name": "literal block",
+  "text": "description: |\n  line 1\n  line 2\n\n  # kept, not a comment\n    indented more\ntitle: x\n",
+  "web": "same",
+  "value": {
+   "description": "line 1\nline 2\n\n# kept, not a comment\n  indented more\n",
+   "title": "x"
+  }
+ },
+ {
+  "name": "literal strip and keep",
+  "text": "a: |-\n  no newline\nb: |+\n  keeps\n\nc: |\n  clip\n\n\nd: z\n",
+  "web": "same",
+  "value": {
+   "a": "no newline",
+   "b": "keeps\n\n",
+   "c": "clip\n",
+   "d": "z"
+  }
+ },
+ {
+  "name": "literal at end of file",
+  "text": "a: |\n  last\n",
+  "web": "same",
+  "value": {
+   "a": "last\n"
+  }
+ },
+ {
+  "name": "empty literal",
+  "text": "a: |\nb: x\n",
+  "web": "same",
+  "value": {
+   "a": "",
+   "b": "x"
+  }
+ },
+ {
+  "name": "parameters at column 0",
+  "text": "parameters:\n- name: Elution pH\n  spec: 3.40-3.60\n  actual: '3.62'\n  duration: 6 min\n- name: TOC\n  spec: ≤ 500 ppb\n  actual: 412 ppb\nx: y\n",
+  "web": "same",
+  "value": {
+   "parameters": [
+    {
+     "name": "Elution pH",
+     "spec": "3.40-3.60",
+     "actual": "3.62",
+     "duration": "6 min"
+    },
+    {
+     "name": "TOC",
+     "spec": "≤ 500 ppb",
+     "actual": "412 ppb"
+    }
+   ],
+   "x": "y"
+  }
+ },
+ {
+  "name": "parameters indented",
+  "text": "parameters:\n  - name: A   # c\n    spec: 1\n\n  - name: B\n    actual:\nx: y\n",
+  "web": "same",
+  "value": {
+   "parameters": [
+    {
+     "name": "A",
+     "spec": "1"
+    },
+    {
+     "name": "B",
+     "actual": null
+    }
+   ],
+   "x": "y"
+  }
+ },
+ {
+  "name": "empty list",
+  "text": "parameters: []\nx: y\n",
+  "web": "same",
+  "value": {
+   "parameters": [],
+   "x": "y"
+  }
+ },
+ {
+  "name": "document start, BOM, CRLF",
+  "text": "﻿---\r\na: 1\r\nb: |\r\n  two\r\n  lines\r\n",
+  "web": "same",
+  "value": {
+   "a": "1",
+   "b": "two\nlines\n"
+  }
+ },
+ {
+  "name": "hash glued to value",
+  "text": "title: 제목# [필수] 한 줄 제목\n",
+  "web": "same",
+  "value": {
+   "title": "제목# [필수] 한 줄 제목"
+  }
+ },
+ {
+  "name": "colon inside plain value",
+  "text": "a: x: y\n",
+  "web": "same",
+  "error": true
+ },
+ {
+  "name": "unclosed quote",
+  "text": "a: 'open\nb: x\n",
+  "web": "same",
+  "error": true
+ },
+ {
+  "name": "text after quote",
+  "text": "a: 'x' y\n",
+  "web": "same",
+  "error": true
+ },
+ {
+  "name": "tab indentation",
+  "text": "parameters:\n\t- name: A\n",
+  "web": "same",
+  "error": true
+ },
+ {
+  "name": "bad indentation",
+  "text": "a: x\n   b: y\nc: z\n",
+  "web": "same",
+  "error": true
+ },
+ {
+  "name": "not a mapping",
+  "text": "just text\n",
+  "web": "refuse",
+  "value": "just text"
+ },
+ {
+  "name": "duplicate key",
+  "text": "a: 1\na: 2\n",
+  "web": "refuse",
+  "value": {
+   "a": "2"
+  }
+ },
+ {
+  "name": "folded block",
+  "text": "a: >\n  one\n  two\n",
+  "web": "refuse",
+  "value": {
+   "a": "one two\n"
+  }
+ },
+ {
+  "name": "nested mapping",
+  "text": "a:\n  b: c\n",
+  "web": "refuse",
+  "value": {
+   "a": {
+    "b": "c"
+   }
+  }
+ },
+ {
+  "name": "flow list",
+  "text": "a: [1, 2]\n",
+  "web": "refuse",
+  "value": {
+   "a": [
+    "1",
+    "2"
+   ]
+  }
+ },
+ {
+  "name": "flow map",
+  "text": "a: {b: c}\n",
+  "web": "refuse",
+  "value": {
+   "a": {
+    "b": "c"
+   }
+  }
+ },
+ {
+  "name": "anchor and alias",
+  "text": "a: &x v\nb: *x\n",
+  "web": "refuse",
+  "value": {
+   "a": "v",
+   "b": "v"
+  }
+ },
+ {
+  "name": "tag",
+  "text": "a: !!str 12\n",
+  "web": "refuse",
+  "value": {
+   "a": "12"
+  }
+ },
+ {
+  "name": "list of plain items",
+  "text": "parameters:\n- one\n- two\n",
+  "web": "refuse",
+  "value": {
+   "parameters": [
+    "one",
+    "two"
+   ]
+  }
+ },
+ {
+  "name": "two documents",
+  "text": "a: 1\n---\nb: 2\n",
+  "web": "refuse",
+  "error": true
+ },
+ {
+  "name": "block with indent digit",
+  "text": "a: |2\n    x\n",
+  "web": "refuse",
+  "value": {
+   "a": "  x\n"
+  }
+ },
+ {
+  "name": "DEV-2026-2201.yaml",
+  "text": "synthetic: true\nid: DEV-2026-2201\ntitle: Protein A 크로마토그래피 용출 pH 상한 이탈\nsite: Plant A\narea: Downstream Suite 3\nproduct: SYN-mAb-07 drug substance\nbatch: DS-26-0412\nequipment_id: CHR-03\ncategory: process_parameter\ndetected_at: 2026-11-21T14:20\ndetected_by: 공정 운전원 (2교대)\nprocess_step: Protein A capture - elution\ndescription: 용출 단계 pH가 3.62로 기록됨 (허용 범위 3.40-3.60). 이탈 시간 약 6분. 용출 완충액 lot BUF-5531\n  사용.\nimmediate_actions: 공정 일시 중단, 용출 분획 격리 보관(2-8°C), 교대 감독자 및 QA 통보 (15:05).\nparameters:\n- name: Elution pH\n  spec: 3.40-3.60\n  actual: '3.62'\n  duration: 6 min\ncpp_excursion: true\nspec_oos: false\nother_batches_possibly_affected: true\nsterility_assurance_impacted: false\nreleased_product_affected: false\ndata_integrity_concern: false\npatient_safety_impact: false\nregulatory_report_required: false\n",
+  "web": "same",
+  "value": {
+   "synthetic": true,
+   "id": "DEV-2026-2201",
+   "title": "Protein A 크로마토그래피 용출 pH 상한 이탈",
+   "site": "Plant A",
+   "area": "Downstream Suite 3",
+   "product": "SYN-mAb-07 drug substance",
+   "batch": "DS-26-0412",
+   "equipment_id": "CHR-03",
+   "category": "process_parameter",
+   "detected_at": "2026-11-21T14:20",
+   "detected_by": "공정 운전원 (2교대)",
+   "process_step": "Protein A capture - elution",
+   "description": "용출 단계 pH가 3.62로 기록됨 (허용 범위 3.40-3.60). 이탈 시간 약 6분. 용출 완충액 lot BUF-5531 사용.",
+   "immediate_actions": "공정 일시 중단, 용출 분획 격리 보관(2-8°C), 교대 감독자 및 QA 통보 (15:05).",
+   "parameters": [
+    {
+     "name": "Elution pH",
+     "spec": "3.40-3.60",
+     "actual": "3.62",
+     "duration": "6 min"
+    }
+   ],
+   "cpp_excursion": true,
+   "spec_oos": false,
+   "other_batches_possibly_affected": true,
+   "sterility_assurance_impacted": false,
+   "released_product_affected": false,
+   "data_integrity_concern": false,
+   "patient_safety_impact": false,
+   "regulatory_report_required": false
+  }
+ },
+ {
+  "name": "DEV-2026-2202.yaml",
+  "text": "synthetic: true\nid: DEV-2026-2202\ntitle: 충전 라인 2 아이솔레이터 장갑 리크 테스트 부적합\nsite: Plant B\narea: Aseptic Filling\nproduct: SYN-mAb-03 drug product (PFS)\nbatch: DP-26-1180\nequipment_id: FIL-L2\ncategory: environmental_monitoring\ndetected_at: 2026-11-22T06:45\ndetected_by: 무균 충전 작업자\nprocess_step: Pre-use glove integrity test\ndescription: 충전 전 장갑 무결성 시험에서 포트 4번 장갑 부적합. 직전 배치(DP-26-1179) 충전 종료 후 시험은 적합이었음.\nimmediate_actions: 충전 착수 보류, 장갑 교체 및 재시험 적합, 직전 배치 EM 데이터 검토 요청.\nparameters:\n- name: Glove leak test\n  spec: Pass\n  actual: Fail (port 4)\ncpp_excursion: false\nspec_oos: false\nother_batches_possibly_affected: true\nsterility_assurance_impacted: true\nreleased_product_affected: false\ndata_integrity_concern: false\npatient_safety_impact: false\nregulatory_report_required: false\n",
+  "web": "same",
+  "value": {
+   "synthetic": true,
+   "id": "DEV-2026-2202",
+   "title": "충전 라인 2 아이솔레이터 장갑 리크 테스트 부적합",
+   "site": "Plant B",
+   "area": "Aseptic Filling",
+   "product": "SYN-mAb-03 drug product (PFS)",
+   "batch": "DP-26-1180",
+   "equipment_id": "FIL-L2",
+   "category": "environmental_monitoring",
+   "detected_at": "2026-11-22T06:45",
+   "detected_by": "무균 충전 작업자",
+   "process_step": "Pre-use glove integrity test",
+   "description": "충전 전 장갑 무결성 시험에서 포트 4번 장갑 부적합. 직전 배치(DP-26-1179) 충전 종료 후 시험은 적합이었음.",
+   "immediate_actions": "충전 착수 보류, 장갑 교체 및 재시험 적합, 직전 배치 EM 데이터 검토 요청.",
+   "parameters": [
+    {
+     "name": "Glove leak test",
+     "spec": "Pass",
+     "actual": "Fail (port 4)"
+    }
+   ],
+   "cpp_excursion": false,
+   "spec_oos": false,
+   "other_batches_possibly_affected": true,
+   "sterility_assurance_impacted": true,
+   "released_product_affected": false,
+   "data_integrity_concern": false,
+   "patient_safety_impact": false,
+   "regulatory_report_required": false
+  }
+ },
+ {
+  "name": "DEV-2026-2203.yaml",
+  "text": "synthetic: true\nid: DEV-2026-2203\ntitle: 배치 기록서 서명 누락 (원료 칭량 단계)\nsite: Plant A\narea: Dispensing\nproduct: SYN-mAb-07 drug substance\nbatch: DS-26-0415\nequipment_id: ''\ncategory: documentation\ndetected_at: 2026-11-23T10:10\ndetected_by: QA 기록 검토자\nprocess_step: Raw material dispensing\ndescription: 배지 성분 칭량 단계에서 확인자(2nd person) 서명 누락. 칭량 저울 출력지는 첨부되어 있음.\nimmediate_actions: 작업자 및 확인자 인터뷰 예정, 저울 출력지와 기록 대조.\ncpp_excursion: false\nspec_oos: false\nother_batches_possibly_affected: false\nsterility_assurance_impacted: false\nreleased_product_affected: false\ndata_integrity_concern: false\npatient_safety_impact: false\nregulatory_report_required: false\n",
+  "web": "same",
+  "value": {
+   "synthetic": true,
+   "id": "DEV-2026-2203",
+   "title": "배치 기록서 서명 누락 (원료 칭량 단계)",
+   "site": "Plant A",
+   "area": "Dispensing",
+   "product": "SYN-mAb-07 drug substance",
+   "batch": "DS-26-0415",
+   "equipment_id": "",
+   "category": "documentation",
+   "detected_at": "2026-11-23T10:10",
+   "detected_by": "QA 기록 검토자",
+   "process_step": "Raw material dispensing",
+   "description": "배지 성분 칭량 단계에서 확인자(2nd person) 서명 누락. 칭량 저울 출력지는 첨부되어 있음.",
+   "immediate_actions": "작업자 및 확인자 인터뷰 예정, 저울 출력지와 기록 대조.",
+   "cpp_excursion": false,
+   "spec_oos": false,
+   "other_batches_possibly_affected": false,
+   "sterility_assurance_impacted": false,
+   "released_product_affected": false,
+   "data_integrity_concern": false,
+   "patient_safety_impact": false,
+   "regulatory_report_required": false
+  }
+ },
+ {
+  "name": "DEV-2026-2204.yaml",
+  "text": "synthetic: true\nid: DEV-2026-2204\ntitle: WFI 루프 TOC 경고 수준 초과\nsite: Plant B\narea: Utilities\nproduct: N/A (utility)\nbatch: N/A\nequipment_id: WFI-LOOP\ncategory: utilities\ndetected_at: 2026-11-23T03:30\nprocess_step: Routine WFI monitoring\ndescription: 사용 지점 POU-07 TOC 412 ppb (경고 기준 400 ppb, 조치 기준 500 ppb).\nimmediate_actions: POU-07 사용 중지 표시, 재샘플링 요청.\nparameters:\n- name: TOC (POU-07)\n  spec: Alert 400 / Action 500 ppb\n  actual: 412 ppb\ncpp_excursion: false\nspec_oos: false\nother_batches_possibly_affected: false\nsterility_assurance_impacted: false\nreleased_product_affected: false\ndata_integrity_concern: false\npatient_safety_impact: false\nregulatory_report_required: false\n",
+  "web": "same",
+  "value": {
+   "synthetic": true,
+   "id": "DEV-2026-2204",
+   "title": "WFI 루프 TOC 경고 수준 초과",
+   "site": "Plant B",
+   "area": "Utilities",
+   "product": "N/A (utility)",
+   "batch": "N/A",
+   "equipment_id": "WFI-LOOP",
+   "category": "utilities",
+   "detected_at": "2026-11-23T03:30",
+   "process_step": "Routine WFI monitoring",
+   "description": "사용 지점 POU-07 TOC 412 ppb (경고 기준 400 ppb, 조치 기준 500 ppb).",
+   "immediate_actions": "POU-07 사용 중지 표시, 재샘플링 요청.",
+   "parameters": [
+    {
+     "name": "TOC (POU-07)",
+     "spec": "Alert 400 / Action 500 ppb",
+     "actual": "412 ppb"
+    }
+   ],
+   "cpp_excursion": false,
+   "spec_oos": false,
+   "other_batches_possibly_affected": false,
+   "sterility_assurance_impacted": false,
+   "released_product_affected": false,
+   "data_integrity_concern": false,
+   "patient_safety_impact": false,
+   "regulatory_report_required": false
+  }
+ },
+ {
+  "name": "DEV-2026-2301.yaml",
+  "text": "synthetic: true\nid: DEV-2026-2301\ntitle: SEC-HPLC 순도 시험 수동 재적분 — 사유 미기재\nsite: Plant A\narea: QC Lab\nproduct: SYN-mAb-07 drug substance\nbatch: DS-26-0418\nequipment_id: HPLC-07\ncategory: documentation\ndetected_at: 2026-11-24T09:40\ndetected_by: QC 데이터 검토자\nprocess_step: Release testing - SEC-HPLC purity\ndescription: 출하 시험 데이터 검토 중 감사추적(audit trail)에서 2026-11-20 16:42 주 피크 수동 재적분 1건 확인.\n  재적분 사유 기재 없음. 보고된 순도 98.7%, 최초 적분 결과 98.1%.\nimmediate_actions: 해당 결과 보고 보류, 분석자 및 QC 책임자 통보, 원 데이터와 감사추적 사본 확보 (10:15).\nparameters:\n- name: SEC-HPLC main peak purity\n  spec: ≥ 97.0%\n  actual: 98.7% (재적분) / 98.1% (최초)\ncpp_excursion: false\nspec_oos: false\nother_batches_possibly_affected: false\nsterility_assurance_impacted: false\nreleased_product_affected: false\ndata_integrity_concern: true\npatient_safety_impact: false\nregulatory_report_required: false\n",
+  "web": "same",
+  "value": {
+   "synthetic": true,
+   "id": "DEV-2026-2301",
+   "title": "SEC-HPLC 순도 시험 수동 재적분 — 사유 미기재",
+   "site": "Plant A",
+   "area": "QC Lab",
+   "product": "SYN-mAb-07 drug substance",
+   "batch": "DS-26-0418",
+   "equipment_id": "HPLC-07",
+   "category": "documentation",
+   "detected_at": "2026-11-24T09:40",
+   "detected_by": "QC 데이터 검토자",
+   "process_step": "Release testing - SEC-HPLC purity",
+   "description": "출하 시험 데이터 검토 중 감사추적(audit trail)에서 2026-11-20 16:42 주 피크 수동 재적분 1건 확인. 재적분 사유 기재 없음. 보고된 순도 98.7%, 최초 적분 결과 98.1%.",
+   "immediate_actions": "해당 결과 보고 보류, 분석자 및 QC 책임자 통보, 원 데이터와 감사추적 사본 확보 (10:15).",
+   "parameters": [
+    {
+     "name": "SEC-HPLC main peak purity",
+     "spec": "≥ 97.0%",
+     "actual": "98.7% (재적분) / 98.1% (최초)"
+    }
+   ],
+   "cpp_excursion": false,
+   "spec_oos": false,
+   "other_batches_possibly_affected": false,
+   "sterility_assurance_impacted": false,
+   "released_product_affected": false,
+   "data_integrity_concern": true,
+   "patient_safety_impact": false,
+   "regulatory_report_required": false
+  }
+ },
+ {
+  "name": "DEV-2026-2302.yaml",
+  "text": "synthetic: true\nid: DEV-2026-2302\ntitle: Poloxamer 188 입고 시험 엔도톡신 규격 초과 (OOS)\nsite: Plant A\narea: QC Lab / Warehouse\nproduct: SYN-mAb-07 drug substance\nbatch: RM-26-0933 (원료 입고 lot)\nequipment_id: ''\ncategory: material\ndetected_at: 2026-11-23T15:05\ndetected_by: QC 시험자\nprocess_step: Incoming raw material testing - Poloxamer 188\ndescription: Poloxamer 188 입고 lot RM-26-0933의 엔도톡신 1차 시험 결과 0.62 EU/mg (규격 ≤ 0.50\n  EU/mg). 재시험 전 결과.\nimmediate_actions: lot RM-26-0933 부적합 보류 라벨 부착 및 격리, OOS 조사 개시 통보, 공급업체 CoA 확보 요청.\nparameters:\n- name: Endotoxin\n  spec: ≤ 0.50 EU/mg\n  actual: 0.62 EU/mg\ncpp_excursion: false\nspec_oos: true\nother_batches_possibly_affected: false\nsterility_assurance_impacted: false\nreleased_product_affected: false\ndata_integrity_concern: false\npatient_safety_impact: false\nregulatory_report_required: false\n",
+  "web": "same",
+  "value": {
+   "synthetic": true,
+   "id": "DEV-2026-2302",
+   "title": "Poloxamer 188 입고 시험 엔도톡신 규격 초과 (OOS)",
+   "site": "Plant A",
+   "area": "QC Lab / Warehouse",
+   "product": "SYN-mAb-07 drug substance",
+   "batch": "RM-26-0933 (원료 입고 lot)",
+   "equipment_id": "",
+   "category": "material",
+   "detected_at": "2026-11-23T15:05",
+   "detected_by": "QC 시험자",
+   "process_step": "Incoming raw material testing - Poloxamer 188",
+   "description": "Poloxamer 188 입고 lot RM-26-0933의 엔도톡신 1차 시험 결과 0.62 EU/mg (규격 ≤ 0.50 EU/mg). 재시험 전 결과.",
+   "immediate_actions": "lot RM-26-0933 부적합 보류 라벨 부착 및 격리, OOS 조사 개시 통보, 공급업체 CoA 확보 요청.",
+   "parameters": [
+    {
+     "name": "Endotoxin",
+     "spec": "≤ 0.50 EU/mg",
+     "actual": "0.62 EU/mg"
+    }
+   ],
+   "cpp_excursion": false,
+   "spec_oos": true,
+   "other_batches_possibly_affected": false,
+   "sterility_assurance_impacted": false,
+   "released_product_affected": false,
+   "data_integrity_concern": false,
+   "patient_safety_impact": false,
+   "regulatory_report_required": false
+  }
+ },
+ {
+  "name": "DEV-2026-2303.yaml",
+  "text": "synthetic: true\nid: DEV-2026-2303\ntitle: 무균 복장 자격 만료 작업자의 Grade B 구역 작업\nsite: Plant B\narea: Aseptic Filling (Grade B)\nproduct: SYN-mAb-03 drug product (PFS)\nbatch: DP-26-1183\nequipment_id: FIL-L2\ncategory: personnel\ndetected_at: 2026-11-23T11:20\ndetected_by: 무균 공정 감독자\nprocess_step: Aseptic filling - operator support\ndescription: 교육 기록 대조 중, 작업자 1명이 무균 복장 자격(gowning qualification) 만료일 2026-11-15 이후인\n  2026-11-22에 Grade B 구역에서 충전 지원 작업을 수행한 것을 확인.\nimmediate_actions: 해당 작업자 무균 구역 출입 중지, 2026-11-22 작업자 장갑·복장 접촉판 EM 결과 검토 요청, QA 통보.\ncpp_excursion: false\nspec_oos: false\nother_batches_possibly_affected: false\nsterility_assurance_impacted: true\nreleased_product_affected: false\ndata_integrity_concern: false\npatient_safety_impact: false\nregulatory_report_required: false\n",
+  "web": "same",
+  "value": {
+   "synthetic": true,
+   "id": "DEV-2026-2303",
+   "title": "무균 복장 자격 만료 작업자의 Grade B 구역 작업",
+   "site": "Plant B",
+   "area": "Aseptic Filling (Grade B)",
+   "product": "SYN-mAb-03 drug product (PFS)",
+   "batch": "DP-26-1183",
+   "equipment_id": "FIL-L2",
+   "category": "personnel",
+   "detected_at": "2026-11-23T11:20",
+   "detected_by": "무균 공정 감독자",
+   "process_step": "Aseptic filling - operator support",
+   "description": "교육 기록 대조 중, 작업자 1명이 무균 복장 자격(gowning qualification) 만료일 2026-11-15 이후인 2026-11-22에 Grade B 구역에서 충전 지원 작업을 수행한 것을 확인.",
+   "immediate_actions": "해당 작업자 무균 구역 출입 중지, 2026-11-22 작업자 장갑·복장 접촉판 EM 결과 검토 요청, QA 통보.",
+   "cpp_excursion": false,
+   "spec_oos": false,
+   "other_batches_possibly_affected": false,
+   "sterility_assurance_impacted": true,
+   "released_product_affected": false,
+   "data_integrity_concern": false,
+   "patient_safety_impact": false,
+   "regulatory_report_required": false
+  }
+ },
+ {
+  "name": "DEV-2026-2304.yaml",
+  "text": "synthetic: true\nid: DEV-2026-2304\ntitle: 2-8°C 보관실 온도 상한 초과 (25분)\nsite: Plant A\narea: Cold Room 2\nproduct: SYN-mAb-07 drug substance\nbatch: DS-26-0409, DS-26-0410\nequipment_id: CR-02\ncategory: equipment\ndetected_at: 2026-11-24T02:12\ndetected_by: 창고 담당자 (야간)\nprocess_step: Intermediate storage (2-8°C)\ndescription: 보관실 온도 모니터링 알람. 02:10–02:35 동안 최고 8.6°C 기록. 해당 시간 문 개폐 기록 없음. 냉각기 압축기\n  재기동 후 02:35 정상 범위 복귀.\nimmediate_actions: 보관 중 배치 2건 격리 표시, 온도 로그 출력 보관, 설비팀 냉각기 점검 요청, QA 통보 (03:00).\nparameters:\n- name: Storage temperature\n  spec: 2-8°C\n  actual: max 8.6°C\n  duration: 25 min\ncpp_excursion: false\nspec_oos: false\nother_batches_possibly_affected: true\nsterility_assurance_impacted: false\nreleased_product_affected: false\ndata_integrity_concern: false\npatient_safety_impact: false\nregulatory_report_required: false\n",
+  "web": "same",
+  "value": {
+   "synthetic": true,
+   "id": "DEV-2026-2304",
+   "title": "2-8°C 보관실 온도 상한 초과 (25분)",
+   "site": "Plant A",
+   "area": "Cold Room 2",
+   "product": "SYN-mAb-07 drug substance",
+   "batch": "DS-26-0409, DS-26-0410",
+   "equipment_id": "CR-02",
+   "category": "equipment",
+   "detected_at": "2026-11-24T02:12",
+   "detected_by": "창고 담당자 (야간)",
+   "process_step": "Intermediate storage (2-8°C)",
+   "description": "보관실 온도 모니터링 알람. 02:10–02:35 동안 최고 8.6°C 기록. 해당 시간 문 개폐 기록 없음. 냉각기 압축기 재기동 후 02:35 정상 범위 복귀.",
+   "immediate_actions": "보관 중 배치 2건 격리 표시, 온도 로그 출력 보관, 설비팀 냉각기 점검 요청, QA 통보 (03:00).",
+   "parameters": [
+    {
+     "name": "Storage temperature",
+     "spec": "2-8°C",
+     "actual": "max 8.6°C",
+     "duration": "25 min"
+    }
+   ],
+   "cpp_excursion": false,
+   "spec_oos": false,
+   "other_batches_possibly_affected": true,
+   "sterility_assurance_impacted": false,
+   "released_product_affected": false,
+   "data_integrity_concern": false,
+   "patient_safety_impact": false,
+   "regulatory_report_required": false
+  }
+ },
+ {
+  "name": "broken_form.yaml",
+  "text": "# 튜토리얼용 — 일부러 틀린 양식 (합성 데이터)\n# 실수 3가지: detected_by 빠짐 / spec_oos 를 true·false 대신 no 로 씀 / 양식에 없는 root_cause 를 적음\nsynthetic: true\nid: DEV-2026-2390\ntitle: 배치 기록서 서명 누락 (원료 칭량 단계)\nsite: Plant A\narea: Dispensing\nproduct: SYN-mAb-07 drug substance\nbatch: DS-26-0415\nequipment_id: ''\ncategory: documentation\ndetected_at: 2026-11-23T10:10\nprocess_step: Raw material dispensing\ndescription: 배지 성분 칭량 단계에서 확인자(2nd person) 서명 누락. 칭량 저울 출력지는 첨부되어 있음.\nimmediate_actions: 작업자 및 확인자 인터뷰 예정, 저울 출력지와 기록 대조.\ncpp_excursion: false\nspec_oos: no\nother_batches_possibly_affected: false\nsterility_assurance_impacted: false\nreleased_product_affected: false\ndata_integrity_concern: false\npatient_safety_impact: false\nregulatory_report_required: false\nroot_cause: 작업자 부주의\n",
+  "web": "same",
+  "value": {
+   "synthetic": true,
+   "id": "DEV-2026-2390",
+   "title": "배치 기록서 서명 누락 (원료 칭량 단계)",
+   "site": "Plant A",
+   "area": "Dispensing",
+   "product": "SYN-mAb-07 drug substance",
+   "batch": "DS-26-0415",
+   "equipment_id": "",
+   "category": "documentation",
+   "detected_at": "2026-11-23T10:10",
+   "process_step": "Raw material dispensing",
+   "description": "배지 성분 칭량 단계에서 확인자(2nd person) 서명 누락. 칭량 저울 출력지는 첨부되어 있음.",
+   "immediate_actions": "작업자 및 확인자 인터뷰 예정, 저울 출력지와 기록 대조.",
+   "cpp_excursion": false,
+   "spec_oos": "no",
+   "other_batches_possibly_affected": false,
+   "sterility_assurance_impacted": false,
+   "released_product_affected": false,
+   "data_integrity_concern": false,
+   "patient_safety_impact": false,
+   "regulatory_report_required": false,
+   "root_cause": "작업자 부주의"
+  }
+ },
+ {
+  "name": "no_synthetic_flag.yaml",
+  "text": "# 튜토리얼용 — synthetic: true 를 일부러 뺀 양식 (내용은 합성 데이터)\n# 실제 양식처럼 보이므로, 기본 합성 이력으로는 실행이 거부되는 것을 보여 줍니다.\nid: DEV-2026-2391\ntitle: 배치 기록서 서명 누락 (원료 칭량 단계)\nsite: Plant A\narea: Dispensing\nproduct: SYN-mAb-07 drug substance\nbatch: DS-26-0415\nequipment_id: ''\ncategory: documentation\ndetected_at: 2026-11-23T10:10\ndetected_by: QA 기록 검토자\nprocess_step: Raw material dispensing\ndescription: 배지 성분 칭량 단계에서 확인자(2nd person) 서명 누락. 칭량 저울 출력지는 첨부되어 있음.\nimmediate_actions: 작업자 및 확인자 인터뷰 예정, 저울 출력지와 기록 대조.\ncpp_excursion: false\nspec_oos: false\nother_batches_possibly_affected: false\nsterility_assurance_impacted: false\nreleased_product_affected: false\ndata_integrity_concern: false\npatient_safety_impact: false\nregulatory_report_required: false\n",
+  "web": "same",
+  "value": {
+   "id": "DEV-2026-2391",
+   "title": "배치 기록서 서명 누락 (원료 칭량 단계)",
+   "site": "Plant A",
+   "area": "Dispensing",
+   "product": "SYN-mAb-07 drug substance",
+   "batch": "DS-26-0415",
+   "equipment_id": "",
+   "category": "documentation",
+   "detected_at": "2026-11-23T10:10",
+   "detected_by": "QA 기록 검토자",
+   "process_step": "Raw material dispensing",
+   "description": "배지 성분 칭량 단계에서 확인자(2nd person) 서명 누락. 칭량 저울 출력지는 첨부되어 있음.",
+   "immediate_actions": "작업자 및 확인자 인터뷰 예정, 저울 출력지와 기록 대조.",
+   "cpp_excursion": false,
+   "spec_oos": false,
+   "other_batches_possibly_affected": false,
+   "sterility_assurance_impacted": false,
+   "released_product_affected": false,
+   "data_integrity_concern": false,
+   "patient_safety_impact": false,
+   "regulatory_report_required": false
+  }
+ },
+ {
+  "name": "intake_template.yaml",
+  "text": "# ============================================================================\n#  Deviation 보고서 입력 양식 (빈 템플릿)\n# ----------------------------------------------------------------------------\n#  사용법\n#   1) python -m devdraft.cli --new DEV-2026-2301  로 복사본을 만듭니다 (drafts/DEV-2026-2301.yaml).\n#      직접 복사해도 됩니다: <deviation 번호>.yaml 로 저장.\n#      (복사본은 drafts/ 등 저장소 밖 또는 .gitignore 된 위치에 두십시오.\n#       실제 배치 정보가 담긴 양식을 저장소에 커밋하지 않습니다.)\n#   2) 각 항목의 '' 안이나 콜론 뒤에 값을 적습니다.\n#   3) python -m devdraft.cli <파일>.yaml --docx\n#\n#  원칙\n#   - 확인된 사실만 적습니다. 모르는 것은 추정하지 말고 담당자에게 확인 후 기재합니다.\n#   - [필수] 항목이 비어 있으면 도구가 초안을 만들지 않고 누락 항목을 알려줍니다.\n#   - 예/아니오 항목은 반드시 true 또는 false 로 적습니다 (따옴표 없이).\n#     yes / no / on / off / 예 / 아니오 도 거부됩니다.\n#     비워 두거나 \"예\", \"yes\" 처럼 쓰면 거부됩니다. 미응답을 \"아니오\"로 처리하지 않기 위함입니다.\n#   - 근본원인·영향평가·CAPA 는 이 양식에 적지 않습니다. 넣으면 거부됩니다.\n#     (조사 후 초안 문서에 담당자가 직접 작성)\n#   - 필수 항목 목록은 config/rules.yaml 의 required_fields / required_flags 가 기준입니다.\n#   - 여러 줄 문장은  description: |  다음 줄부터 들여써서 적습니다. 그 블록 안에는 '#' 줄을 두지 마십시오\n#     (여러 줄 블록 안의 '#' 줄은 주석이 아니라 내용으로 읽힙니다).\n#   - 연습용(가짜) 양식에만 맨 위에  synthetic: true  를 추가합니다. 초안에 \"합성 데이터\"로 표시되고,\n#     합성 이력(기본값)으로도 실행됩니다. 실제 양식은 --history 로 실제 이력을 지정해야 실행됩니다.\n# ============================================================================\n\n# ── 식별 정보 ───────────────────────────────────────────────────────────────\nid: ''                 # [필수] deviation 번호. QMS 에서 부여된 번호 그대로. 예: DEV-2026-2301\ntitle: ''              # [필수] 한 줄 제목. 무엇이 기준과 달랐는지. 원인을 제목에 넣지 않습니다.\n\n# ── 발생 위치 / 대상 ────────────────────────────────────────────────────────\nsite: ''               # [필수] 사업장. 예: Plant A\narea: ''               # [필수] 구역/실. 예: Downstream Suite 3\nproduct: ''            # [필수] 제품명. 제품 무관(유틸리티 등)이면 N/A\nbatch: ''              # [필수] 배치 번호. 배치 무관이면 N/A\n# ↓ equipment_id: 해당 설비가 없으면 '' 로 둡니다 (반복성 조회를 하지 않음).\nequipment_id: ''       # [선택] 설비 ID. 반복성 조회에 사용되므로 설비 대장 ID 그대로 적습니다.\n# ↓ category: equipment / environmental_monitoring / documentation /\n# ↓ category: process_parameter / material / personnel / utilities\ncategory: ''           # [선택] 위 목록 중 하나. 비워 두면 초안에 \"작성 필요\"로 표시됩니다.\n\n# ── 발견 ────────────────────────────────────────────────────────────────────\ndetected_at: ''        # [필수] 발견 일시. YYYY-MM-DDTHH:MM 예: 2026-11-21T14:20\ndetected_by: ''        # [필수] 발견자 직무/소속. 예: 공정 운전원 (2교대)\nprocess_step: ''       # [필수] 공정 단계. 예: Protein A capture - elution\n\n# ── 사건 내용 ───────────────────────────────────────────────────────────────\n# ↓ description: \"~때문으로 보임\" 같은 원인 추정은 적지 않습니다.\ndescription: ''        # [필수] 사건 경위. 관찰한 사실·기록된 수치·시각만 적습니다.\n# ↓ immediate_actions: 계획만 있는 조치는 \"예정\"이라고 명시합니다.\nimmediate_actions: ''  # [필수] 이미 수행한 즉시 조치와 통보 대상·시각.\n\n# ── 관련 공정 변수 / 측정값 ─────────────────────────────────────────────────\n# [선택] 기준과 실측을 기록에 있는 그대로 적습니다. 초안의 수치는 여기서만 옵니다.\n# 해당 없으면 [] 로 둡니다. 여러 개면 \"- name:\" 블록을 반복합니다.\nparameters: []\n# 예시 (주석 해제 후 사용, 위의 parameters: [] 줄은 삭제):\n# parameters:\n#   - name: Elution pH       # 항목명\n#     spec: 3.40-3.60        # 기준 (문서에 적힌 표기 그대로)\n#     actual: '3.62'         # 실측 — 숫자는 따옴표로 감싸 표기가 바뀌지 않게 합니다\n#     duration: 6 min        # [선택] 이탈 지속 시간 등 비고\n\n# ── 위험 확인 항목 (모두 필수, true 또는 false) ─────────────────────────────\n# 분류 \"제안\"의 입력값입니다. 확정 등급은 QA 검토자가 초안 문서에 직접 기재합니다.\n# 판단이 서지 않으면 false 로 두지 말고 확인 후 기재하십시오.\ncpp_excursion:                    # 주요 공정 변수(CPP)가 기준을 벗어났는가        → major 제안 트리거\nspec_oos:                         # 규격 이탈(OOS) 시험 결과가 있는가              → major 제안 트리거\nother_batches_possibly_affected:  # 다른 배치에 영향이 있을 가능성이 있는가        → major 제안 트리거\nsterility_assurance_impacted:     # 무균 보증에 영향 가능성이 있는가               → critical 제안 트리거\nreleased_product_affected:        # 이미 출하된 제품에 영향 가능성이 있는가        → critical 제안 트리거\ndata_integrity_concern:           # 데이터 완전성(ALCOA+) 우려가 있는가            → critical 제안 트리거\npatient_safety_impact:            # 환자 안전에 영향을 줄 가능성이 있는가          → critical 제안 트리거\nregulatory_report_required:       # 규제기관 신고 대상일 가능성이 있는가 (등급과 별개 — true면 초안에 신고 검토 항목)\n",
+  "web": "same",
+  "value": {
+   "id": "",
+   "title": "",
+   "site": "",
+   "area": "",
+   "product": "",
+   "batch": "",
+   "equipment_id": "",
+   "category": "",
+   "detected_at": "",
+   "detected_by": "",
+   "process_step": "",
+   "description": "",
+   "immediate_actions": "",
+   "parameters": [],
+   "cpp_excursion": null,
+   "spec_oos": null,
+   "other_batches_possibly_affected": null,
+   "sterility_assurance_impacted": null,
+   "released_product_affected": null,
+   "data_integrity_concern": null,
+   "patient_safety_impact": null,
+   "regulatory_report_required": null
+  }
+ }
+]

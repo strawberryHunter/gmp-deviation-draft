@@ -1,7 +1,7 @@
 # HANDOFF — 현재 상태와 다음 할 일
 
 > 작업이 끝날 때마다 갱신합니다 (규칙: [`CLAUDE.md`](../CLAUDE.md)).
-> **마지막 갱신: 2026-11-26** · 기준 브랜치 `main` · 테스트 312개 통과 · **CI 통과 시 Claude가 자동 머지** (CI: Ubuntu Python 3.10–3.13, Windows 3.12) · 도구 버전 `devdraft 0.5.0`
+> **마지막 갱신: 2026-11-26** · 기준 브랜치 `main` · 테스트 313개 통과 + 웹 화면 검사(엔진 36 · 실제 입력 14 · 화면) · **CI 통과 시 Claude가 자동 머지** (CI 6개: Ubuntu Python 3.10–3.13, Windows 3.12, web) · 도구 버전 `devdraft 0.5.0`
 >
 > **프로젝트 목적: 입사 포트폴리오.** 실제 회사 도입이 아니므로 회사 SOP·사내 적격성 평가는 범위 밖입니다. 우선순위는 "검토자가 처음 1분에 보고 이해하는가"입니다.
 
@@ -37,6 +37,7 @@
 | 한국어 Windows에서 출력을 파일로 저장할 때(cp949) 오류로 멈추던 문제 | ✅ 수정, CI에 Windows PowerShell 실행 단계 추가 |
 | 빈 양식 만들기 `--new 번호` (Windows·macOS 같은 명령), 설치 안내(ZIP·Python·자주 나는 오류) | ✅ |
 | 양식에 따옴표 없이 적은 숫자 모양 값(배치 0412 등)을 적힌 그대로 초안에 표시 | ✅ (이전에는 266으로 바뀌고 오류로 종료) |
+| 브라우저 화면 `web/` — 여러 건 관리, 빠진 항목·제안 등급·반복 건·보고 기한, Word 내보내기, YAML 가져오기. CLI 결과와 대조 테스트 | ✅ 게시본: claude.ai 아티팩트 "Deviation 초안 데스크" (비공개) — **실제 화면에서 Word 저장은 사용자 확인 필요** |
 | 회사 실제 SOP 반영 | — 포트폴리오라 범위 밖 (공개 SOP 예시로 방법을 보여 줌) |
 
 ## 2. 머지된 작업
@@ -65,6 +66,7 @@
 | [#20](https://github.com/strawberryHunter/gmp-deviation-draft/pull/20) | 한국어 Windows 출력 오류 수정, `--new`, 설치 안내, CI에 Windows PowerShell 사용자 경로 |
 | [#21](https://github.com/strawberryHunter/gmp-deviation-draft/pull/21) | 화면의 파일 경로를 짧게 (현재 폴더 기준) |
 | [#22](https://github.com/strawberryHunter/gmp-deviation-draft/pull/22) | 양식의 숫자 모양 값(0412, 1:30, 3.40)을 적힌 그대로 읽음 (이전에는 값이 바뀌고 오류로 중단) |
+| [#23](https://github.com/strawberryHunter/gmp-deviation-draft/pull/23) | 브라우저 화면 `web/` 추가 (사이드바 리디자인, YAML 가져오기), CI에 web 작업, CLI 기준값 대조 |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
@@ -75,6 +77,8 @@
   - 공개 전 점검 완료: 추적 파일에 비밀값·개인 이메일 없음, 커밋 이메일은 GitHub noreply 주소
   - 같은 화면에서 함께: About(오른쪽 톱니)에 주제 태그 `gmp` `gxp` `deviation-management` `data-integrity` `quality-assurance` `python` 추가, 프로필에서 **Pin**
 - [ ] **⓪-2 포트폴리오 페이지 공유** — claude.ai 아티팩트(대화에서 받은 링크) 오른쪽 위 Share에서 링크 공유 켜기. 공유 후 README나 이력서에 링크를 넣을지 Claude에게 알려 주세요.
+
+- [ ] **⓪-3 웹 화면에서 Word 저장 한 번 눌러 보기** — 게시된 "Deviation 초안 데스크"에서 예시 불러오기 → 카드 열기 → 내보내기 → Word. 저장 확인 창이 뜨고 .docx가 받아지는지 알려 주세요. 테스트는 저장 기능의 대역으로만 했습니다.
 
 - [ ] **① Word 초안을 실제 Word에서 열어 보기** — 작업 환경에 맑은 고딕이 없어 화면 확인을 못 했습니다.
   1. 바로 볼 수 있는 렌더링 결과: [`sample_output/showcase/`](../sample_output/showcase/)의 PDF (이 환경의 대체 글꼴로 렌더링됨). Word 원본이 필요하면 "프롬프트 A" 또는 `python scripts/make_showcase.py`
@@ -114,8 +118,10 @@ CLAUDE.md와 docs/HANDOFF.md를 읽고, "다음 개선 후보" 중 맨 위 항�
 
 **다음 개선 후보** (Claude가 끝낼 때마다 이 목록을 갱신, 포트폴리오 기준 우선순위)
 
-현재 남은 후보가 없습니다. 사용자가 정한 작업(결정 5개, 새 질문 2개, Excel 출력)은 모두 끝났습니다.
-새 아이디어가 있으면 "다음 작업 하자"와 함께 알려 주세요. 없으면 Claude가 위험을 줄일 거리를 찾아 제안합니다.
+1. **웹: 다른 규칙 파일 선택** — 지금은 기본 rules.yaml만 내장. Duke 예시 규칙을 고를 수 있게 (CLI 기준값에 Duke 결과 추가).
+2. **CLI: 같은 항목이 두 번 나온 양식 거부** — YAML은 뒤의 값을 조용히 씀. 웹은 이미 거부.
+3. **웹: 미리보기 패널의 Tab 이동 가두기** — 지금은 Tab이 뒤 화면으로 나감 (Esc로는 닫힘).
+4. **웹: 초안을 YAML로 내보내기** — 화면에서 쓴 초안을 CLI 양식으로 저장.
 
 ## 5. 참고 문서
 - 사용법: [`docs/USAGE.md`](USAGE.md)

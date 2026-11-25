@@ -57,6 +57,24 @@ GxP 문서에서 가장 위험한 것은 **조사로 뒷받침되지 않은 그�
 
 등급은 **제안**이고 확정은 QA 검토자가 합니다.
 
+## 브라우저 화면 (`web/`)
+
+같은 판정 규칙을 설치 없이 브라우저에서 씁니다. 여러 건의 초안을 한 화면에서 관리하고, 빠진 항목·제안 등급·반복 건·보고 기한을 카드에서 바로 봅니다. 판단 칸은 여기서도 비어 있습니다.
+
+<table>
+<tr>
+<td><img src="web/docs/screen-home.png" width="380" alt="초안 목록: 먼저 볼 초안, 숫자, 필터, 카드"></td>
+<td><img src="web/docs/screen-editor.png" width="380" alt="작성 화면: 단계 목록, 입력, 근거와 제안"></td>
+</tr>
+<tr><td colspan="2" align="center">목록 (먼저 볼 초안 · 숫자 · 카드) · 작성 화면 (단계 목록 · 입력 · 이 칸의 근거와 도구 제안)</td></tr>
+</table>
+
+- **CLI와 같은 결과** — 합성 양식 8건의 등급·근거·반복 건, 그리고 YAML 46개 사례의 읽기 결과를 CLI에서 뽑아 기준값으로 두고 대조합니다. CLI나 샘플이 바뀌면 기준값 검사가 실패합니다.
+- **외부 요청 0** — 글꼴·아이콘·Word 변환 모듈을 페이지와 함께 묶었고, 테스트가 요청을 세어 확인합니다. 입력 내용은 사용자가 켤 때만 브라우저에 저장합니다.
+- **실제 입력으로 시험** — headless 브라우저에서 클릭·타이핑으로 업무 흐름(새 초안 → Word, 빠진 항목 찾기, 복제, YAML 가져오기 등) 14가지를 끝까지 수행합니다.
+
+구조·실행·판단 기록은 [`web/README.md`](web/README.md)에 있습니다.
+
 ## 실제 SOP에 맞추기
 
 분류 기준은 코드가 아니라 [`config/rules.yaml`](config/rules.yaml) 한 파일에 있어 QA가 직접 고칩니다.
@@ -85,6 +103,8 @@ GxP 문서에서 가장 위험한 것은 **조사로 뒷받침되지 않은 그�
 | Word 2·3쪽에 초안 표시 없음 | 쪽만 떼면 완성 문서처럼 보임 | 모든 쪽 머리글 |
 | 영문 Windows 콘솔 | 한국어 메시지에서 오류로 종료 | 한글 못 쓰는 콘솔만 UTF-8로 전환 |
 | Windows `cmd`·PowerShell의 `*.yaml` | 셸이 펼치지 않아 오류로 종료 | 도구가 직접 펼침, 없는 파일은 거부로 처리 |
+| 따옴표 없는 숫자 모양 값 (`batch: 0412`, `1:30`, `3.40`) | YAML 1.1 규칙으로 266·90·3.4로 읽히고, 초안 생성이 오류로 중단 (웹 화면과 대조하다 발견) | 양식 값은 적힌 그대로 읽음 |
+| 웹 화면: 덜 채워진 초안에도 등급 표시, 양식 해시에 위험 질문 답이 빠짐 | CLI가 거부하는 양식에 "MAJOR", 답을 바꿔도 같은 해시 | 완전한 초안에만 제안 표시, 해시는 모든 값을 포함 |
 
 판단 과정은 [`DECISIONS.md`](DECISIONS.md)에 한 줄씩 남겼습니다 (무엇을 · 왜 · 대안 · 확인 필요 여부).
 
@@ -101,7 +121,8 @@ python -m devdraft.cli data/synthetic/showcase/*.yaml --docx --summary --today 2
 
 ## 검증
 
-- 테스트 312개 — GitHub Actions에서 Ubuntu Python 3.10–3.13, Windows 3.12로 PR마다 실행
+- 테스트 313개 — GitHub Actions에서 Ubuntu Python 3.10–3.13, Windows 3.12로 PR마다 실행
+- 웹 화면: 엔진 테스트 36개 + 실제 입력 테스트 14개 + 화면 검사 (콘솔 오류 0, 외부 요청 0, 1280·390px, 라이트·다크) — 같은 CI에서 Chrome으로 실행
 - 튜토리얼에 실린 명령 출력·입력 파일·초안 발췌가 실제와 같은지 테스트가 대조
 - 같은 입력이면 바이트 단위로 같은 초안 (생성 근거의 SHA-256으로 대조 가능)
 - 입력한 문장은 Markdown 기호가 섞여 있어도 Word·GitHub에서 입력 그대로 표시 (CommonMark+GFM 파서로도 확인)
@@ -132,6 +153,7 @@ config/examples/                  SOP를 옮긴 예시 (Duke 공개 SOP, 합성 
 templates/intake_template.yaml    빈 입력 양식
 data/synthetic/                   합성 이력·양식·SOP (scripts/make_synthetic_data.py로 재생성)
 sample_output/                    샘플 초안, showcase/ (PDF·이미지: scripts/make_showcase.py)
+web/                              브라우저 화면 (같은 규칙, CLI 결과와 대조 테스트) — web/README.md
 docs/TUTORIAL.md · docs/USAGE.md · docs/HANDOFF.md · DECISIONS.md
 tests/
 ```
