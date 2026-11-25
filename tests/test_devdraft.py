@@ -438,7 +438,7 @@ def test_cli_exits_on_bad_rules(tmp_path):
 import ast  # noqa: E402
 
 ALLOWED_IMPORTS = {"__future__", "argparse", "ast", "csv", "dataclasses", "datetime",
-                   "glob", "hashlib", "pathlib", "re", "sys", "yaml", "docx"}
+                   "glob", "hashlib", "pathlib", "re", "sys", "types", "yaml", "docx"}
 
 
 def test_package_imports_nothing_that_can_reach_a_network_or_llm():
@@ -1370,3 +1370,113 @@ def test_duke_sample_outputs_are_up_to_date(tmp_path):
     for f in tmp_path.glob("*.md"):
         assert f.read_text(encoding="utf-8") == (out / f.name).read_text(encoding="utf-8"), \
             f"{f.name} stale — regenerate with --rules {DUKE_RULES.relative_to(ROOT)} --out {out.relative_to(ROOT)}"
+
+
+# --- entered facts are shown verbatim (no Markdown interpretation) ---------------
+
+from devdraft.mdtext import block as md_block, inline as md_inline  # noqa: E402
+
+TRICKY = ["#4 포트 장갑 부적합", "- 직전 배치 적합", "> 작업자 진술", "*재시험 전* 교체", "결과 **Fail** 기록",
+          "코드 `GL-4`", "A | B", "2~8°C, 10~15분", "_주의_ 표시", "[A] lot", "<b>x</b>", "1. 첫 번째",
+          "=== 구분 ===", "+ 추가", "R&D", "&lt;5", "back\\slash"]
+
+
+def _tricky_form(tmp_path):
+    f = yaml.safe_load((INTAKE / "DEV-2026-2202.yaml").read_text(encoding="utf-8"))
+    f["title"] = "장갑 리크 | 포트 4 *부적합*"
+    f["description"] = "\n".join(TRICKY)
+    f["immediate_actions"] = "포트 #4 장갑 교체 | 재시험 적합\n> 재시험 결과 Pass"
+    f["parameters"] = [{"name": "Glove leak | port 4", "spec": "Pass", "actual": "Fail*", "duration": "~5 min"}]
+    p = tmp_path / "tricky.yaml"
+    p.write_text(yaml.safe_dump(f, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    return f, p
+
+
+def _md_cells(row: str) -> list[str]:
+    """Split a Markdown table row on unescaped pipes."""
+    return [c.strip() for c in re.split(r"(?<!\\)\|", row.strip().strip("|"))]
+
+
+def test_entered_facts_appear_verbatim_in_word(tmp_path):
+    f, p = _tricky_form(tmp_path)
+    build(p, ROOT / "config/rules.yaml", ROOT / "data/synthetic/history.csv", tmp_path / "o", TODAY, want_docx=True)
+    doc = _Document(tmp_path / "o" / "DEV-2026-2202_draft.docx")
+    text = "\n".join(p.text for p in _all_paragraphs(doc))
+    facts = [f["title"], *f["description"].splitlines(), *f["immediate_actions"].splitlines(),
+             f["parameters"][0]["name"], f["parameters"][0]["actual"], f["parameters"][0]["duration"]]
+    missing = [x for x in facts if x not in text]
+    assert not missing, missing
+    # no fact turned into a heading or into the tool's warning box
+    assert not [p.text for p in doc.paragraphs if p.style.name.startswith("Heading") and "포트" in p.text]
+    assert not [t for t in doc.tables if len(t.rows) == 1 and "작업자 진술" in t.cell(0, 0).text]
+
+
+def test_parameter_values_stay_in_their_columns(tmp_path):
+    """A "|" in a parameter name used to push the actual result into the wrong column."""
+    f, p = _tricky_form(tmp_path)
+    md = build(p, ROOT / "config/rules.yaml", ROOT / "data/synthetic/history.csv",
+               tmp_path / "o", TODAY, want_docx=True).read_text(encoding="utf-8")
+    row = next(l for l in md.splitlines() if l.startswith("| Glove"))
+    assert len(_md_cells(row)) == 4
+    doc = _Document(tmp_path / "o" / "DEV-2026-2202_draft.docx")
+    cells = next([c.text for c in r.cells] for t in doc.tables for r in t.rows if r.cells[0].text.startswith("Glove"))
+    assert cells == ["Glove leak | port 4", "Pass", "Fail*", "~5 min"]
+    title_row = next(l for l in md.splitlines() if l.startswith("| 제목 |"))
+    assert len(_md_cells(title_row)) == 2
+
+
+def test_description_line_breaks_are_kept(tmp_path):
+    f, p = _tricky_form(tmp_path)
+    md = build(p, ROOT / "config/rules.yaml", ROOT / "data/synthetic/history.csv",
+               tmp_path / "o", TODAY).read_text(encoding="utf-8")
+    body = md.split("## 1. 사건 경위", 1)[1].split("###", 1)[0].strip().splitlines()
+    assert len(body) == len(TRICKY) and all(l.endswith("  ") for l in body[:-1])
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("3.40-3.60", "3.40-3.60"), ("SYN-mAb-07", "SYN-mAb-07"), ("SYN_mAb_07", "SYN_mAb_07"),
+    ("98.7% (재적분)", "98.7% (재적분)"), ("R&D", "R&D"), ("5.5.2", "5.5.2"), ("≥ 97.0%", "≥ 97.0%"),
+    ("#4", r"\#4"), ("- a", r"\- a"), ("1. a", r"1\. a"), ("a|b", r"a\|b"), ("2~8", r"2\~8"),
+    ("*x*", r"\*x\*"), ("_x_", r"\_x\_"), ("<b>", r"\<b>"), ("&lt;", r"\&lt;"), ("a\\b", r"a\\b"),
+])
+def test_md_escaping_rules(text, expected):
+    assert md_inline(text) == expected
+
+
+def test_md_block_keeps_lines():
+    assert md_block("a\n#b") == "a  \n\\#b"
+
+
+def test_summary_cells_are_escaped(tmp_path):
+    r = FormResult(file="a.yaml", ok=True, dev_id="D-1", title="*굵게* | 둘", proposed="minor", reasons=["x"])
+    row = next(l for l in render_summary([r], "2026-11-24", 365).splitlines() if l.startswith("| D-1"))
+    assert len(_md_cells(row)) == 7 and r"\*굵게\* \| 둘" in row
+
+
+@pytest.mark.parametrize("field", ["title", "batch", "detected_by"])
+def test_line_break_in_one_line_field_is_rejected(tmp_path, field):
+    f = yaml.safe_load((INTAKE / "DEV-2026-2203.yaml").read_text(encoding="utf-8"))
+    f[field] = "첫 줄\n둘째 줄"
+    p = tmp_path / "f.yaml"
+    p.write_text(yaml.safe_dump(f, allow_unicode=True), encoding="utf-8")
+    with pytest.raises(IntakeError) as e:
+        load(p, RULES)
+    assert "줄바꿈" in str(e.value) and field in str(e.value)
+
+
+def test_line_break_in_parameter_is_rejected(tmp_path):
+    f = yaml.safe_load((INTAKE / "DEV-2026-2201.yaml").read_text(encoding="utf-8"))
+    f["parameters"][0]["actual"] = "3.62\n(재측정 3.58)"
+    p = tmp_path / "f.yaml"
+    p.write_text(yaml.safe_dump(f, allow_unicode=True), encoding="utf-8")
+    with pytest.raises(IntakeError) as e:
+        load(p, RULES)
+    assert "parameters 1번째" in str(e.value)
+
+
+def test_multiline_description_is_allowed(tmp_path):
+    f = yaml.safe_load((INTAKE / "DEV-2026-2203.yaml").read_text(encoding="utf-8"))
+    f["description"] = "첫 줄\n둘째 줄"
+    p = tmp_path / "f.yaml"
+    p.write_text(yaml.safe_dump(f, allow_unicode=True), encoding="utf-8")
+    assert load(p, RULES).description == "첫 줄\n둘째 줄"

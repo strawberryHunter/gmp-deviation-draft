@@ -8,8 +8,10 @@ root causes or conclusions.
 from __future__ import annotations
 
 from datetime import date
+from types import SimpleNamespace
 
 from .intake import Deviation
+from .mdtext import block, inline
 from .rules import level_label
 
 TBD = "☐ **작성 필요**"
@@ -39,7 +41,7 @@ def _provenance_block(dev: Deviation, src: dict | None, generated_on: str) -> st
         ("기준일", src["today"]),
         ("생성 도구", f"devdraft {src['version']}"),
     ]
-    return "\n".join(["| 항목 | 값 |", "|---|---|"] + [f"| {k} | {v} |" for k, v in rows])
+    return "\n".join(["| 항목 | 값 |", "|---|---|"] + [f"| {k} | {inline(v)} |" for k, v in rows])
 
 
 def _params_table(dev: Deviation) -> str:
@@ -47,10 +49,21 @@ def _params_table(dev: Deviation) -> str:
         return "해당 없음"
     head = "| 항목 | 기준 | 실측 | 비고 |\n|---|---|---|---|"
     rows = [
-        f"| {p.get('name','')} | {p.get('spec','')} | {p.get('actual','')} | {p.get('duration','')} |"
+        f"| {inline(p.get('name',''))} | {inline(p.get('spec',''))} | {inline(p.get('actual',''))} "
+        f"| {inline(p.get('duration',''))} |"
         for p in dev.parameters
     ]
     return "\n".join([head, *rows])
+
+
+def _escaped(dev: Deviation) -> SimpleNamespace:
+    """The deviation's text fields, escaped for Markdown (see mdtext)."""
+    out = {}
+    for name in Deviation.__dataclass_fields__:
+        value = getattr(dev, name)
+        if isinstance(value, str):
+            out[name] = block(value) if name in ("description", "immediate_actions") else inline(value)
+    return SimpleNamespace(**out)
 
 
 def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
@@ -75,50 +88,52 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
         rec_block = "\n".join(
             [f"{window} 내 동일 {match} 건 {len(recurrence)}건 (목록만 표시, 원인 연관성은 판단하지 않음):", "",
              "| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
-            + ["| " + " | ".join(str(r.get(c, "")) for c in cols) + " |" for r in recurrence]
+            + ["| " + " | ".join(inline(r.get(c, "")) for c in cols) + " |" for r in recurrence]
         )
     if self_in_history:
-        rec_block += f"\n\n※ 이력 파일에 이번 deviation({dev.id}) 자체가 있어 반복 건에서 제외했습니다."
+        rec_block += f"\n\n※ 이력 파일에 이번 deviation({inline(dev.id)}) 자체가 있어 반복 건에서 제외했습니다."
     sop = (rules or {}).get("sop_reference") or ""
-    source = sop if sop else f"{TBD} — 분류 기준 출처 미기재 (config/rules.yaml sop_reference). 사내 SOP와 대조 필요."
+    source = inline(sop) if sop else f"{TBD} — 분류 기준 출처 미기재 (config/rules.yaml sop_reference). 사내 SOP와 대조 필요."
     also_block = ""
     if also:
         also_block = "\n그 밖에 해당한 트리거 (하위 등급):\n" + "\n".join(
-            f"- [{level_label(rules, lvl)}] {r}" for lvl, r in also) + "\n"
+            f"- [{inline(level_label(rules, lvl))}] {inline(r)}" for lvl, r in also) + "\n"
     manual_block = ""
     manual = (rules or {}).get("manual_checks") or []
     if manual:
         manual_block = (
             "\n**도구가 판단하지 않은 SOP 기준 — 검토자가 직접 확인** "
             "(해당하면 위 제안 등급과 다를 수 있음):\n\n"
-            + "\n".join(f"- ☐ SOP {m['clause']}: {m['text']}" for m in manual)
+            + "\n".join(f"- ☐ SOP {inline(m['clause'])}: {inline(m['text'])}" for m in manual)
             + "\n"
         )
-    plan_block = "\n".join(f"| {k} | {v} | {TBD} |" for k, v in plan)
+    plan_block = "\n".join(f"| {inline(k)} | {inline(v)} | {TBD} |" for k, v in plan)
     banner = BANNER
     if dev.synthetic:
         banner = f"> **{SYNTHETIC_MARK}**  \n" + banner
-    form_name = (sources or {}).get("form") or "입력 양식"
+    form_name = inline((sources or {}).get("form") or "입력 양식")
+    # Every value the reporter entered, escaped so it is shown as entered.
+    d = _escaped(dev)
 
-    return f"""# Deviation 보고서 초안 — {dev.id}
+    return f"""# Deviation 보고서 초안 — {d.id}
 
 {banner}
 | 항목 | 내용 |
 |---|---|
-| Deviation 번호 | {dev.id} |
-| 제목 | {dev.title} |
-| 사업장 / 구역 | {dev.site} / {dev.area} |
-| 제품 / 배치 | {dev.product} / {dev.batch} |
-| 설비 | {dev.equipment_id or "해당 없음"} |
-| 공정 단계 | {dev.process_step} |
-| 발견 일시 | {dev.detected_at} |
-| 발견자 | {dev.detected_by or TBD} |
-| 유형 | {dev.category or TBD} |
+| Deviation 번호 | {d.id} |
+| 제목 | {d.title} |
+| 사업장 / 구역 | {d.site} / {d.area} |
+| 제품 / 배치 | {d.product} / {d.batch} |
+| 설비 | {d.equipment_id or "해당 없음"} |
+| 공정 단계 | {d.process_step} |
+| 발견 일시 | {d.detected_at} |
+| 발견자 | {d.detected_by or TBD} |
+| 유형 | {d.category or TBD} |
 | 초안 생성일 | {generated_on} |
 
 ## 1. 사건 경위
 
-{dev.description}
+{d.description}
 
 ### 관련 공정 변수
 
@@ -126,14 +141,14 @@ def render_markdown(dev: Deviation, proposed: str, reasons: list[str],
 
 ## 2. 즉시 조치
 
-{dev.immediate_actions}
+{d.immediate_actions}
 
 ## 3. 분류 (제안)
 
 **제안 등급: {level_label(rules, proposed)}**
 
 근거:
-{chr(10).join(f"- {r}" for r in reasons)}
+{chr(10).join(f"- {inline(r)}" for r in reasons)}
 {also_block}
 분류 기준 출처: {source}
 {manual_block}

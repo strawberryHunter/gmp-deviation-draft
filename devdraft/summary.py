@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .mdtext import inline
 from .rules import level_label
 
 
@@ -28,7 +29,8 @@ class FormResult:
 
 
 def _cell(text: str) -> str:
-    return str(text).replace("|", "\\|").replace("\n", " ").strip()
+    # Rejection messages may span lines; a table cell may not.
+    return inline(" ".join(str(text).split("\n")).strip())
 
 
 def render_summary(results: list[FormResult], generated_on: str, window_days: int,

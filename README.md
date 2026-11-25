@@ -71,6 +71,7 @@ GxP 문서에서 가장 위험한 것은 **조사로 뒷받침되지 않은 그�
 
 | 결함 | 영향 | 지금 |
 |---|---|---|
+| 입력 문장 속 `\|` `#` `*` `>` 등을 Markdown이 해석 | 파라미터 이름의 `\|` 때문에 표 열이 밀려 **실측 칸에 `Fail*` 대신 `Pass`** 표시, `#4 포트`가 제목으로, 작업자 진술이 경고 상자로 | 입력값을 이스케이프해 Word·GitHub 모두 입력 그대로 표시 |
 | 위험 항목 미응답이 `False`로 처리 | 무균 영향 질문을 비워도 MINOR 제안 | 미응답·`yes`/`no`·`"true"` 거부 |
 | 기본 이력이 합성 데이터 | 실제 양식에 가짜 반복 건 5건이 붙어 MAJOR 근거가 됨 | 실제 양식 + 합성 이력은 거부 |
 | Excel "CSV UTF-8"의 BOM | 반복 건 표의 deviation 번호가 전부 빈칸 | BOM 처리, 이력 점검 명령 추가 |
@@ -96,9 +97,10 @@ python -m devdraft.cli data/synthetic/showcase/*.yaml --docx --summary --today 2
 
 ## 검증
 
-- 테스트 206개 — GitHub Actions에서 Ubuntu Python 3.10–3.13, Windows 3.12로 PR마다 실행
+- 테스트 233개 — GitHub Actions에서 Ubuntu Python 3.10–3.13, Windows 3.12로 PR마다 실행
 - 튜토리얼에 실린 명령 출력·입력 파일·초안 발췌가 실제와 같은지 테스트가 대조
 - 같은 입력이면 바이트 단위로 같은 초안 (생성 근거의 SHA-256으로 대조 가능)
+- 입력한 문장은 Markdown 기호가 섞여 있어도 Word·GitHub에서 입력 그대로 표시 (CommonMark+GFM 파서로도 확인)
 - `sample_output/`이 현재 코드의 출력과 다르면 테스트 실패
 - 외부 전송·LLM 호출 없음 — 패키지의 import 허용 목록을 테스트가 검사
 

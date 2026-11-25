@@ -177,12 +177,41 @@ def _banner(doc: Document, lines: list[str]) -> None:
 # Both the draft banner and the summary banner start with this phrase.
 SYNTHETIC_PHRASE = "합성(가짜) 데이터로 만든 초안"
 
+# Backslash escapes (devdraft.mdtext) mark entered text that must be shown
+# as typed. They are swapped for private-use characters before parsing, so
+# "\|" can't split a table cell and "\#" can't start a heading, then swapped
+# back to the real character in the finished document.
+_ESCAPED = re.compile(r"\\([!-/:-@\[-`{-~])")
+_PLACEHOLDER = 0xE000
+_RESTORE = {_PLACEHOLDER + c: chr(c) for c in range(0x21, 0x7F)}
+
+
+def _protect(md: str) -> str:
+    return _ESCAPED.sub(lambda m: chr(_PLACEHOLDER + ord(m.group(1))), md)
+
+
+def _restore(doc: Document) -> None:
+    def fix(paragraphs):
+        for p in paragraphs:
+            for run in p.runs:
+                if any(_PLACEHOLDER <= ord(ch) < _PLACEHOLDER + 0x80 for ch in run.text):
+                    run.text = run.text.translate(_RESTORE)
+    fix(doc.paragraphs)
+    for t in doc.tables:
+        for row in t.rows:
+            for cell in row.cells:
+                fix(cell.paragraphs)
+    for sec in doc.sections:
+        fix(sec.header.paragraphs)
+        fix(sec.footer.paragraphs)
+
 
 def markdown_to_docx(md: str, out_path: str | Path, *, label: str | None = None,
                      generated: str | None = None, landscape: bool = False) -> Path:
     """Convert a draft (or, with `label`, any other report such as the batch
     summary) to Word. `label` and `generated` go into every page header; for a
     draft they are read from the Markdown (deviation number, 초안 생성일)."""
+    md = _protect(md)
     doc = Document()
     _style(doc)
     if landscape:  # wide tables (batch summary) need the width
@@ -248,6 +277,7 @@ def markdown_to_docx(md: str, out_path: str | Path, *, label: str | None = None,
                 para.append(line)
         i += 1
     flush()
+    _restore(doc)
 
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
