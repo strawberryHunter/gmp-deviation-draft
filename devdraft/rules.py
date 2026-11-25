@@ -41,6 +41,28 @@ def strict_load(text: str):
     return yaml.load(text, Loader=StrictLoader)  # SafeLoader subclass: no object construction
 
 
+class FormLoader(StrictLoader):
+    """Loader for intake forms: what the reporter typed stays text.
+
+    YAML 1.1 turns unquoted number-like text into numbers: batch `0412`
+    becomes 266 (octal), `1:30` becomes 90 (base 60), `3.40` becomes 3.4.
+    A form field is a record of what was written, so numbers are not
+    resolved at all. Only true/false (the yes/no answers) and empty values
+    keep their meaning. rules.yaml still uses StrictLoader: it needs numbers.
+    """
+
+
+FormLoader.yaml_implicit_resolvers = {
+    ch: [(tag, rx) for tag, rx in resolvers
+         if tag not in ("tag:yaml.org,2002:int", "tag:yaml.org,2002:float")]
+    for ch, resolvers in StrictLoader.yaml_implicit_resolvers.items()
+}
+
+
+def form_load(text: str):
+    return yaml.load(text, Loader=FormLoader)
+
+
 # Trigger on the number of matching deviations found in history.
 RECURRENCE_FIELD = "recurrence_count"
 

@@ -1,7 +1,7 @@
 # HANDOFF — 현재 상태와 다음 할 일
 
 > 작업이 끝날 때마다 갱신합니다 (규칙: [`CLAUDE.md`](../CLAUDE.md)).
-> **마지막 갱신: 2026-11-25** · 기준 브랜치 `main` · 테스트 309개 통과 · **CI 통과 시 Claude가 자동 머지** (CI: Ubuntu Python 3.10–3.13, Windows 3.12) · 도구 버전 `devdraft 0.5.0`
+> **마지막 갱신: 2026-11-26** · 기준 브랜치 `main` · 테스트 312개 통과 · **CI 통과 시 Claude가 자동 머지** (CI: Ubuntu Python 3.10–3.13, Windows 3.12) · 도구 버전 `devdraft 0.5.0`
 >
 > **프로젝트 목적: 입사 포트폴리오.** 실제 회사 도입이 아니므로 회사 SOP·사내 적격성 평가는 범위 밖입니다. 우선순위는 "검토자가 처음 1분에 보고 이해하는가"입니다.
 
@@ -36,6 +36,7 @@
 | 처음 쓰는 사람용 화면: 한국어 `--help`(예시·종료 코드), 만든 파일 전부 표시, 마지막에 건수·저장 위치·다음 할 일 | ✅ |
 | 한국어 Windows에서 출력을 파일로 저장할 때(cp949) 오류로 멈추던 문제 | ✅ 수정, CI에 Windows PowerShell 실행 단계 추가 |
 | 빈 양식 만들기 `--new 번호` (Windows·macOS 같은 명령), 설치 안내(ZIP·Python·자주 나는 오류) | ✅ |
+| 양식에 따옴표 없이 적은 숫자 모양 값(배치 0412 등)을 적힌 그대로 초안에 표시 | ✅ (이전에는 266으로 바뀌고 오류로 종료) |
 | 회사 실제 SOP 반영 | — 포트폴리오라 범위 밖 (공개 SOP 예시로 방법을 보여 줌) |
 
 ## 2. 머지된 작업
@@ -63,6 +64,7 @@
 | [#19](https://github.com/strawberryHunter/gmp-deviation-draft/pull/19) | 처음 쓰는 사람 기준 화면 개선: 한국어 도움말, 만든 파일 전부 표시, 실행 끝 요약 줄 |
 | [#20](https://github.com/strawberryHunter/gmp-deviation-draft/pull/20) | 한국어 Windows 출력 오류 수정, `--new`, 설치 안내, CI에 Windows PowerShell 사용자 경로 |
 | [#21](https://github.com/strawberryHunter/gmp-deviation-draft/pull/21) | 화면의 파일 경로를 짧게 (현재 폴더 기준) |
+| [#22](https://github.com/strawberryHunter/gmp-deviation-draft/pull/22) | 양식의 숫자 모양 값(0412, 1:30, 3.40)을 적힌 그대로 읽음 (이전에는 값이 바뀌고 오류로 중단) |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
