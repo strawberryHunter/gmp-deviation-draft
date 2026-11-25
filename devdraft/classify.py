@@ -19,6 +19,40 @@ def load_history(path: str | Path) -> list[dict]:
         return list(csv.DictReader(f))
 
 
+MATCH_LABEL = {"equipment_id": "설비", "category": "유형", "site": "사업장"}
+
+
+def unmatched_keys(dev: Deviation, rules: dict) -> list[str]:
+    """match_on keys the form leaves empty. With any of them empty no history
+    row can match, so recurrence was NOT checked — which must not be reported
+    as "no recurrence"."""
+    return [k for k in rules["recurrence"]["match_on"] if not str(dev.get(k) or "").strip()]
+
+
+def has_recurrence_trigger(rules: dict) -> bool:
+    return any(t.get("field") == RECURRENCE_FIELD for ts in rules["classes"].values() for t in ts or [])
+
+
+def qualify_for_unchecked_recurrence(dev: Deviation, rules: dict, level: str,
+                                     reasons: list[str]) -> list[str]:
+    """If recurrence could not be checked, say so in the proposal's reasons.
+
+    A default reason such as "최근 2년 내 … deviation 없음" would then state
+    something nobody checked, so at the default level it is replaced.
+    """
+    missing = unmatched_keys(dev, rules)
+    if not missing or not has_recurrence_trigger(rules):
+        return reasons
+    labels = "·".join(MATCH_LABEL.get(k, k) for k in missing)
+    note = (f"반복성 조회를 하지 않음({labels} 미기재) — 반복 기준은 평가되지 않았습니다. "
+            "검토자가 QMS에서 직접 확인 필요")
+    if level == rules["default_level"]:
+        # The rules' own default wording may assert "no recurrence"; replace it
+        # with what is actually known: no other criterion matched.
+        return [note, "그 밖의 분류 기준에는 해당 없음 (보고자 입력 기준) — 검토자 확인 필요"]
+    return [*reasons, note]
+
+
 def find_recurrence(dev: Deviation, history: list[dict], rules: dict, today: date | None = None) -> list[dict]:
     """Past deviations in the window that match on every `match_on` key.
 

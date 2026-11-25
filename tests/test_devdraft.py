@@ -260,8 +260,8 @@ def test_summary_marks_class_as_proposal_only(tmp_path):
     _, path = _batch(tmp_path, sorted(INTAKE.glob("*.yaml")))
     md = path.read_text(encoding="utf-8")
     assert "판단·승인 문서가 아닙니다" in md
-    for lvl in ("MAJOR", "CRITICAL", "MINOR"):
-        assert f"{lvl} (제안)" in md
+    for lvl in ("MAJOR (제안)", "CRITICAL (제안)", "MINOR (제안, 반복 기준 미평가)"):
+        assert lvl in md
     assert "확정 등급:" not in md  # confirmation lives only in each draft
 
 
@@ -1590,7 +1590,8 @@ def test_summary_xlsx_contents(tmp_path):
     rows = [[c.value for c in r] for r in ws.iter_rows(min_row=h + 1)]
     assert [r[0] for r in rows] == ["DEV-2026-2201", "DEV-2026-2202", "DEV-2026-2203"]
     assert rows[0][2] == "MAJOR (제안)" and rows[0][4] == 5
-    assert all("(제안)" in r[2] for r in rows)
+    assert all("(제안" in r[2] for r in rows)
+    assert rows[2][2] == "MINOR (제안, 반복 기준 미평가)" and rows[2][4] == "조회 안 함"  # 2203 has no equipment
     assert ws.freeze_panes == f"A{h + 1}" and ws.auto_filter.ref.startswith(f"A{h}")
     header = [c.value for c in ws[h]]
     assert not any("확정" in str(v) or "근본원인" in str(v) for v in header)  # no confirmation, no root cause
@@ -1729,3 +1730,47 @@ def test_future_detected_at_is_rejected_and_others_still_drafted(tmp_path):
 def test_same_day_detection_is_accepted(tmp_path):
     p = _form_text_with_detected_at(tmp_path, "'2026-11-24T23:59'")
     assert build(p, ROOT / "config/rules.yaml", ROOT / "data/synthetic/history.csv", tmp_path / "o", TODAY).exists()
+
+
+# --- recurrence that was not checked must not read as "no recurrence" -----------------
+
+def test_no_equipment_means_recurrence_not_checked_not_none(tmp_path):
+    """DEV-2026-2203 has no equipment ID, so no history row can match."""
+    md = (ROOT / "sample_output/DEV-2026-2203_draft.md").read_text(encoding="utf-8")
+    sec = md.split("## 4. 반복성 검토", 1)[1].split("## 5.", 1)[0]
+    assert "반복성 조회를 하지 않았습니다" in sec and "설비 값이 비어" in sec
+    assert "건 없음" not in sec
+    assert "☐ **작성 필요** QMS에서 반복 여부 직접 확인" in sec
+
+
+def test_unchecked_recurrence_is_flagged_on_the_proposal():
+    md = (ROOT / "sample_output/DEV-2026-2203_draft.md").read_text(encoding="utf-8")
+    assert "**제안 등급: MINOR** (반복 기준 미평가" in md
+    sec = md.split("근거:", 1)[1].split("분류 기준 출처", 1)[0]
+    assert "반복성 조회를 하지 않음(설비 미기재)" in sec
+
+
+def test_duke_default_reason_does_not_claim_absence_when_unchecked():
+    """The Duke default reason says "최근 2년 내 … deviation 없음" — false if nobody looked."""
+    md = (ROOT / "sample_output/sop_examples/duke/DEV-2026-2203_draft.md").read_text(encoding="utf-8")
+    sec = md.split("## 3. 분류", 1)[1].split("## 4.", 1)[0]
+    assert "deviation 없음" not in sec
+    assert "반복 기준은 평가되지 않았습니다" in sec
+    row = next(l for l in (ROOT / "sample_output/sop_examples/duke/_summary_2026-11-24.md").read_text(
+        encoding="utf-8").splitlines() if "DEV-2026-2203" in l)
+    assert "반복 기준 미평가" in row and "조회 안 함" in row
+
+
+def test_checked_recurrence_is_unchanged():
+    md = (ROOT / "sample_output/DEV-2026-2202_draft.md").read_text(encoding="utf-8")
+    assert "최근 365일 내 동일 사업장·설비·유형 건 없음." in md and "미평가" not in md
+
+
+def test_empty_category_also_counts_as_not_checked(tmp_path):
+    f = yaml.safe_load((INTAKE / "DEV-2026-2201.yaml").read_text(encoding="utf-8"))
+    f["category"] = ""
+    p = tmp_path / "f.yaml"
+    p.write_text(yaml.safe_dump(f, allow_unicode=True), encoding="utf-8")
+    md = build(p, ROOT / "config/rules.yaml", ROOT / "data/synthetic/history.csv",
+               tmp_path / "o", TODAY).read_text(encoding="utf-8")
+    assert "유형 값이 비어" in md and "(반복 기준 미평가" in md
