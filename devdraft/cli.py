@@ -9,8 +9,9 @@ from datetime import date
 from pathlib import Path
 
 from .classify import (find_recurrence, investigation_plan, lower_triggers, propose_class,
-                       has_recurrence_trigger, qualify_for_unchecked_recurrence, unmatched_keys)
-from .draft import render_markdown
+                       has_recurrence_trigger, qualify_for_unchecked_recurrence, unmatched_keys,
+                       unused_yes_answers)
+from .draft import FLAG_LABELS, render_markdown
 from . import __version__
 from .history import HistoryError, check_history, is_synthetic, load_checked_history, render_report
 from .intake import IntakeError, check_rules, detected_datetime, load
@@ -82,6 +83,7 @@ def draft_one(form: Path, rules: dict, history: list[dict], out_dir: Path,
                       proposed=level, reasons=reasons, recurrence_count=len(rec),
                       recurrence_checked=not unmatched_keys(dev, rules),
                       recurrence_evaluated=not (unmatched_keys(dev, rules) and has_recurrence_trigger(rules)),
+                      unused_yes=[dict(FLAG_LABELS).get(f, f) for f in unused_yes_answers(dev, rules)],
                       draft=str(md_path), synthetic=dev.synthetic)
 
 
