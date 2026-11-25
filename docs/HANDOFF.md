@@ -55,10 +55,18 @@
 | [#14](https://github.com/strawberryHunter/gmp-deviation-draft/pull/14) | 요약표 Excel 출력 (수식 주입 방지) |
 | [#15](https://github.com/strawberryHunter/gmp-deviation-draft/pull/15) | 템플릿 안내 문구가 사건 경위에 섞이던 문제, 발견 일시 검증 |
 | [#16](https://github.com/strawberryHunter/gmp-deviation-draft/pull/16) | 반복성 조회를 못 한 경우 "없음" 대신 "조회 안 함" |
+| [#17](https://github.com/strawberryHunter/gmp-deviation-draft/pull/17) | 규칙에 없는 기준에 "예"로 답한 항목을 제안 아래에 명시 |
+| [#18](https://github.com/strawberryHunter/gmp-deviation-draft/pull/18) | HANDOFF 갱신 (포트폴리오 공개 준비 할 일) |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
 위에서부터 중요한 순서입니다. 끝나면 Claude에게 결과를 알려 주세요.
+
+- [ ] **⓪ 저장소를 공개(Public)로 전환** — 지금은 비공개라 면접관이 링크를 열면 404입니다. 이 세션은 저장소 설정을 바꿀 권한이 없습니다(2026-11-25 시도, 403).
+  - Settings → General → 맨 아래 Danger Zone → **Change visibility** → Public
+  - 공개 전 점검 완료: 추적 파일에 비밀값·개인 이메일 없음, 커밋 이메일은 GitHub noreply 주소
+  - 같은 화면에서 함께: About(오른쪽 톱니)에 주제 태그 `gmp` `gxp` `deviation-management` `data-integrity` `quality-assurance` `python` 추가, 프로필에서 **Pin**
+- [ ] **⓪-2 포트폴리오 페이지 공유** — claude.ai 아티팩트(대화에서 받은 링크) 오른쪽 위 Share에서 링크 공유 켜기. 공유 후 README나 이력서에 링크를 넣을지 Claude에게 알려 주세요.
 
 - [ ] **① Word 초안을 실제 Word에서 열어 보기** — 작업 환경에 맑은 고딕이 없어 화면 확인을 못 했습니다.
   1. 바로 볼 수 있는 렌더링 결과: [`sample_output/showcase/`](../sample_output/showcase/)의 PDF (이 환경의 대체 글꼴로 렌더링됨). Word 원본이 필요하면 "프롬프트 A" 또는 `python scripts/make_showcase.py`
@@ -91,18 +99,7 @@ SOP 번호/개정: <예: QA-SOP-012 Rev.05>
 <등급 정의 부분 붙여넣기>
 ```
 
-### 프롬프트 C — 결정 반영 (③에 답할 때)
-```
-CLAUDE.md와 docs/HANDOFF.md를 읽고 시작해. DECISIONS.md "확인 필요" 결정:
-- 같은 deviation 기준: <이대로 / 설비만 / 유형만 / ...>
-- 기본 rules.yaml 합성 SOP 적용: <이대로 / 바꿔>
-- CP949 자동 읽기: <이대로 / 바꿔>
-- 과거 근본원인 표시: <이대로 / 보여줘>
-- 종료 코드: <이대로 / 바꿔>
-반영하고 PR 만들어줘.
-```
-
-### 프롬프트 D — 다음 개선 (목적과 관계없이 유용, 위에서부터 권장)
+### 프롬프트 C — 다음 개선 (목적과 관계없이 유용, 위에서부터 권장)
 ```
 CLAUDE.md와 docs/HANDOFF.md를 읽고, "다음 개선 후보" 중 맨 위 항목을 진행해줘.
 ```
