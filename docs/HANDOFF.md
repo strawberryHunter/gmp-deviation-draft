@@ -1,7 +1,7 @@
 # HANDOFF — 현재 상태와 다음 할 일
 
 > 작업이 끝날 때마다 갱신합니다 (규칙: [`CLAUDE.md`](../CLAUDE.md)).
-> **마지막 갱신: 2026-11-25** · 기준 브랜치 `main` · 테스트 308개 통과 · **CI 통과 시 Claude가 자동 머지** (CI: Ubuntu Python 3.10–3.13, Windows 3.12) · 도구 버전 `devdraft 0.5.0`
+> **마지막 갱신: 2026-11-25** · 기준 브랜치 `main` · 테스트 309개 통과 · **CI 통과 시 Claude가 자동 머지** (CI: Ubuntu Python 3.10–3.13, Windows 3.12) · 도구 버전 `devdraft 0.5.0`
 >
 > **프로젝트 목적: 입사 포트폴리오.** 실제 회사 도입이 아니므로 회사 SOP·사내 적격성 평가는 범위 밖입니다. 우선순위는 "검토자가 처음 1분에 보고 이해하는가"입니다.
 
@@ -62,6 +62,7 @@
 | [#18](https://github.com/strawberryHunter/gmp-deviation-draft/pull/18) | HANDOFF 갱신 (포트폴리오 공개 준비 할 일) |
 | [#19](https://github.com/strawberryHunter/gmp-deviation-draft/pull/19) | 처음 쓰는 사람 기준 화면 개선: 한국어 도움말, 만든 파일 전부 표시, 실행 끝 요약 줄 |
 | [#20](https://github.com/strawberryHunter/gmp-deviation-draft/pull/20) | 한국어 Windows 출력 오류 수정, `--new`, 설치 안내, CI에 Windows PowerShell 사용자 경로 |
+| [#21](https://github.com/strawberryHunter/gmp-deviation-draft/pull/21) | 화면의 파일 경로를 짧게 (현재 폴더 기준) |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 

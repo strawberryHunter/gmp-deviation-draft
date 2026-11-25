@@ -29,6 +29,16 @@ EXIT_CONFIG_ERROR = 2
 EXIT_RULES_ERROR = EXIT_CONFIG_ERROR  # kept for callers of the earlier name
 
 
+def shown(path) -> str:
+    """A path as the user should see it: relative to the current folder when
+    the file is inside it (drafts\\x.md instead of C:\\Users\\...\\drafts\\x.md)."""
+    p = Path(path)
+    try:
+        return str(p.resolve().relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return str(p)
+
+
 def _sha256(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -116,7 +126,7 @@ def run_batch(forms: list[Path], rules_path: Path, history_path: Path, out_dir: 
     for f in forms:
         try:
             r = draft_one(f, rules, history, out_dir, today, want_docx, seen, src)
-            made = r.draft + (f", {Path(r.draft).with_suffix('.docx')}" if want_docx else "")
+            made = shown(r.draft) + (f", {shown(Path(r.draft).with_suffix('.docx'))}" if want_docx else "")
             print(f"OK  {f.name} -> {made}")
         except IntakeError as e:
             r = FormResult(file=f.name, ok=False, error=str(e))
@@ -130,7 +140,7 @@ def run_batch(forms: list[Path], rules_path: Path, history_path: Path, out_dir: 
         summary_md = render_summary(results, stamp, rules["recurrence"]["window_days"], rules)
         summary_path.write_text(summary_md, encoding="utf-8")
         extra = [summary_path.with_suffix(x) for x, on in ((".docx", want_docx), (".xlsx", want_xlsx)) if on]
-        print("SUM " + ", ".join(str(x) for x in [summary_path, *extra]))
+        print("SUM " + ", ".join(shown(x) for x in [summary_path, *extra]))
         if want_docx:
             from .docx_out import markdown_to_docx
             markdown_to_docx(summary_md, summary_path.with_suffix(".docx"),
@@ -214,7 +224,7 @@ def new_form(dev_id: str, out_dir: Path) -> Path:
 def batch_footer(results: list[FormResult], out_dir: Path) -> str:
     """Last lines of a run: counts, where the files are, what to do next."""
     done = sum(r.ok for r in results)
-    lines = [f"완료: 입력 {len(results)}건 · 초안 {done}건 · 거부 {len(results) - done}건 (저장 위치: {out_dir})"]
+    lines = [f"완료: 입력 {len(results)}건 · 초안 {done}건 · 거부 {len(results) - done}건 (저장 위치: {shown(out_dir)})"]
     if done < len(results):
         lines.append("  → ERR 줄의 양식을 보완한 뒤 다시 실행하십시오. 거부된 양식은 초안을 만들지 않았습니다.")
     if done:
@@ -270,9 +280,9 @@ def main() -> None:
         except (ValueError, FileExistsError) as e:
             print(f"ERR {e}")
             raise SystemExit(EXIT_REJECTED)
-        print(f"NEW {made}")
+        print(f"NEW {shown(made)}")
         print("  → 이 파일을 메모장·VS Code 등으로 열어 채웁니다 (항목마다 '#' 뒤에 설명이 있습니다).")
-        print(f"  → 다 채운 뒤: python -m devdraft.cli {made} --docx")
+        print(f"  → 다 채운 뒤: python -m devdraft.cli {shown(made)} --docx")
         print("  → 연습용(가짜) 내용이면 파일 맨 위에 synthetic: true 를 넣어야 이력 파일 없이 실행됩니다.")
         raise SystemExit(0)
 
