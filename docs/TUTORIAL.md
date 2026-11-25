@@ -10,9 +10,11 @@
 ```bash
 git clone https://github.com/strawberryHunter/gmp-deviation-draft.git
 cd gmp-deviation-draft
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 python -m pytest -q
 ```
+
+Git이 없으면 GitHub에서 **Code → Download ZIP**으로 받아 압축을 풀고 그 폴더로 `cd`합니다. Python 설치와 `python` 명령이 안 될 때는 [사용 가이드 1장](USAGE.md#1-설치-최초-1회)을 보십시오. 모든 명령은 저장소 폴더 안에서 실행합니다.
 
 Python 3.10 이상, Windows·macOS·Linux 모두 됩니다. 아래 명령의 `*.yaml`은 Windows `cmd`·PowerShell에서도 그대로 동작합니다.
 Windows에서는 출력의 경로가 `drafts\DEV-…`처럼 `\`로 보입니다 (이 문서는 `/`로 적었습니다).
@@ -54,7 +56,7 @@ regulatory_report_required: false
 
 - 맨 아래 8개는 **위험 확인 질문**입니다. 반드시 `true` / `false`로 답합니다. 비우거나 `yes`/`no`로 쓰면 거부됩니다 (3단계).
 - `synthetic: true`는 연습용 표시입니다. 초안 모든 쪽에 "합성 데이터"가 찍힙니다.
-- 새 양식은 빈 템플릿 [`templates/intake_template.yaml`](../templates/intake_template.yaml)을 복사해서 씁니다.
+- 새 양식은 `python -m devdraft.cli --new DEV-2026-2301`로 만듭니다 (빈 템플릿 [`templates/intake_template.yaml`](../templates/intake_template.yaml)을 `drafts/`에 복사하고 번호를 채움).
 
 ## 2. 초안 만들기
 

@@ -91,17 +91,17 @@ GxP 문서에서 가장 위험한 것은 **조사로 뒷받침되지 않은 그�
 ## 빠른 실행
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 python -m pytest -q
 python -m devdraft.cli data/synthetic/showcase/*.yaml --docx --summary --today 2026-11-24 --out drafts
 ```
 
-`drafts/`에 사례별 Markdown·Word 초안과 요약표(Markdown·Word)가 생깁니다. `--xlsx`를 더하면 요약표가 Excel로도 나옵니다. 단계별 설명은 [튜토리얼](docs/TUTORIAL.md). 직접 양식을 쓰려면 [`templates/intake_template.yaml`](templates/intake_template.yaml)을 복사해 채웁니다.
+`drafts/`에 사례별 Markdown·Word 초안과 요약표(Markdown·Word)가 생깁니다. `--xlsx`를 더하면 요약표가 Excel로도 나옵니다. 단계별 설명은 [튜토리얼](docs/TUTORIAL.md). 직접 양식을 쓰려면 `python -m devdraft.cli --new DEV-2026-2301`로 빈 양식을 만들어 채웁니다.
 설치, 거부 메시지 대응, 초안 검토 방법, rules.yaml 전체 항목, 이력 파일 준비, 종료 코드는 [사용 가이드](docs/USAGE.md)에 있습니다.
 
 ## 검증
 
-- 테스트 282개 — GitHub Actions에서 Ubuntu Python 3.10–3.13, Windows 3.12로 PR마다 실행
+- 테스트 308개 — GitHub Actions에서 Ubuntu Python 3.10–3.13, Windows 3.12로 PR마다 실행
 - 튜토리얼에 실린 명령 출력·입력 파일·초안 발췌가 실제와 같은지 테스트가 대조
 - 같은 입력이면 바이트 단위로 같은 초안 (생성 근거의 SHA-256으로 대조 가능)
 - 입력한 문장은 Markdown 기호가 섞여 있어도 Word·GitHub에서 입력 그대로 표시 (CommonMark+GFM 파서로도 확인)

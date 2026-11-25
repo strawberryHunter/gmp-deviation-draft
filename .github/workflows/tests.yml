@@ -40,3 +40,27 @@ jobs:
           python -m devdraft.cli --check-history --today 2026-11-24
           python -m devdraft.cli data/synthetic/intake/DEV-2026-2201.yaml --docx --today 2026-11-24 --out ci_out
           test -s ci_out/DEV-2026-2201_draft.docx
+      # What a Windows user types, in the shell they have by default (Windows
+      # PowerShell 5.1: no "&&", no glob expansion). Fails on any non-zero exit
+      # that the docs don't promise, and on any Python traceback.
+      - name: First-time user path in Windows PowerShell
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Continue'  # stderr text alone must not abort; exit codes are checked below
+          function Run($want, [string[]]$a) {
+            $out = & python -m devdraft.cli @a 2>&1 | Out-String
+            Write-Host "> python -m devdraft.cli $a`n$out"
+            if ($LASTEXITCODE -ne $want -or $out -match 'Traceback') { throw "exit $LASTEXITCODE (want $want)" }
+          }
+          Run 0 @('--help')
+          Run 0 @('--new', 'DEV-2026-2301')
+          if (-not (Test-Path drafts\DEV-2026-2301.yaml)) { throw 'form not created' }
+          Run 1 @('--new', 'DEV-2026-2301')
+          Run 1 @('drafts\DEV-2026-2301.yaml')
+          Run 0 @('data/synthetic/showcase/*.yaml', '--docx', '--summary', '--xlsx', '--today', '2026-11-24', '--out', 'drafts')
+          Run 0 @('data\synthetic\intake\DEV-2026-2202.yaml', '--rules', 'config\examples\rules_Duke_COMM-PAS-013.yaml', '--today', '2026-11-24', '--out', 'drafts\duke')
+          Run 1 @('data/synthetic/tutorial/broken_form.yaml')
+          if (-not (Test-Path drafts\_summary_2026-11-24.xlsx)) { throw 'xlsx missing' }
+          python -m devdraft.cli data/synthetic/intake/DEV-2026-2201.yaml --out drafts\redir > drafts\log.txt 2>&1
+          if ($LASTEXITCODE -ne 0) { Get-Content drafts\log.txt; throw "redirected run failed" }
