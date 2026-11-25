@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 import yaml
@@ -73,19 +74,62 @@ def _template_comments() -> dict[str, str]:
     return out
 
 
-def _glued_template_comments(raw: dict) -> list[str]:
-    """Keys whose value swallowed the template comment.
+_ANY_COMMENT = re.compile(r"(?:^|\s)#\s*(?:↓\s*\w+:\s*)?(\S.*)$")
 
-    YAML only starts a comment at '#' preceded by whitespace, so
-    `title: 제목# [필수] 한 줄 제목...` keeps the comment inside the value and
-    it would be copied into the draft verbatim.
+
+def _template_phrases() -> list[str]:
+    """Every guidance sentence in the blank template's comments.
+
+    Kept in the same wording when the template is reorganised, so forms copied
+    from an older template layout are still recognised.
     """
+    if not TEMPLATE.exists():
+        return []
+    phrases = []
+    for line in TEMPLATE.read_text(encoding="utf-8").splitlines():
+        m = _ANY_COMMENT.search(line)
+        if m:
+            text = m.group(1).strip()
+            if len(text) >= 10 and not set(text) <= set("─=-# "):
+                phrases.append(text)
+    return phrases
+
+
+def _glued_template_comments(raw: dict) -> list[str]:
+    """Keys whose value swallowed template guidance text.
+
+    Two ways this happens, both copying the template's words into the draft
+    as if the reporter had written them:
+    - YAML only starts a comment at '#' preceded by whitespace, so
+      `title: 제목# [필수] 한 줄 제목...` keeps the comment inside the value;
+    - inside a multi-line `|` block, a more-indented "# ..." line is text,
+      not a comment.
+    """
+    own = _template_comments()
+    phrases = _template_phrases()
     hits = []
-    for key, comment in _template_comments().items():
-        val = raw.get(key)
-        if isinstance(val, str) and comment[:8] in val:
+    for key, val in raw.items():
+        if not isinstance(val, str):
+            continue
+        if (key in own and own[key][:8] in val) or any(p in val for p in phrases):
             hits.append(key)
     return sorted(hits)
+
+
+_WHEN = re.compile(r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?$")
+
+
+def detected_datetime(value) -> datetime | None:
+    """The discovery time as a datetime, or None if it is not an exact,
+    valid date and time. "어제 새벽", "2026/11/25" or "2026-13-40T99:99" are
+    not acceptable in a deviation record."""
+    s = str(value).strip()
+    if not _WHEN.match(s):
+        return None
+    try:
+        return datetime.fromisoformat(s.replace(" ", "T"))
+    except ValueError:
+        return None
 
 
 def _short(v, n: int = 20) -> str:
@@ -125,7 +169,8 @@ def load(path: str | Path, rules: dict) -> Deviation:
     glued = _glued_template_comments(raw)
     if glued:
         problems.append(
-            f"값 뒤에 양식 주석이 붙어 값의 일부로 읽힘 ('#' 앞에 공백을 두거나 주석을 지우십시오): {', '.join(glued)}"
+            "값에 양식 주석이 붙어 값의 일부로 읽힘 ('#' 앞에 공백을 두고, 여러 줄(|) 블록 안에는 "
+            f"'#' 줄을 두지 마십시오): {', '.join(glued)}"
         )
     not_bool = [
         f"{f}={_short(raw[f])!r}" for f in sorted(_bool_fields())
@@ -144,6 +189,12 @@ def load(path: str | Path, rules: dict) -> Deviation:
     for n, prm in enumerate(raw.get("parameters") or [], 1):
         if isinstance(prm, dict) and any(isinstance(v, str) and "\n" in v.strip() for v in prm.values()):
             problems.append(f"parameters {n}번째 항목에 줄바꿈이 있음 — 한 줄로 적으십시오")
+
+    when = raw.get("detected_at")
+    if when and detected_datetime(when) is None:
+        problems.append(
+            f"detected_at '{_short(when)}' 는 실제 날짜·시각이어야 합니다 (YYYY-MM-DD HH:MM, 예: 2026-11-21T14:20)"
+        )
 
     cat = raw.get("category")
     if cat and cat not in rules["categories"]:

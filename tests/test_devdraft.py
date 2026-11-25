@@ -1630,3 +1630,102 @@ def test_xlsx_without_summary_is_usage_error(tmp_path):
 def test_openpyxl_is_a_declared_dependency():
     reqs = (ROOT / "requirements.txt").read_text(encoding="utf-8")
     assert re.search(r"^openpyxl>=", reqs, flags=re.M)
+
+
+# --- template guidance must never leak into a value (found by filling the template) --
+
+OLD_LAYOUT_LEAK = '''description: |         # [필수] 사건 경위. 관찰한 사실·기록된 수치·시각만 적습니다.
+  02:30부터 DO 값이 하한(30%) 아래로 떨어져 03:10 최저 22% 기록.
+                       #        "~때문으로 보임" 같은 원인 추정은 적지 않습니다.
+'''
+
+
+def _filled_with_block(tmp_path, description_block: str, template: Path = TEMPLATE) -> Path:
+    t = template.read_text(encoding="utf-8")
+    src = yaml.safe_load((INTAKE / "DEV-2026-2203.yaml").read_text(encoding="utf-8"))
+    for k, v in src.items():
+        if k in ("synthetic", "parameters", "description"):
+            continue
+        val = ("true" if v else "false") if isinstance(v, bool) else f"'{v}'"
+        t = re.sub(rf"^{k}:( *)(''|)( *)#", lambda m: f"{k}: {val}  #", t, count=1, flags=re.M)
+    t = re.sub(r"^description: ''.*$", description_block.rstrip("\n"), t, count=1, flags=re.M)
+    p = tmp_path / "f.yaml"
+    p.write_text(t, encoding="utf-8")
+    return p
+
+
+def test_template_has_no_comment_lines_under_a_field():
+    """An indented '# ...' line below a field is swallowed by a `|` block."""
+    for n, line in enumerate(TEMPLATE.read_text(encoding="utf-8").splitlines(), 1):
+        assert not re.match(r"^\s+#", line), f"line {n}: {line!r}"
+
+
+def test_block_description_from_template_keeps_only_entered_lines(tmp_path):
+    block = ("description: |         # [필수] 사건 경위. 관찰한 사실·기록된 수치·시각만 적습니다.\n"
+             "  첫 줄 사실.\n  둘째 줄 사실.\n")
+    d = load(_filled_with_block(tmp_path, block), RULES)
+    assert d.description == "첫 줄 사실.\n둘째 줄 사실.\n"
+
+
+def test_guidance_swallowed_by_block_is_rejected(tmp_path):
+    """Forms copied from the old template layout leaked its guidance into the description."""
+    with pytest.raises(IntakeError) as e:
+        load(_filled_with_block(tmp_path, OLD_LAYOUT_LEAK), RULES)
+    assert "양식 주석이" in str(e.value) and "description" in str(e.value)
+
+
+def test_every_template_phrase_is_detected_anywhere_in_a_value(tmp_path):
+    from devdraft.intake import _template_phrases
+    phrases = _template_phrases()
+    assert any("원인 추정은 적지 않습니다" in p for p in phrases)
+    f = yaml.safe_load((INTAKE / "DEV-2026-2203.yaml").read_text(encoding="utf-8"))
+    f["immediate_actions"] = "교체 완료.\n계획만 있는 조치는 \"예정\"이라고 명시합니다."
+    p = tmp_path / "f.yaml"
+    p.write_text(yaml.safe_dump(f, allow_unicode=True), encoding="utf-8")
+    with pytest.raises(IntakeError) as e:
+        load(p, RULES)
+    assert "immediate_actions" in str(e.value)
+
+
+# --- detected_at must be a real, past date-time, shown as typed ----------------------
+
+def _form_text_with_detected_at(tmp_path, raw_value: str) -> Path:
+    t = (INTAKE / "DEV-2026-2203.yaml").read_text(encoding="utf-8")
+    t, n = re.subn(r"^detected_at: .*$", f"detected_at: {raw_value}", t, flags=re.M)
+    assert n == 1
+    p = tmp_path / "f.yaml"
+    p.write_text(t, encoding="utf-8")
+    return p
+
+
+@pytest.mark.parametrize("raw", ["'어제 새벽 3시'", "'2026/11/23 10:10'", "'2026-13-40T99:99'", "'2026-11-23'",
+                                 "2026-11-23", "'23.11.2026 10:10'"])
+def test_detected_at_must_be_a_real_date_time(tmp_path, raw):
+    with pytest.raises(IntakeError) as e:
+        load(_form_text_with_detected_at(tmp_path, raw), RULES)
+    assert "detected_at" in str(e.value) and "실제 날짜·시각" in str(e.value)
+
+
+@pytest.mark.parametrize("raw, shown", [("'2026-11-23T10:10'", "2026-11-23T10:10"),
+                                        ("'2026-11-23 10:10'", "2026-11-23 10:10"),
+                                        ("2026-11-23 10:10:00", "2026-11-23 10:10:00")])
+def test_valid_detected_at_is_shown_exactly_as_typed(tmp_path, raw, shown):
+    """Unquoted YAML date-times used to load as datetime objects."""
+    p = _form_text_with_detected_at(tmp_path, raw)
+    assert load(p, RULES).detected_at == shown
+    md = build(p, ROOT / "config/rules.yaml", ROOT / "data/synthetic/history.csv",
+               tmp_path / "o", TODAY).read_text(encoding="utf-8")
+    assert f"| 발견 일시 | {shown} |" in md
+
+
+def test_future_detected_at_is_rejected_and_others_still_drafted(tmp_path):
+    future = _form_text_with_detected_at(tmp_path, "'2026-11-25T08:00'")  # TODAY is 2026-11-24
+    results, _ = run_batch([future, INTAKE / "DEV-2026-2201.yaml"], ROOT / "config/rules.yaml",
+                           ROOT / "data/synthetic/history.csv", tmp_path / "o", TODAY)
+    assert [r.ok for r in results] == [False, True]
+    assert "미래" in results[0].error
+
+
+def test_same_day_detection_is_accepted(tmp_path):
+    p = _form_text_with_detected_at(tmp_path, "'2026-11-24T23:59'")
+    assert build(p, ROOT / "config/rules.yaml", ROOT / "data/synthetic/history.csv", tmp_path / "o", TODAY).exists()

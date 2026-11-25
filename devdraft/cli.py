@@ -12,7 +12,7 @@ from .classify import find_recurrence, investigation_plan, lower_triggers, propo
 from .draft import render_markdown
 from . import __version__
 from .history import HistoryError, check_history, is_synthetic, load_checked_history, render_report
-from .intake import IntakeError, check_rules, load
+from .intake import IntakeError, check_rules, detected_datetime, load
 from .rules import RulesError, load_rules
 from .summary import FormResult, render_summary
 
@@ -47,6 +47,12 @@ def draft_one(form: Path, rules: dict, history: list[dict], out_dir: Path,
               seen_ids: set[str] | None = None, sources: dict | None = None) -> FormResult:
     """Draft one form. Raises IntakeError if the form is rejected."""
     dev = load(form, rules)
+    when = detected_datetime(dev.detected_at)
+    if when and when.date() > (today or date.today()):
+        raise IntakeError(
+            f"발견 일시 {dev.detected_at} 가 기준일({(today or date.today()).isoformat()})보다 미래입니다 — "
+            "날짜를 확인하십시오 (재현용으로 --today 를 쓰는 경우 그 날짜 이후는 받지 않습니다)."
+        )
     if not dev.synthetic and is_synthetic(history):
         raise IntakeError(
             "반복성 조회 이력이 합성(가짜) 데이터입니다 — 실제 양식에 가짜 반복 건이 붙습니다. "
