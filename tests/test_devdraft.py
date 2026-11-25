@@ -1941,3 +1941,41 @@ def test_paths_inside_the_current_folder_are_shown_short(tmp_path):
         (out / "ZZ-SHORT-PATH-TEST.yaml").unlink(missing_ok=True)
         if created and out.exists() and not any(out.iterdir()):
             out.rmdir()
+
+
+# --- a form field is a record of what was typed: numbers are not re-read ---------
+
+from devdraft.rules import form_load  # noqa: E402
+
+
+def test_form_loader_keeps_number_like_text_as_typed():
+    d = form_load("batch: 0412\nstep: 1:30\nph: 3.40\nn: 12\nexp: 1.5e3\nhex: 0x1F\nflag: true\nempty:\nwhen: 2026-11-21 14:20\n")
+    assert d == {"batch": "0412", "step": "1:30", "ph": "3.40", "n": "12", "exp": "1.5e3", "hex": "0x1F",
+                 "flag": True, "empty": None, "when": "2026-11-21 14:20"}
+    # rules.yaml still needs real numbers (window_days, min)
+    assert strict_load("window_days: 365")["window_days"] == 365
+
+
+def test_unquoted_numbers_in_a_form_reach_the_draft_as_typed(tmp_path):
+    """YAML 1.1 read batch 0412 as 266 and 1:30 as 90; the draft then crashed
+    (the fields were no longer text) instead of showing what was written."""
+    text = (INTAKE / "DEV-2026-2201.yaml").read_text(encoding="utf-8")
+    text = re.sub(r"^batch: .*$", "batch: 0412", text, flags=re.M)
+    text = re.sub(r"^product: .*$", "product: 1:30", text, flags=re.M)
+    text = re.sub(r"^  actual: .*$", "  actual: 3.40", text, flags=re.M)
+    assert "batch: 0412" in text and "product: 1:30" in text and "  actual: 3.40" in text
+    form = tmp_path / "DEV-2026-2201.yaml"
+    form.write_text(text, encoding="utf-8")
+    p = _cli(form, "--today", "2026-11-24", "--out", tmp_path)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert "Traceback" not in p.stderr
+    md = (tmp_path / "DEV-2026-2201_draft.md").read_text(encoding="utf-8")
+    assert "| 제품 / 배치 | 1:30 / 0412 |" in md
+    assert "| Elution pH | 3.40-3.60 | 3.40 | 6 min |" in md
+
+
+def test_a_form_with_only_a_number_in_a_required_field_is_not_missing(tmp_path):
+    text = (INTAKE / "DEV-2026-2201.yaml").read_text(encoding="utf-8")
+    form = tmp_path / "f.yaml"
+    form.write_text(re.sub(r"^batch: .*$", "batch: 0", text, flags=re.M), encoding="utf-8")
+    assert load(form, RULES).batch == "0"

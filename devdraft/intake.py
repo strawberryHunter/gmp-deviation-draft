@@ -12,7 +12,7 @@ from pathlib import Path
 
 import yaml
 
-from .rules import RulesError, check_rules as _check_rules, strict_load  # noqa: F401  (re-exported)
+from .rules import RulesError, check_rules as _check_rules, form_load, strict_load  # noqa: F401  (re-exported)
 
 
 class IntakeError(ValueError):
@@ -140,7 +140,7 @@ def _short(v, n: int = 20) -> str:
 def load(path: str | Path, rules: dict) -> Deviation:
     check_rules(rules)
     try:
-        raw = strict_load(Path(path).read_text(encoding="utf-8")) or {}
+        raw = form_load(Path(path).read_text(encoding="utf-8")) or {}
     except yaml.YAMLError as e:
         mark = getattr(e, "problem_mark", None)
         where = f" ({mark.line + 1}행)" if mark else ""
