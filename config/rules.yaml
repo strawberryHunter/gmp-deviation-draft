@@ -25,6 +25,8 @@ required_flags:
   - sterility_assurance_impacted
   - released_product_affected
   - data_integrity_concern
+  - patient_safety_impact
+  - regulatory_report_required
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 분류 제안 규칙 — 사내 deviation 관리 SOP의 등급 정의를 여기에 옮깁니다.
@@ -67,6 +69,9 @@ classes:
     - field: data_integrity_concern
       equals: true
       reason: "데이터 완전성(ALCOA+) 우려"
+    - field: patient_safety_impact
+      equals: true
+      reason: "환자 안전에 영향 가능성"
   major:
     - field: cpp_excursion
       equals: true

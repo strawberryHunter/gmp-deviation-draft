@@ -48,7 +48,7 @@ mkdir -p drafts && cp templates/intake_template.yaml drafts/DEV-2026-2301.yaml
 | 구분 | 규칙 |
 |---|---|
 | `[필수]` 항목 | 비워 두면 거부됩니다. 배치 무관이면 `N/A`라고 적습니다. |
-| 예/아니오 6개 항목 | 반드시 `true` 또는 `false` (따옴표 없이). `yes`/`no`/`예`도 거부됩니다. 모르면 확인 후 적습니다. 비워 두면 거부됩니다. |
+| 예/아니오 8개 항목 | 반드시 `true` 또는 `false` (따옴표 없이). `yes`/`no`/`예`도 거부됩니다. 모르면 확인 후 적습니다. 비워 두면 거부됩니다. |
 | `description` | 관찰한 사실·수치·시각만. 원인 추정은 쓰지 않습니다. |
 | `parameters` | 기록서에 적힌 기준·실측값 그대로. **초안의 수치는 여기서만 나옵니다.** |
 | 근본원인·CAPA | 양식에 넣지 않습니다 (넣으면 거부). 조사 후 초안에 직접 씁니다. |
@@ -201,7 +201,7 @@ recurrence:
   match_on: [equipment_id, category]
 ```
 
-위 예시처럼 SOP에 없는 트리거(예: `data_integrity_concern`)를 `classes`에서 빼도, 입력 양식에서는 계속 true/false로 답하게 할지(`required_flags`) 따로 정합니다. 초안의 확인 항목 표에는 6개 항목이 항상 표시됩니다.
+위 예시처럼 SOP에 없는 트리거(예: `data_integrity_concern`)를 `classes`에서 빼도, 입력 양식에서는 계속 true/false로 답하게 할지(`required_flags`) 따로 정합니다. 초안의 확인 항목 표에는 8개 항목이 항상 표시됩니다.
 
 ### 5-2-1. 끝까지 따라 해 볼 수 있는 예시 (합성 SOP)
 
@@ -250,7 +250,9 @@ python -m devdraft.cli data/synthetic/intake/*.yaml --summary --today 2026-11-24
 | `field: <예/아니오 항목>` + `equals: true` | 입력 양식에서 그 항목이 `true`이면 해당 |
 | `field: recurrence_count` + `min: N` | 조회 기간 안에 `match_on` 조건이 모두 같은 과거 deviation이 N건 이상이면 해당. 어느 등급에나 둘 수 있음 |
 
-사용할 수 있는 예/아니오 항목: `cpp_excursion`, `spec_oos`, `other_batches_possibly_affected`, `sterility_assurance_impacted`, `released_product_affected`, `data_integrity_concern`.
+사용할 수 있는 예/아니오 항목: `cpp_excursion`, `spec_oos`, `other_batches_possibly_affected`, `sterility_assurance_impacted`, `released_product_affected`, `data_integrity_concern`, `patient_safety_impact`, `regulatory_report_required`.
+
+`regulatory_report_required`(규제 신고 대상 가능성)는 기본 규칙에서 등급 트리거가 아닙니다. 신고 여부는 등급과 별개의 결정이라, 보고자가 `true`로 답하면 초안 분류 절에 `☐ 신고 필요 여부·기한·신고처 확인` 항목만 나타납니다. 도구는 신고 여부를 판단하지 않습니다.
 
 `match_on`에 쓸 수 있는 값: `equipment_id`, `category`, `site`. `site`를 넣으면 다른 사업장의 같은 설비 ID 건이 제외됩니다.
 
@@ -287,7 +289,7 @@ manual_checks:
 
 도구가 직접 평가하게 하려면 코드 수정과 테스트 추가가 필요합니다. 개발 담당에게 요청하십시오.
 
-- 6개 외의 새 예/아니오 판단 항목 (예: "환자 안전 영향", "규제 신고 대상")
+- 8개 외의 새 예/아니오 판단 항목 (예: "의료기기 결합 제품 영향")
 - "A이고 B이면" 같은 조건 조합
 - 수치 기준 (예: "이탈 30분 이상") — 입력 양식에 전용 칸을 추가해야 함
 - 이력에 없는 열(예: 제품)로 반복성 일치

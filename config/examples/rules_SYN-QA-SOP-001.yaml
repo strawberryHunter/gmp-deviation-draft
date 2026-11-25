@@ -39,6 +39,8 @@ required_flags:
   - sterility_assurance_impacted
   - released_product_affected
   - data_integrity_concern
+  - patient_safety_impact      # 사실 확인 항목 — 이 SOP의 등급 기준에는 없음
+  - regulatory_report_required # 등급과 별개, 초안에 신고 검토 항목으로 표시
 
 sop_reference: "SYN-QA-SOP-001 Rev.01 §5 (합성 예시 — 실제 SOP 아님)"
 

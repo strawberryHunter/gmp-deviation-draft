@@ -41,6 +41,8 @@ class Deviation:
     sterility_assurance_impacted: bool = False
     released_product_affected: bool = False
     data_integrity_concern: bool = False
+    patient_safety_impact: bool = False
+    regulatory_report_required: bool = False
     synthetic: bool = False
 
     def get(self, name: str):

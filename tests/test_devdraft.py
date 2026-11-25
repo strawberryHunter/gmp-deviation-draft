@@ -1500,3 +1500,67 @@ def test_multiline_description_is_allowed(tmp_path):
     p = tmp_path / "f.yaml"
     p.write_text(yaml.safe_dump(f, allow_unicode=True), encoding="utf-8")
     assert load(p, RULES).description == "첫 줄\n둘째 줄"
+
+
+# --- new risk questions (user decision 2026-11-25) ------------------------------------
+
+def _form_with(tmp_path, **flags):
+    f = yaml.safe_load((INTAKE / "DEV-2026-2203.yaml").read_text(encoding="utf-8"))
+    f.update(flags)
+    p = tmp_path / "f.yaml"
+    p.write_text(yaml.safe_dump(f, allow_unicode=True), encoding="utf-8")
+    return p
+
+
+@pytest.mark.parametrize("flag", ["patient_safety_impact", "regulatory_report_required"])
+def test_new_questions_must_be_answered(tmp_path, flag):
+    f = yaml.safe_load((INTAKE / "DEV-2026-2203.yaml").read_text(encoding="utf-8"))
+    f.pop(flag)
+    p = tmp_path / "f.yaml"
+    p.write_text(yaml.safe_dump(f, allow_unicode=True), encoding="utf-8")
+    with pytest.raises(IntakeError) as e:
+        load(p, RULES)
+    assert "미응답" in str(e.value) and flag in str(e.value)
+
+
+def test_patient_safety_impact_proposes_critical(tmp_path):
+    d = load(_form_with(tmp_path, patient_safety_impact=True), RULES)
+    level, reasons = propose_class(d, RULES, 0)
+    assert level == "critical" and reasons == ["환자 안전에 영향 가능성"]
+
+
+def test_regulatory_report_is_shown_not_decided(tmp_path):
+    """Reporting is a separate decision from severity: a ☐ item, not a trigger."""
+    p = _form_with(tmp_path, regulatory_report_required=True)
+    d = load(p, RULES)
+    assert propose_class(d, RULES, 0)[0] == "minor"  # grade unchanged
+    md = build(p, ROOT / "config/rules.yaml", ROOT / "data/synthetic/history.csv",
+               tmp_path / "o", TODAY, want_docx=True).read_text(encoding="utf-8")
+    sec = md.split("## 3. 분류", 1)[1].split("## 4.", 1)[0]
+    assert "| 규제 신고 대상 가능성 | 예 |" in sec
+    assert "☐ **작성 필요** 신고 필요 여부·기한·신고처 확인" in sec
+    assert "도구는 신고 여부를 판단하지 않습니다" in sec
+    doc = _Document(tmp_path / "o" / "DEV-2026-2203_draft.docx")
+    para = next(p for p in doc.paragraphs if "신고 필요 여부" in p.text)
+    box = next(r for r in para.runs if r.text.startswith("☐"))
+    assert box.font.highlight_color == WD_COLOR_INDEX.YELLOW
+
+
+def test_no_report_item_when_answer_is_no():
+    md = (ROOT / "sample_output/DEV-2026-2203_draft.md").read_text(encoding="utf-8")
+    assert "| 규제 신고 대상 가능성 | 아니오 |" in md and "신고 필요 여부" not in md
+
+
+def test_flag_table_lists_every_required_flag():
+    md = (ROOT / "sample_output/DEV-2026-2201_draft.md").read_text(encoding="utf-8")
+    sec = md.split("| 확인 항목 | 보고자 입력 |", 1)[1].split("\n\n", 1)[0]
+    rows = [l for l in sec.strip().splitlines() if l.startswith("| ") and "---" not in l]
+    assert len(rows) == len(RULES["required_flags"]) == 8
+
+
+def test_regulatory_report_is_never_a_grade_trigger_in_shipped_rules():
+    for rules_path in (ROOT / "config/rules.yaml", SOP_RULES, DUKE_RULES):
+        r = load_rules(rules_path)
+        fields = {t["field"] for ts in r["classes"].values() for t in ts}
+        assert "regulatory_report_required" not in fields, rules_path.name
+        assert {"patient_safety_impact", "regulatory_report_required"} <= set(r["required_flags"])

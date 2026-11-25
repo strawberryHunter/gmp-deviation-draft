@@ -48,9 +48,11 @@ other_batches_possibly_affected: false
 sterility_assurance_impacted: false
 released_product_affected: false
 data_integrity_concern: true
+patient_safety_impact: false
+regulatory_report_required: false
 ```
 
-- 맨 아래 6개는 **위험 확인 질문**입니다. 반드시 `true` / `false`로 답합니다. 비우거나 `yes`/`no`로 쓰면 거부됩니다 (3단계).
+- 맨 아래 8개는 **위험 확인 질문**입니다. 반드시 `true` / `false`로 답합니다. 비우거나 `yes`/`no`로 쓰면 거부됩니다 (3단계).
 - `synthetic: true`는 연습용 표시입니다. 초안 모든 쪽에 "합성 데이터"가 찍힙니다.
 - 새 양식은 빈 템플릿 [`templates/intake_template.yaml`](../templates/intake_template.yaml)을 복사해서 씁니다.
 
