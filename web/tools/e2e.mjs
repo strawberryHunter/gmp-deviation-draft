@@ -2,6 +2,7 @@
 // node tools/e2e.mjs   (headless only: it never touches the real mouse or keyboard)
 import { chromium } from "playwright-core";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { CHROME } from "./browser.mjs";
 
 const url = new URL("../dist/local.html", import.meta.url).href;
@@ -153,6 +154,33 @@ await job("4 같은 설비의 과거 건 찾기", async () => {
   assert.ok((await text(page, ".alert .next")).startsWith("다음:"));
   await ctx.close();
   return "클릭 1번 (숫자), 이력 파일은 한 번만 선택";
+});
+
+await job("실제 양식에 합성 이력을 불러와도 가짜 반복 건을 붙이지 않음", async () => {
+  // The CLI refuses this pair. The screen refused it too, but still listed the five made-up matches under the warning.
+  const { page, click, ctx } = await open();
+  const data = p => readFileSync(new URL("../../data/synthetic/" + p, import.meta.url), "utf8");
+  await page.setInputFiles("#yamlFile", { name: "DEV-2026-2201.yaml", mimeType: "text/yaml", buffer: Buffer.from(data("intake/DEV-2026-2201.yaml").replace(/^synthetic: *true *$/m, "synthetic: false")) });
+  await page.waitForFunction(() => document.querySelector("#toast").textContent.includes("YAML 1건 가져옴"));
+  await click('#side .nav-item:has-text("반복성 조회")');
+  await page.setInputFiles(".panel input[type=file]", { name: "history.csv", mimeType: "text/csv", buffer: Buffer.from(data("history.csv")) });
+  await page.waitForFunction(() => document.querySelector("#toast").textContent.includes("이력 51건"));
+  assert.equal(await text(page, "table.stack tbody tr td:last-child"), "조회 안 함 · 합성 이력");
+  assert.equal(await text(page, ".title-row .count"), "반복 건 있음 0건");
+  await click("table.stack tbody tr");
+  assert.ok((await text(page, "#step-s7 .alert")).includes("실제 양식에 합성 이력 사용 불가"));
+  assert.equal(await text(page, "#step-s7 dd:nth-of-type(3)"), "조회 안 함 · 합성 이력");
+  assert.equal(await page.locator("#step-s7 table").count(), 0, "no list of made-up matches");
+  const why = await page.locator("#e-aside .acard:nth-child(2) li").allInnerTexts();
+  assert.ok(why.some(r => r.startsWith("반복성 조회를 하지 않음(합성 이력)")), why.join(" / ")); assert.ok(!why.some(r => r.includes("유사 건")));
+  await click('.ebar button:has-text("미리보기")');
+  assert.equal(await text(page, ".drawer .alert b"), "초안 안 만듦 · 고칠 곳 1개"); assert.equal(await text(page, ".drawer .alert .next"), "다음: 아래 항목을 눌러 고치기");
+  await page.keyboard.press("Escape");
+  // Marked as practice, the same file is allowed and the matches are back.
+  await page.check("#f-synthetic");
+  assert.equal(await text(page, "#step-s7 dd:nth-of-type(3)"), "반복 건 5건");
+  assert.equal(await page.locator("#step-s7 tbody tr").count(), 5); assert.equal(await page.locator("#step-s7 .alert").count(), 0);
+  await ctx.close();
 });
 
 await job("5 보고 기한", async () => {

@@ -347,12 +347,19 @@ export function validate(f, history) {
   if (f.category && !RULES.categories.includes(f.category)) errs.push({ code: "category", text: "유형이 목록에 없음: " + f.category, targets: ["category"] });
   const oneLine = ONE_LINE.filter(k => /[\r\n]/.test(f[k] || ""));
   if (oneLine.length) errs.push({ code: "newline", text: "한 줄 항목에 줄바꿈: " + oneLine.map(k => FIELD_LABEL[k] || k).join(", "), targets: oneLine });
-  if (!f.synthetic && history && history.synthetic) errs.push({ code: "synthetic-history", text: "실제 양식에 합성 이력 사용 불가 · 실제 이력 CSV 필요", targets: ["step-s7"] });
+  if (historyBlocked(f, history)) errs.push({ code: "synthetic-history", text: "실제 양식에 합성 이력 사용 불가 · 실제 이력 CSV 필요", targets: ["step-s7"] });
   return errs;
 }
 
 /* ---------- classification (proposal only) ---------- */
 export function unmatchedKeys(f) { return RULES.recurrence.match_on.filter(k => !String(f[k] || "").trim()); }
+// A real form with a synthetic history: the CLI refuses the pair so that no made-up past case lands on a real document.
+// Here the form is refused too (validate), and no lookup is done, so no made-up match is shown on the way.
+export function historyBlocked(f, history) { return !f.synthetic && !!history && !!history.synthetic; }
+// What stops a draft: how many places, and whether they are all just unfilled (otherwise something has to be corrected).
+export function blockCount(errs) {
+  return { n: errs.reduce((k, e) => k + e.targets.length, 0), missingOnly: errs.every(e => e.code === "missing" || e.code === "unanswered") };
+}
 export function hasRecTrigger() { return Object.values(RULES.classes).some(ts => ts.some(t => t.field === "recurrence_count")); }
 export function findRecurrence(f, history) {
   if (!history) return [];
@@ -377,7 +384,7 @@ export function classify(f, rec, recChecked, history) {
   const lower = hits.filter(h => h[0] !== level);
   let note = "";
   if (!recChecked && hasRecTrigger()) {
-    const why = history ? unmatchedKeys(f).map(k => MATCH_LABEL[k]).join("·") + " 미기재" : "이력 파일 없음";
+    const why = !history ? "이력 파일 없음" : historyBlocked(f, history) ? "합성 이력" : unmatchedKeys(f).map(k => MATCH_LABEL[k]).join("·") + " 미기재";
     const n = "반복성 조회를 하지 않음(" + why + ") — 반복 기준은 평가되지 않았습니다. 검토자가 QMS에서 직접 확인 필요";
     reasons = level === RULES.default_level ? [n, "그 밖의 분류 기준에는 해당 없음 (보고자 입력 기준) — 검토자 확인 필요"] : reasons.concat([n]);
     note = " (반복 기준 미평가 — 반복성 조회를 하지 않음)";
@@ -389,8 +396,9 @@ export function classify(f, rec, recChecked, history) {
 // The recurrence lookup for one form: done or not, and why not.
 export function lookup(f, history) {
   const keys = unmatchedKeys(f);
-  const checked = !!history && keys.length === 0 && isISODate(f.today);
-  const why = checked ? "" : !history ? "이력 파일 없음" : keys.length ? keys.map(k => MATCH_LABEL[k]).join("·") + " 미기재" : "초안 생성일 형식 오류";
+  const blocked = historyBlocked(f, history);
+  const checked = !!history && !blocked && keys.length === 0 && isISODate(f.today);
+  const why = checked ? "" : !history ? "이력 파일 없음" : blocked ? "합성 이력" : keys.length ? keys.map(k => MATCH_LABEL[k]).join("·") + " 미기재" : "초안 생성일 형식 오류";
   return { checked, rec: checked ? findRecurrence(f, history) : [], why };
 }
 // The tool's proposal, or null while any risk question is unanswered (an empty answer is never read as "no").
