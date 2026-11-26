@@ -162,14 +162,16 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); }
 .panel .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; font-size: 15px; }
 .kv dt { color: var(--muted); } .kv dd { margin: 0; }
-.tw { overflow-x: auto; }
+.tw { overflow-x: auto; container-type: inline-size; }
 table { border-collapse: collapse; width: 100%; font-size: 13px; }
 th, td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
 th { color: var(--muted); font-weight: 400; white-space: nowrap; }
 td.num { white-space: nowrap; }
-table.summary { min-width: 1080px; }
-table.summary td:nth-child(3) { white-space: nowrap; }
-table.summary td:nth-child(2) { min-width: 200px; } table.summary td:nth-child(4) { min-width: 260px; }
+td .sub { display: block; color: var(--muted); margin-top: 2px; }
+td .sub.fix { color: var(--crit); }
+td b.late { color: var(--crit); } td b.soon { color: var(--major); }
+table.summary td:nth-child(2) { white-space: normal; min-width: 220px; }
+table.summary td.act { text-align: right; }
 tr.click { cursor: pointer; } tr.click:hover td { background: var(--bg); }
 .alert { border: 1px solid var(--crit); border-radius: var(--r-ctl); padding: 10px 12px; color: var(--crit); background: var(--crit-tint); display: grid; gap: 2px; }
 .alert .next { color: var(--ink); }
@@ -323,5 +325,19 @@ kbd { font-family: var(--mono); font-size: 13px; border: 1px solid var(--line-st
   .ebar .btn.primary .lbl { display: inline; }
   .doc .body { padding: 16px; }
   .drawer .scroll { padding: 12px; }
+}
+/* Where a table's own box is narrow (a phone, or a small window beside the sidebar) it becomes one block per row:
+   the number on top, then name and value lines. Measured on the table's box, not the window, so it never scrolls sideways. */
+@container (max-width: 780px) {
+  table.stack, table.stack tbody, table.stack tr, table.stack td { display: block; }
+  table.stack thead { display: none; }
+  table.stack tr { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  table.stack td { border: 0; padding: 3px 0; white-space: normal; min-width: 0; }
+  table.stack td[data-label] { display: grid; grid-template-columns: 76px minmax(0, 1fr); column-gap: 12px; }
+  table.stack td[data-label]::before { content: attr(data-label); color: var(--muted); grid-row: 1 / span 3; }
+  table.stack td[data-label] > * { grid-column: 2; justify-self: start; }
+  table.stack td:empty { display: none; }
+  table.stack td.key { font-size: 15px; font-weight: 700; }
+  table.stack td.act { text-align: left; padding-top: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

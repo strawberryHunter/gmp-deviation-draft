@@ -313,18 +313,39 @@ await job("폰: 메뉴 서랍이 화면 안에 들어오고 맨 아래 사용법
   await page.tap('#side .nav-item:has-text("사용법")');
   assert.equal(await text(page, "#view h1"), "사용법");
   assert.equal(await page.evaluate(() => document.querySelector(".shell").classList.contains("nav-open")), false, "drawer closes after choosing");
+  // Tables on a phone: one block per row with its names, nothing to scroll sideways, the row's button reachable.
+  for (const [nav, sel] of [["반복성 조회", "table.stack"], ["내보내기", "table.summary"]]) {
+    await page.tap("#menuBtn"); await page.tap(`#side .nav-item:has-text("${nav}")`); await page.waitForSelector(sel);
+    const t = await page.evaluate(s => { const t = document.querySelector(s), w = t.parentElement, td = t.rows[1].cells[1];
+      return { fits: w.scrollWidth <= w.clientWidth, headShown: t.tHead.offsetHeight > 0, label: getComputedStyle(td, "::before").content, key: t.rows[1].cells[0].innerText }; }, sel);
+    assert.equal(t.fits, true, nav + " fits the phone"); assert.equal(t.headShown, false); assert.equal(t.key, "DEV-2026-2201");
+    assert.equal(t.label, nav === "내보내기" ? '"제목"' : '"설비"');
+  }
+  await page.tap("table.summary tr:nth-child(1) button"); await page.waitForSelector('.menu button:has-text("Word")');
   await ctx.close();
 });
 
 await job("내보내기: 요약표 복사와 CSV, 메일용 요약", async () => {
   const { page, click, ctx } = await open();
   await click("#loadExamples"); await page.waitForSelector(".card");
+  // One blank draft too: its row must still say what it is.
+  await click("#side .new"); await page.keyboard.press("Escape"); await page.keyboard.press("Escape");   // Esc leaves the field, Esc again leaves the editor
   await click('#side .nav-item:has-text("내보내기")');
+  // The whole table, with each row's button, is on screen at 1280: nothing to scroll sideways for.
+  const sum = await page.evaluate(() => { const t = document.querySelector("table.summary"), w = t.parentElement, cells = n => [...t.rows[n].cells].map(c => c.innerText.replace(/\s*\n\s*/g, " | "));
+    const btn = t.rows[1].querySelector("button").getBoundingClientRect();
+    return { head: cells(0), r1: cells(1), r4: cells(4), blank: cells(t.rows.length - 1), fits: w.scrollWidth <= w.clientWidth, btnRight: Math.round(btn.right), vw: innerWidth }; });
+  assert.deepEqual(sum.head, ["Deviation 번호", "제목 · 제안 근거", "제안 등급", "반복 건", "보고 기한 · 발견", "파일"]);
+  assert.equal(sum.fits, true, "summary table fits its box"); assert.ok(sum.btnRight <= sum.vw, "row button on screen");
+  assert.equal(sum.r1[0], "DEV-2026-2201"); assert.ok(sum.r1[1].startsWith("Protein A 크로마토그래피 용출 pH 상한 이탈 | 주요 공정 변수(CPP) 기준 이탈"));
+  assert.deepEqual(sum.r1.slice(2, 4), ["MAJOR 제안", "5건"]); assert.ok(/^D-\d+ · 2026-12-21 \| 발견 2026-11-21 14:20$/.test(sum.r1[4]), sum.r1[4]);
+  assert.deepEqual(sum.r4.slice(0, 4), ["DEV-2026-2204", "WFI 루프 TOC 경고 수준 초과 | 보완 필요 · 필수 항목 누락: 발견자", "빠짐 · 발견자", ""]); assert.equal(sum.r4[5], "보완");
+  assert.equal(sum.blank[0], "번호 미입력"); assert.ok(sum.blank[1].startsWith("제목 없음 | 보완 필요 · 필수 항목 누락: Deviation 번호"));
   await click('button:has-text("표 복사")');
   await page.waitForFunction(() => document.querySelector("#toast").textContent.includes("표 복사함"));
   const tsv = await page.evaluate(() => navigator.clipboard.readText());
-  const rows = tsv.trim().split("\n").map(r => r.split("\t"));
-  assert.equal(rows.length, 9); assert.equal(rows[0][2], "제안 등급"); assert.equal(rows[1][2], "MAJOR (제안)"); assert.equal(rows[4][7], "필수 항목 누락: 발견자");
+  const rows = tsv.split("\n").slice(0, -1).map(r => r.split("\t"));
+  assert.equal(rows.length, 10); assert.equal(rows[0].length, 8); assert.deepEqual(rows[9].slice(0, 2), ["", ""]);   // the copied table keeps the CLI's eight columns; a blank draft stays blank there assert.equal(rows[0][2], "제안 등급"); assert.equal(rows[1][2], "MAJOR (제안)"); assert.equal(rows[4][7], "필수 항목 누락: 발견자");
   await click('button:has-text("CSV 저장")');
   await page.waitForFunction(() => window.__saved.length === 1);
   assert.ok((await page.evaluate(() => window.__saved[0].filename)).endsWith(".csv"));

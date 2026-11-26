@@ -70,6 +70,7 @@
 | [#23](https://github.com/strawberryHunter/gmp-deviation-draft/pull/23) | 브라우저 화면 `web/` 추가 (사이드바 리디자인, YAML 가져오기), CI에 web 작업, CLI 기준값 대조 |
 | [#24](https://github.com/strawberryHunter/gmp-deviation-draft/pull/24) | 같은 항목이 두 번 있는 양식·rules.yaml 거부 (이전에는 뒤의 값을 말없이 사용) |
 | [#25](https://github.com/strawberryHunter/gmp-deviation-draft/pull/25) | 웹: 더보기 메뉴 깨짐(글자가 세로로 쌓임), 완료한 초안 카드의 빨간 D+ 표시, 낮은 화면에서 메뉴 서랍 맨 아래(사용법)에 닿지 않던 문제 수정 |
+| [#26](https://github.com/strawberryHunter/gmp-deviation-draft/pull/26) | 웹: 내보내기 요약표가 한 화면에 들어오게 (1280px에서 보고 기한·행별 내보내기 버튼이 잘려 있었음), 좁은 화면에서는 표를 행마다 쌓아 표시, 번호·제목 없는 초안은 "번호 미입력 / 제목 없음" |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
