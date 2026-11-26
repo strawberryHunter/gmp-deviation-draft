@@ -374,8 +374,10 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
   }
 
   /* ---------- home ---------- */
-  function heroCard(list) {
+  // filtered: the list is narrowed by a search or filter. The card then shows the most urgent of what is listed, or nothing.
+  function heroCard(list, filtered) {
     const hero = E.heroItems(list, 3);
+    if (!hero.length && filtered) return null;
     if (!hero.length) {
       return h("section", { class: "hero empty" }, h("h2", { text: "열린 초안 없음" }), h("div", { class: "acts" },
         h("button", { type: "button", class: "btn primary lg", onclick: createDraft }, ic("plus"), "새 초안")));
@@ -426,7 +428,7 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
           h("button", { type: "button", class: "btn lg quiet", onclick: () => $("#yamlFile").click() }, ic("upload"), "YAML 가져오기"))));
       return;
     }
-    const F = S.ui.filter, shown = E.sortItems(E.filterItems(list, F, S.query), S.ui.sort);
+    const F = S.ui.filter, matched = E.filterItems(list, F, S.query), shown = E.sortItems(matched, S.ui.sort);
     const open = list.filter(i => i.status !== "done");
     const stat = (label, count, pressed, run, cls) => h("button", { type: "button", class: "stat" + (cls ? " " + cls : ""), "aria-pressed": String(pressed), onclick: run }, h("span", { text: label }), h("b", { text: String(count) }));
     const overdue = open.filter(i => i.dd !== null && i.dd < 0).length;
@@ -437,7 +439,7 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
     const active = F.status !== "all" || F.category || F.level || F.site || F.quick || S.query;
     const title = (F.status === "all" ? "전체 초안" : E.STATUS_LABEL[F.status]);
     fill(v, 
-      heroCard(list),
+      heroCard(active ? matched : list, !!active),
       h("div", { class: "title-row" }, h("h1", { text: title }), h("span", { class: "count", text: shown.length + "건" })),
       h("div", { class: "stats" },
         stat("작성 중", list.filter(i => i.status === "drafting").length, F.status === "drafting", () => setFilter("status", F.status === "drafting" ? "all" : "drafting")),
@@ -453,7 +455,7 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
         h("div", { class: "seg", role: "group", "aria-label": "도구 제안 등급" },
           [["", "전체", list.length]].concat(E.RULES.levels.map(l => [l.id, l.label, list.filter(i => i.level === l.id).length])).map(([id, label, count]) =>
             h("button", { type: "button", "aria-pressed": String(F.level === id), onclick: () => { F.level = id; S.hero = 0; saveUI(); render(); } }, label, h("span", { class: "n", text: String(count) })))),
-        active ? h("button", { type: "button", class: "btn quiet", onclick: clearFilters }, ic("x"), "필터 지움") : null,
+        active && shown.length ? h("button", { type: "button", class: "btn quiet", onclick: clearFilters }, ic("x"), "필터 지움") : null,   // with nothing listed, the empty state below has the one button
         h("div", { class: "sort" }, sel("정렬", S.ui.sort, [["due", "기한순"], ["saved", "최근 저장순"], ["id", "번호순"]], val => { S.ui.sort = val; saveUI(); render(); }))),
       shown.length ? h("div", { class: "grid" }, shown.map(card))
         : h("div", { class: "blankstate" }, h("p", { text: "조건에 맞는 초안 없음" }), h("button", { type: "button", class: "btn", onclick: clearFilters }, "필터 지움")));

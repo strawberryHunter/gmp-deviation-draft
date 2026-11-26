@@ -302,9 +302,18 @@ await job("저장: 기본은 탭에만 보관, 켜면 새로고침 뒤에도 남
 await job("목록: 검색, 필터, 삭제 되돌리기, 완료 표시, 키보드", async () => {
   const { page, click, ctx } = await open();
   await click("#loadExamples"); await page.waitForSelector(".card");
+  const urgent = await text(page, ".hero h2");
   await page.keyboard.press("/"); await page.keyboard.type("hplc-07");
   assert.equal(await page.locator(".card").count(), 1);
+  // The card on top follows the search: the most urgent of what is listed, and nothing when nothing is listed.
+  assert.equal(await text(page, ".hero h2"), "SEC-HPLC 순도 시험 수동 재적분 — 사유 미기재"); assert.notEqual(urgent, "SEC-HPLC 순도 시험 수동 재적분 — 사유 미기재");
+  await page.keyboard.type("-없는값");
+  assert.equal(await page.locator(".card").count(), 0); assert.equal(await page.locator(".hero").count(), 0);
+  assert.equal(await page.locator('button:has-text("필터 지움")').count(), 1, "one way out of an empty result, not two");
+  for (let n = 0; n < 4; n++) await page.keyboard.press("Backspace");
+  assert.equal(await page.locator(".card").count(), 1);
   await page.keyboard.press("Escape"); await click('.filters button:has-text("필터 지움")');
+  assert.equal(await text(page, ".hero h2"), urgent);
   await click('#side .nav-item:has-text("CRITICAL")'); assert.equal(await page.locator(".card").count(), 3);
   await click('#side .nav-item:has-text("전체")'); await click('#side .nav-item:has-text("CRITICAL")');
   assert.equal(await page.locator(".card").count(), 8);
