@@ -299,6 +299,25 @@ export function parseFormYAML(text) {
 }
 export const FORM_KEYS = ["synthetic", "id", "title", "site", "area", "product", "batch", "equipment_id", "category", "detected_at", "detected_by",
   "process_step", "description", "immediate_actions", "parameters"].concat(RULES.required_flags);
+// A draft form as a CLI intake file: the keys the CLI reads, in the order of its template (the draft date is not part of a form;
+// the CLI takes it as --today). Every text is written double-quoted, the one YAML form that carries any character exactly,
+// so the CLI's loader and this page's own reader get back what the page shows. An unanswered question stays empty.
+export function toFormYAML(f) {
+  // JSON string syntax is YAML double-quoted syntax; the characters YAML does not allow raw (or would fold as a line break) are escaped too.
+  const q = v => JSON.stringify(String(v == null ? "" : v)).replace(/[\u007f-\u009f\u2028\u2029\ufeff\ufffe\uffff]/g, c => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
+  const lines = ["# Deviation 초안 데스크에서 내보낸 입력 양식 (devdraft CLI 양식과 같은 항목)"];
+  if (f.synthetic) lines.push("synthetic: true");
+  TEXT_FIELDS.forEach(k => lines.push(k + ": " + q(f[k])));
+  if (!f.parameters.length) lines.push("parameters: []");
+  else {
+    lines.push("parameters:");
+    f.parameters.forEach(p => ["name", "spec", "actual", "duration"].forEach((k, n) => lines.push((n ? "  " : "- ") + k + ": " + q(p[k]))));
+  }
+  RULES.required_flags.forEach(k => lines.push(k + ":" + (f.flags[k] === true ? " true" : f.flags[k] === false ? " false" : "")));
+  return lines.join("\n") + "\n";
+}
+// The viewer saves .txt but not .yaml: the file is named <number>.yaml.txt, and both this page and the CLI read it as it is.
+export function formFileName(id) { return (String(id || "").trim() || "deviation").replace(/[^\w.\-가-힣]+/g, "_") + ".yaml.txt"; }
 // Template guidance that ended up inside a value (a "#" glued to the text, or a "# …" line inside a "|" block). Same test as the CLI.
 export function gluedTemplateComments(raw, template) {
   return Object.keys(raw).filter(k => typeof raw[k] === "string" &&

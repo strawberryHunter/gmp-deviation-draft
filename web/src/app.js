@@ -280,6 +280,9 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
     const i = item(draftOf(uid));
     openMenu(anchor, (m, close) => {
       m.append(mItem("copy-plus", "복제해서 새 초안", () => { close(); cloneDraft(uid); }));
+      // The form itself, finished or not, as a CLI intake file: to keep, to move to another computer, or to run through the CLI.
+      m.append(mItem("copy", "YAML 양식 복사", () => { close(); copyText(E.toFormYAML(i.form), "YAML 양식 복사함"); }));
+      if (downloads) m.append(mItem("file-down", "YAML 양식 저장 (.yaml.txt)", () => { close(); saveFile(E.formFileName(i.form.id), E.toFormYAML(i.form), "YAML 양식 저장함"); }));
       if (i.status === "done") m.append(mItem("undo-2", "작성 중으로 되돌림", () => { close(); setDone(uid, false); }));
       else if (!i.errs.length) m.append(mItem("circle-check", "완료로 표시", () => { close(); setDone(uid, true); }));
       m.append(h("hr"), mItem("trash-2", "삭제", () => { close(); removeDraft(uid); }, "danger"));
@@ -550,7 +553,8 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
       h("div", { class: "title-row" }, h("h1", { text: "사용법" })),
       h("div", { class: "guide" },
         P("순서", li(["새 초안 → 8단계 입력", "빨간 점이 있는 단계 = 빠진 항목", "미리보기에서 초안 확인", "내보내기: Word · Markdown · 복사", "받은 파일의 노란 칸을 담당자가 작성 → QMS 등록",
-          "CLI 양식(.yaml)은 더보기 → YAML 양식 가져오기 · 값은 적힌 그대로 읽음"])),
+          "CLI 양식(.yaml)은 더보기 → YAML 양식 가져오기 · 값은 적힌 그대로 읽음",
+          "초안을 CLI 양식으로: 카드 ⋯ → YAML 양식 저장 (.yaml.txt) · 덜 쓴 초안도 가능 · 그대로 다시 가져오기와 CLI 실행 가능"])),
         P("도구가 비워 두는 칸", li(E.JUDGEMENT_FIELDS.concat(["6M 조사 결과"])), h("p", { class: "muted small", text: "초안과 근거 정리까지만. 승인 문서 아님 · 서명과 승인은 검증된 QMS에서" })),
         P("등급 제안 기준", h("div", { class: "tw" }, h("table", {}, h("tbody", {}, E.RULES.levels.map(l => h("tr", {}, h("td", { class: "num" }, h("span", { class: "chip " + l.id, text: l.label })),
           h("td", { text: (E.RULES.classes[l.id] || []).map(t => t.reason).join(" · ") || "위 기준에 해당 없음" })))))),

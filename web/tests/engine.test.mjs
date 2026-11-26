@@ -466,3 +466,64 @@ test("formFromRaw: what the CLI refuses is refused; odd answers are imported as 
   assert.deepEqual(E.gluedTemplateComments({ a: "plain", b: 3 }, T), []);
   assert.ok(E.FORM_KEYS.includes("regulatory_report_required") && E.FORM_KEYS.length === 23);
 });
+
+/* ---------- a draft form as a CLI intake file ---------- */
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+// These two tests run the CLI itself (the repository's Python). PYTHON overrides which one; otherwise the repo's .venv, then the python on PATH.
+const REPO = fileURLToPath(here("../../"));
+const VENV = join(REPO, ".venv", process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
+const PY = process.env.PYTHON || (existsSync(VENV) ? VENV : process.platform === "win32" ? "python" : "python3");
+// Characters a YAML file may not hold raw, or would read as a line break: bell, NEL, line separator, byte order mark.
+const ODD = [0x07, 0x85, 0x2028, 0xfeff].map(c => String.fromCharCode(c)).join(" ");
+const tricky = () => {
+  const f = good();
+  Object.assign(f, { id: "DEV-2026-9: 9", title: "# 로 시작 · 값: 콜론 \"따옴표\" 'ㅁ' \\ 역슬래시", site: "  앞뒤 공백  ", area: "true", product: "null", batch: "0412",
+    equipment_id: "", process_step: "1:30", detected_by: "~", category: "equipment",
+    description: "첫 줄\n  들여쓴 둘째 줄\n\n# 주석처럼 보이는 줄\t탭 | 세로줄 > 꺾쇠 " + ODD + " " + String.fromCodePoint(0x1f600) + " 끝 ",
+    immediate_actions: "- 목록처럼 보이는 줄\n- 둘째: 값" });
+  f.parameters = [{ name: "pH: 상한", spec: "3.40-3.60", actual: "3.62", duration: "" }, { name: "", spec: "'", actual: "\"", duration: "6 min # 주석 아님" }];
+  f.flags.cpp_excursion = null; f.flags.spec_oos = true; f.synthetic = false;
+  return f;
+};
+// What YAML allows unescaped in a file (its "printable" set), less the characters it reads as line breaks and the byte order mark.
+const rawOk = c => c === 9 || c === 10 || (c >= 0x20 && c <= 0x7e) || (c >= 0xa0 && c <= 0xd7ff && c !== 0x2028 && c !== 0x2029) || (c >= 0xe000 && c <= 0xfffd && c !== 0xfeff) || c >= 0x10000;
+test("toFormYAML: the page reads its own export back as the same form (finished or not, any characters)", () => {
+  const forms = FORMS.map(x => x.form).concat([tricky(), E.blankForm("2026-11-24")]);
+  for (const f of forms) {
+    const text = E.toFormYAML(f);
+    const r = E.formFromRaw(E.parseFormYAML(text), f.today, TEMPLATE_COMMENTS);
+    assert.deepEqual([r.errors, r.notes], [[], []], f.id);
+    assert.deepEqual(r.form, f, f.id);
+    for (const ch of text) assert.ok(rawOk(ch.codePointAt(0)), "a character YAML does not allow raw: U+" + ch.codePointAt(0).toString(16) + " in " + f.id);
+  }
+  assert.equal(E.formFileName("DEV-2026-2201"), "DEV-2026-2201.yaml.txt");
+  assert.equal(E.formFileName(" a/b:c "), "a_b_c.yaml.txt"); assert.equal(E.formFileName(""), "deviation.yaml.txt");
+});
+test("toFormYAML: the CLI's loader reads the same values, and the CLI gives its own result from the exported file", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dd-yaml-"));
+  const run = args => execFileSync(PY, args, { cwd: REPO, encoding: "utf8", env: Object.assign({}, process.env, { PYTHONUTF8: "1", PYTHONIOENCODING: "utf-8" }) });
+  // 1. the loader: every value comes back exactly
+  const f = tricky(), file = join(dir, E.formFileName("tricky"));
+  writeFileSync(file, E.toFormYAML(f));
+  const raw = JSON.parse(run(["-c", "import json,sys; from devdraft.rules import form_load; print(json.dumps(form_load(open(sys.argv[1], encoding='utf-8').read())))", file]));
+  for (const k of E.TEXT_FIELDS) assert.equal(raw[k], f[k], k);
+  assert.deepEqual(raw.parameters, f.parameters);
+  for (const k of E.RULES.required_flags) assert.equal(raw[k], f.flags[k], k);
+  assert.equal("synthetic" in raw, false);
+  // 2. the whole CLI: each synthetic form, exported by the page, gives the result the CLI gave from the original file
+  for (const { file: name, form } of FORMS) {
+    const out = mkdtempSync(join(dir, "out-")), src = join(dir, E.formFileName(form.id));
+    writeFileSync(src, E.toFormYAML(form));
+    let stdout;
+    try { stdout = run(["-m", "devdraft.cli", src, "--today", form.today, "--out", out]); }
+    catch (e) { if (e.status !== 1) throw e; stdout = e.stdout; }   // exit 1 = the form was refused, which is a result too
+    const made = join(out, form.id + "_draft.md"), md = existsSync(made) ? readFileSync(made, "utf8") : null;
+    const want = CLI[name];
+    assert.equal(md === null, want.rejected, name + ": " + stdout);
+    if (md === null) { assert.ok(stdout.includes(want.error.replace(/^ERR \S+: /, "")), name + ": " + stdout); continue; }
+    assert.equal(md.match(/\*\*제안 등급: (\w+)\*\*/)[1], want.grade, name);
+    assert.deepEqual(md.match(/근거:\n\n?((?:- .*\n?)+)/)[1].trim().split("\n").map(x => x.slice(2)), want.reasons, name);
+    assert.deepEqual([...md.matchAll(/^\| (DEV-\d{4}-\d{4}) \| \d{4}-\d{2}-\d{2} \|/gm)].map(x => x[1]), want.rec, name);
+  }
+});

@@ -32,7 +32,7 @@ async function open({ downloads = true, storage, phone } = {}) {
       if (window.__refuse) { const code = window.__refuse; window.__refuse = null; refuse(code); }
       const size = typeof data === "string" ? data.length : data.size;
       const head = typeof data === "string" ? data.slice(0, 80) : new TextDecoder("latin1").decode(new Uint8Array(await data.slice(0, 2).arrayBuffer()));
-      window.__saved.push({ filename, size, head }); return { status: "saved" };
+      window.__saved.push({ filename, size, head, text: typeof data === "string" ? data : null }); return { status: "saved" };
     } } : null };
   });
   if (storage) await page.addInitScript(s => { for (const [k, v] of Object.entries(s)) localStorage.setItem(k, v); }, storage);
@@ -337,6 +337,39 @@ await job("저장: 뷰어가 거절하거나 저장을 못 쓰는 화면", async
   await click('.menu button:has-text("본문 복사")'); await toastHas("복사함");
   assert.equal(await text(page, "#e-chips .chip"), "검토 대기"); assert.equal(await page.evaluate(() => window.__saved.length), 0);
   await ctx.close();
+});
+
+await job("화면 초안을 CLI 양식으로 내보내고 다시 가져오기", async () => {
+  const { page, click, clicks, ctx } = await open();
+  await click("#loadExamples"); await page.waitForSelector(".card");
+  // An unfinished draft too: 2204 has no 발견자.
+  const n = clicks();
+  await click('.card:has-text("DEV-2026-2204") .more'); await click('.menu button:has-text("YAML 양식 저장")');   // 2 clicks
+  await page.waitForFunction(() => window.__saved.length === 1);
+  assert.equal(clicks() - n, 2);
+  const saved = await page.evaluate(() => window.__saved[0]);
+  assert.equal(saved.filename, "DEV-2026-2204.yaml.txt");
+  assert.ok(saved.text.includes('\nid: "DEV-2026-2204"\n') && saved.text.includes('\ndetected_by: ""\n') && saved.text.includes("\nsynthetic: true\n"), saved.text);
+  assert.ok((await text(page, '.card:has-text("DEV-2026-2204") .saved')).includes("작성 중"), "saving the form is not an export for review");
+  // The copy is the same text.
+  await click('.card:has-text("DEV-2026-2204") .more'); await click('.menu button:has-text("YAML 양식 복사")');
+  await page.waitForFunction(() => document.querySelector("#toast").textContent.includes("YAML 양식 복사함"));
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), saved.text);
+  // While the draft is still here, the same number is not taken twice.
+  const file = { name: saved.filename, mimeType: "text/plain", buffer: Buffer.from(saved.text) };
+  await page.setInputFiles("#yamlFile", file);
+  assert.ok((await text(page, ".drawer .alert")).includes("같은 번호의 초안이 이미 있음: DEV-2026-2204")); await page.keyboard.press("Escape");
+  // The draft is gone (another computer, a cleared browser): the saved file, name and all, brings it back as it was.
+  const form = () => page.evaluate(() => { const d = window.__desk.S.drafts.find(d => d.form.id === "DEV-2026-2204"); return d ? window.__desk.E.canonical(Object.assign({}, d.form, { today: "" })) : null; });   // canonical: the same values whatever the key order
+  const before = await form();
+  await click('.card:has-text("DEV-2026-2204") .more'); await click('.menu button:has-text("삭제")');
+  assert.equal(await form(), null);
+  await page.setInputFiles("#yamlFile", file);
+  await page.waitForFunction(() => document.querySelector("#toast").textContent.includes("YAML 1건 가져옴"));
+  assert.equal(await form(), before, "the form that came back is the form that went out");
+  assert.equal(await text(page, '.card:has-text("DEV-2026-2204") .chip.none'), "빠짐 · 발견자");
+  await ctx.close();
+  return "클릭 2번 (카드 ⋯ → YAML 양식 저장), 덜 쓴 초안도 가능";
 });
 
 await job("목록: 검색, 필터, 삭제 되돌리기, 완료 표시, 키보드", async () => {
