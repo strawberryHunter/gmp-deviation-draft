@@ -37,7 +37,7 @@ src/style.css    디자인 토큰과 스타일
 src/sample.js    합성 양식 8건 + 합성 이력 + 템플릿 안내 문구 (생성 파일)
 assets/icons/    사용하는 Lucide 아이콘
 tools/           build, 실제 입력 테스트(e2e), 화면 검사(shots), 화면 문구 목록(strings), CLI 기준값 생성(make_fixtures.py)
-tests/           엔진 테스트 + CLI에서 뽑은 기준값(fixtures/)
+tests/           엔진 테스트 + CLI에서 뽑은 기준값(fixtures/: 양식, CLI 결과, YAML 읽기, rules.yaml과 그 해시)
 ```
 
 판정 로직은 `src/engine.js`에만 둡니다. `app.js`는 등급을 정하지 않습니다.

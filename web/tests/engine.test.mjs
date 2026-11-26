@@ -188,6 +188,28 @@ test("pickHistory: the bundled synthetic history is never used for a real form",
 });
 
 /* ---------- document ---------- */
+test("the rules in the page are config/rules.yaml, and a draft records that file's SHA-256 like the CLI", async () => {
+  const F = JSON.parse(readFileSync(here("./fixtures/rules.json"))), R = F.rules;
+  const same = ["sop_reference", "required_fields", "required_flags", "levels", "default_level", "default_reason", "classes", "manual_checks", "categories"];
+  for (const k of same) assert.deepEqual(E.RULES[k], R[k], k);
+  assert.deepEqual(E.RULES.recurrence, { window_days: R.recurrence.window_days, match_on: R.recurrence.match_on });
+  assert.equal(R.recurrence.show_root_cause, false, "the page never lists root causes from the history");
+  assert.deepEqual(E.RULES.ishikawa, Object.entries(R.ishikawa));
+  assert.deepEqual(Object.keys(R).sort(), same.concat(["recurrence", "ishikawa"]).sort(), "a key in rules.yaml the page does not know");
+  assert.deepEqual(Object.keys(E.RULES).sort(), Object.keys(R).sort());
+  assert.deepEqual(E.RULES_FILE, { name: F.file, sha256: F.sha256 });
+  const md = E.toMarkdown(await E.buildModel(good(), history));
+  assert.ok(md.includes("| 분류 규칙 | rules.yaml (SHA-256 " + F.sha256 + ") |"), "the same line as in a CLI draft");
+});
+test("toMarkdown: bold markers hug the words (a space inside them shows as literal asterisks)", async () => {
+  for (const { form } of FORMS) {
+    if (E.validate(form, history).length) continue;
+    const md = E.toMarkdown(await E.buildModel(form, history));
+    assert.ok(md.includes("\n**QA 검토자 확정 등급:** ☐ **작성 필요**\n"), "as in the CLI draft");
+    assert.ok(md.includes("\n**제안과 다를 경우 사유:** ☐ **작성 필요**\n"));
+    for (const m of md.matchAll(/\*\*(.+?)\*\*/g)) assert.equal(m[1], m[1].trim(), "bold span with outer space: [" + m[1] + "]");
+  }
+});
 test("toMarkdown: entered text is shown as entered (a | does not shift table columns)", async () => {
   const f = good(); f.parameters = [{ name: "Glove leak | port 4", spec: "Pass", actual: "Fail*", duration: "" }];
   const md = E.toMarkdown(await E.buildModel(f, history));

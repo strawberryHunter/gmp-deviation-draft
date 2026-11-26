@@ -1,7 +1,7 @@
 # HANDOFF — 현재 상태와 다음 할 일
 
 > 작업이 끝날 때마다 갱신합니다 (규칙: [`CLAUDE.md`](../CLAUDE.md)).
-> **마지막 갱신: 2026-11-26** · 기준 브랜치 `main` · 테스트 317개 통과 + 웹 화면 검사(엔진 38 · 실제 입력 16 · 화면) · **CI 통과 시 Claude가 자동 머지** (CI 6개: Ubuntu Python 3.10–3.13, Windows 3.12, web) · 도구 버전 `devdraft 0.5.0`
+> **마지막 갱신: 2026-11-26** · 기준 브랜치 `main` · 테스트 317개 통과 + 웹 화면 검사(엔진 40 · 실제 입력 16 · 화면) · **CI 통과 시 Claude가 자동 머지** (CI 6개: Ubuntu Python 3.10–3.13, Windows 3.12, web) · 도구 버전 `devdraft 0.5.0`
 >
 > **프로젝트 목적: 입사 포트폴리오.** 실제 회사 도입이 아니므로 회사 SOP·사내 적격성 평가는 범위 밖입니다. 우선순위는 "검토자가 처음 1분에 보고 이해하는가"입니다.
 
@@ -72,6 +72,7 @@
 | [#25](https://github.com/strawberryHunter/gmp-deviation-draft/pull/25) | 웹: 더보기 메뉴 깨짐(글자가 세로로 쌓임), 완료한 초안 카드의 빨간 D+ 표시, 낮은 화면에서 메뉴 서랍 맨 아래(사용법)에 닿지 않던 문제 수정 |
 | [#26](https://github.com/strawberryHunter/gmp-deviation-draft/pull/26) | 웹: 내보내기 요약표가 한 화면에 들어오게 (1280px에서 보고 기한·행별 내보내기 버튼이 잘려 있었음), 좁은 화면에서는 표를 행마다 쌓아 표시, 번호·제목 없는 초안은 "번호 미입력 / 제목 없음" |
 | [#27](https://github.com/strawberryHunter/gmp-deviation-draft/pull/27) | 웹: 실제 양식에 합성 이력을 불러오면 가짜 반복 건을 보여 주지 않음 (거부는 하면서도 경고 아래에 5건과 목록, 제안 근거에 "유사 건 5건"이 그대로 나왔음) |
+| [#28](https://github.com/strawberryHunter/gmp-deviation-draft/pull/28) | 웹: Markdown 초안의 굵은 글씨 표시 깨짐 2줄 수정, 초안의 분류 규칙 해시를 CLI와 같은 rules.yaml 파일 해시로 (화면 내장 규칙 = rules.yaml임을 테스트로 고정) |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
