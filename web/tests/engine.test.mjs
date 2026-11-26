@@ -326,6 +326,13 @@ test("buildDocx: draft stamp in the header, blanks highlighted, entered text pre
     const s = style(id);
     assert.ok(s.includes("<w:b/>") && s.includes('<w:color w:val="000000"/>') && s.includes('<w:sz w:val="' + size + '"/>'), id + ": " + s);
   }
+  // The proposal is kept with its reasons: the grade line and every lead-in line carry keepNext, ordinary text does not.
+  const paras = doc.match(/<w:p>[\s\S]*?<\/w:p>/g), holding = t => paras.filter(p => p.includes(t));
+  for (const t of ["제안 등급: ", ">근거:<"]) { const p = holding(t); assert.equal(p.length, 1, t); assert.ok(p[0].includes("<w:keepNext/>"), t + " stays with what follows"); }
+  assert.ok(holding("검증된 QMS에서 수행합니다").every(p => !p.includes("<w:keepNext/>")), "ordinary text is left to flow");
+  const items = paras.filter(p => p.includes("<w:numPr>")), lists = m.blocks.filter(b => b.k === "ul");
+  assert.equal(items.length, lists.reduce((n, b) => n + b.items.length, 0));
+  assert.equal(items.filter(p => p.includes("<w:keepNext/>")).length, lists.reduce((n, b) => n + b.items.length - 1, 0), "every item of a list but its last is kept with the next");
   // Tables carry real widths (the library's default of 100 twips per column draws as one letter per line outside Word).
   const page = doc.match(/<w:pgSz w:w="(\d+)"[^>]*\/><w:pgMar[^>]*w:right="(\d+)"[^>]*w:left="(\d+)"/);
   assert.equal(Number(page[1]) - Number(page[2]) - Number(page[3]), E.DOCX_TEXT_WIDTH, "text width of the page the library writes");

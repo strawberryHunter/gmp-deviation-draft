@@ -620,8 +620,10 @@ export function buildDocx(m, D) {
     if (b.k === "h1") kids.push(para(b.runs, { heading: D.HeadingLevel.HEADING_1 }));
     else if (b.k === "h2") kids.push(para(b.runs, { heading: D.HeadingLevel.HEADING_2, spacing: { before: 240 } }));
     else if (b.k === "h3") kids.push(para(b.runs, { heading: D.HeadingLevel.HEADING_3 }));
-    else if (b.k === "p" || b.k === "pre") kids.push(para(b.runs));
-    else if (b.k === "ul") b.items.forEach(i => kids.push(para(i, { bullet: { level: 0 } })));
+    // The proposed grade, and any line that leads into a list or table, stays on the page of what follows (as in the CLI's file):
+    // a page must not end with the proposal and leave its reasons to the next one.
+    else if (b.k === "p" || b.k === "pre") kids.push(para(b.runs, b.grade || /:\s*$/.test(b.runs.map(r => r.t).join("")) ? { keepNext: true } : undefined));
+    else if (b.k === "ul") b.items.forEach((i, n) => kids.push(para(i, Object.assign({ bullet: { level: 0 } }, n < b.items.length - 1 ? { keepNext: true } : {}))));   // the items of one list share a page
     else if (b.k === "banner") kids.push(new D.Table({ width: full, columnWidths: [DOCX_TEXT_WIDTH], margins: pad,
       rows: [new D.TableRow({ cantSplit: true, children: [new D.TableCell({ width: full, shading: { fill: "FFF2CC", type: D.ShadingType.CLEAR, color: "auto" },
         children: b.lines.map(l => para(l)) })] })] }), new D.Paragraph(""));

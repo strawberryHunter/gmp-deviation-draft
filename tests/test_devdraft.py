@@ -966,6 +966,61 @@ def test_docx_table_rows_are_not_split_across_pages(sop_docx):
         assert r._tr.trPr is not None and r._tr.trPr.find(_qn("w:cantSplit")) is not None, [c.text for c in r.cells]
 
 
+def test_docx_proposal_stays_on_the_page_of_its_reasons(sop_docx):
+    """The proposed grade must not end a page with its reasons on the next: a line that leads into a list
+    or table (ends with a colon) and the grade line are kept with what follows."""
+    _, doc = sop_docx
+    paras = doc.paragraphs
+    grade = next(p for p in paras if p.text.startswith("제안 등급:"))
+    lead = next(p for p in paras if p.text == "근거:")
+    assert grade.paragraph_format.keep_with_next is True
+    assert lead.paragraph_format.keep_with_next is True
+    leads = [p for p in paras if p.text.endswith(":") and not p.style.name.startswith("Heading")]
+    assert len(leads) >= 2 and all(p.paragraph_format.keep_with_next for p in leads), [p.text for p in leads]
+    plain = next(p for p in paras if p.text.startswith("검증된 QMS에서 수행합니다"))
+    assert not plain.paragraph_format.keep_with_next  # ordinary text is left to flow
+    # The reasons themselves are not split over two pages: every item of a list but its last is kept with the next.
+    bullets = [(i, p) for i, p in enumerate(paras) if p.style.name == "List Bullet"]
+    assert len(bullets) >= 3
+    for i, p in bullets:
+        more = i + 1 < len(paras) and paras[i + 1].style.name == "List Bullet" and p._p.getnext() is paras[i + 1]._p
+        assert bool(p.paragraph_format.keep_with_next) is more, p.text
+
+
+def test_docx_last_section_stays_on_one_page(sop_docx):
+    """The appendix (last heading to the end) is kept together: when its closing sentence does not fit,
+    the whole appendix moves to the next page instead of leaving one sentence alone on a last page."""
+    _, doc = sop_docx
+    body = list(doc.element.body)
+    heads = [i for i, el in enumerate(body) if el.tag == _qn("w:p") and el.pPr is not None and el.pPr.pStyle is not None
+             and el.pPr.pStyle.val.startswith("Heading")]
+    tail = [el for el in body[heads[-1] + 1:] if el.tag in (_qn("w:p"), _qn("w:tbl"))]
+    assert "".join(body[heads[-1]].itertext()).startswith("부록") and tail[-1].tag == _qn("w:p")
+
+    def kept(p):
+        return p.pPr is not None and p.pPr.find(_qn("w:keepNext")) is not None
+
+    for el in tail[:-1]:
+        paras = [el] if el.tag == _qn("w:p") else list(el.iter(_qn("w:p")))
+        assert paras and all(kept(p) for p in paras), "".join(el.itertext())[:40]
+    assert not kept(tail[-1])  # the last line has nothing after it to hold on to
+    earlier = [el for el in body[:heads[-1]] if el.tag == _qn("w:tbl")]
+    assert earlier and not any(kept(p) for tbl in earlier for p in tbl.iter(_qn("w:p"))), "other tables may break between rows"
+
+
+def test_docx_gap_after_a_table_is_a_thin_line(sop_docx):
+    """Word needs a paragraph between two tables. A full empty line after each of the seven tables pushed
+    the last sentence of a three-page draft onto a fourth page; the gap is an exact 8 pt line with no space after."""
+    _, doc = sop_docx
+    body = list(doc.element.body)
+    gaps = [body[i + 1] for i, el in enumerate(body[:-1]) if el.tag == _qn("w:tbl")]
+    assert len(gaps) == len(doc.tables) >= 6
+    for g in gaps:
+        assert g.tag == _qn("w:p") and not "".join(g.itertext()).strip()
+        spacing = g.find(_qn("w:pPr")).find(_qn("w:spacing"))
+        assert (spacing.get(_qn("w:line")), spacing.get(_qn("w:lineRule")), spacing.get(_qn("w:after"))) == ("160", "exact", "0")
+
+
 def test_docx_has_no_raw_markdown(sop_docx):
     _, doc = sop_docx
     for p in _all_paragraphs(doc):
