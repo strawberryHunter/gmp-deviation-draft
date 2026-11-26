@@ -5,8 +5,10 @@
 
 export const VERSION = "devdraft-web 0.6.0";
 
+// These rules are config/rules.yaml of this repository, and RULES_FILE.sha256 is that file's SHA-256: the value the CLI prints in a draft.
+// tests/engine.test.mjs compares both with the file (through tests/fixtures/rules.json), so the page and the file cannot drift apart unnoticed.
+export const RULES_FILE = { name: "rules.yaml", sha256: "31e23d7599804a61cc23c868c1b16a9c00ad999b99100b83d88365eeb1c3b63f" };
 export const RULES = {
-  name: "기본 규칙 (config/rules.yaml)",
   sop_reference: "",
   required_fields: ["id", "title", "site", "area", "product", "batch", "detected_at", "detected_by", "process_step", "description", "immediate_actions"],
   required_flags: ["cpp_excursion", "spec_oos", "other_batches_possibly_affected", "sterility_assurance_impacted", "released_product_affected", "data_integrity_concern", "patient_safety_impact", "regulatory_report_required"],
@@ -425,7 +427,6 @@ export async function buildModel(f, history) {
   const window = "최근 " + RULES.recurrence.window_days + "일";
   const match = RULES.recurrence.match_on.map(k => MATCH_LABEL[k]).join("·");
   const formSha = await sha256(canonical(f));
-  const rulesSha = await sha256(canonical(RULES));
   const B_ = [];
   B_.push({ k: "h1", runs: [T("Deviation 보고서 초안 — "), U(f.id)] });
   const banner = [[B("초안입니다 — 승인 문서가 아닙니다.")],
@@ -487,7 +488,7 @@ export async function buildModel(f, history) {
   B_.push({ k: "p", runs: [T("같은 입력·규칙·이력이면 같은 초안이 나옵니다. SHA-256 값으로 입력이 바뀌지 않았는지 확인할 수 있습니다.")] });
   B_.push({ k: "table", head: ["항목", "값"], rows: [
     [[T("입력 양식")], [T("화면 입력 (SHA-256 " + formSha + ")")]],
-    [[T("분류 규칙")], [T(RULES.name + " (SHA-256 " + rulesSha + ")")]],
+    [[T("분류 규칙")], [T(RULES_FILE.name + " (SHA-256 " + RULES_FILE.sha256 + ")")]],
     [[T("분류 기준 SOP")], [T(RULES.sop_reference || "미기재")]],
     [[T("반복성 조회 이력")], [history ? U(history.name + " (SHA-256 " + history.sha + ", " + history.rows.length + "행" + (history.synthetic ? ", 합성 데이터" : "") + ")") : T("사용 안 함")]],
     [[T("기준일")], [U(f.today)]], [[T("생성 도구")], [T(VERSION)]]] });
@@ -507,7 +508,8 @@ export function mdInline(s) {
 function mdRuns(runs, multi) {
   return runs.map(r => {
     let t = r.user ? (multi ? r.t.split(/\r?\n/).map(l => mdInline(l.replace(/\s+$/, ""))).join("  \n") : mdInline(r.t.replace(/[\r\n]+/g, " "))) : r.t;
-    if (r.blank) t = "☐ **작성 필요**"; else if (r.b && t.trim()) t = "**" + t + "**";
+    // The markers hug the words: "**label:** " and not "**label: **", which Markdown shows as literal asterisks.
+    if (r.blank) t = "☐ **작성 필요**"; else if (r.b && t.trim()) t = t.replace(/^(\s*)([\s\S]*?)(\s*)$/, "$1**$2**$3");
     return t;
   }).join("");
 }

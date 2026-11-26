@@ -123,7 +123,7 @@ python -m devdraft.cli data/synthetic/showcase/*.yaml --docx --summary --today 2
 ## 검증
 
 - 테스트 317개 — GitHub Actions에서 Ubuntu Python 3.10–3.13, Windows 3.12로 PR마다 실행
-- 웹 화면: 엔진 테스트 38개 + 실제 입력 테스트 16개 + 화면 검사 (콘솔 오류 0, 외부 요청 0, 1280·390px, 라이트·다크) — 같은 CI에서 Chrome으로 실행
+- 웹 화면: 엔진 테스트 40개 + 실제 입력 테스트 16개 + 화면 검사 (콘솔 오류 0, 외부 요청 0, 1280·390px, 라이트·다크) — 같은 CI에서 Chrome으로 실행
 - 튜토리얼에 실린 명령 출력·입력 파일·초안 발췌가 실제와 같은지 테스트가 대조
 - 같은 입력이면 바이트 단위로 같은 초안 (생성 근거의 SHA-256으로 대조 가능)
 - 입력한 문장은 Markdown 기호가 섞여 있어도 Word·GitHub에서 입력 그대로 표시 (CommonMark+GFM 파서로도 확인)

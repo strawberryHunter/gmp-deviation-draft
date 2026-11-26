@@ -7,8 +7,10 @@ Files (all generated, do not edit by hand):
     web/tests/fixtures/forms.json         the 8 synthetic forms as the CLI's form loader reads them
     web/tests/fixtures/cli_expected.json  CLI result per form: rejected, or grade / reasons / recurrence ids
     web/tests/fixtures/yaml_cases.json    YAML texts with what the CLI's form loader reads from each
+    web/tests/fixtures/rules.json         config/rules.yaml as the CLI reads it, with the file's SHA-256 (what a draft records)
     web/src/sample.js                     the same forms + synthetic history + template guidance, bundled into the page
 """
+import hashlib
 import json
 import re
 import subprocess
@@ -22,7 +24,7 @@ CHECK = "--check" in sys.argv[1:]
 sys.path.insert(0, str(REPO))
 import yaml  # noqa: E402
 from devdraft.intake import _template_comments, _template_phrases  # noqa: E402
-from devdraft.rules import form_load  # noqa: E402
+from devdraft.rules import form_load, load_rules  # noqa: E402
 
 TODAY = "2026-11-24"
 TEXT = ["id", "title", "site", "area", "product", "batch", "equipment_id", "category", "detected_at",
@@ -123,6 +125,9 @@ for name, text, web in CASES:
     cases.append({"name": name, "text": text, "web": web, **expect})
 OUT["tests/fixtures/yaml_cases.json"] = json.dumps(cases, ensure_ascii=False, indent=1) + "\n"
 OUT["src/sample.js"] = sample
+rules_path = REPO / "config/rules.yaml"
+OUT["tests/fixtures/rules.json"] = json.dumps({"file": rules_path.name, "sha256": hashlib.sha256(rules_path.read_bytes()).hexdigest(),
+                                               "rules": load_rules(rules_path)}, ensure_ascii=False, indent=1) + "\n"
 
 stale = [name for name, text in OUT.items() if not (HERE / name).exists() or (HERE / name).read_text(encoding="utf-8") != text]
 if CHECK:

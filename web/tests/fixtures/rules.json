@@ -1,0 +1,119 @@
+{
+ "file": "rules.yaml",
+ "sha256": "31e23d7599804a61cc23c868c1b16a9c00ad999b99100b83d88365eeb1c3b63f",
+ "rules": {
+  "required_fields": [
+   "id",
+   "title",
+   "site",
+   "area",
+   "product",
+   "batch",
+   "detected_at",
+   "detected_by",
+   "process_step",
+   "description",
+   "immediate_actions"
+  ],
+  "required_flags": [
+   "cpp_excursion",
+   "spec_oos",
+   "other_batches_possibly_affected",
+   "sterility_assurance_impacted",
+   "released_product_affected",
+   "data_integrity_concern",
+   "patient_safety_impact",
+   "regulatory_report_required"
+  ],
+  "sop_reference": "",
+  "levels": [
+   {
+    "id": "critical",
+    "label": "CRITICAL"
+   },
+   {
+    "id": "major",
+    "label": "MAJOR"
+   },
+   {
+    "id": "minor",
+    "label": "MINOR"
+   }
+  ],
+  "default_level": "minor",
+  "default_reason": "상위 등급 트리거에 해당 없음 (보고자 입력 기준) — 검토자 확인 필요",
+  "classes": {
+   "critical": [
+    {
+     "field": "sterility_assurance_impacted",
+     "equals": true,
+     "reason": "무균 보증에 영향 가능성"
+    },
+    {
+     "field": "released_product_affected",
+     "equals": true,
+     "reason": "출하된 제품에 영향 가능성"
+    },
+    {
+     "field": "data_integrity_concern",
+     "equals": true,
+     "reason": "데이터 완전성(ALCOA+) 우려"
+    },
+    {
+     "field": "patient_safety_impact",
+     "equals": true,
+     "reason": "환자 안전에 영향 가능성"
+    }
+   ],
+   "major": [
+    {
+     "field": "cpp_excursion",
+     "equals": true,
+     "reason": "주요 공정 변수(CPP) 기준 이탈"
+    },
+    {
+     "field": "spec_oos",
+     "equals": true,
+     "reason": "규격 이탈(OOS) 결과"
+    },
+    {
+     "field": "other_batches_possibly_affected",
+     "equals": true,
+     "reason": "다른 배치 영향 가능성"
+    },
+    {
+     "field": "recurrence_count",
+     "min": 2,
+     "reason": "조회 기간 내 동일 사업장·설비·유형 반복 (2회 이상)"
+    }
+   ]
+  },
+  "manual_checks": [],
+  "recurrence": {
+   "window_days": 365,
+   "match_on": [
+    "site",
+    "equipment_id",
+    "category"
+   ],
+   "show_root_cause": false
+  },
+  "categories": [
+   "equipment",
+   "environmental_monitoring",
+   "documentation",
+   "process_parameter",
+   "material",
+   "personnel",
+   "utilities"
+  ],
+  "ishikawa": {
+   "Man": "작업자 교육 이력, 해당 SOP 숙지 여부, 교대 인수인계",
+   "Machine": "설비 정비·교정 이력, 알람 로그, 최근 변경",
+   "Method": "SOP 버전, 배치 기록서 지시 내용과 실제 수행 비교",
+   "Material": "원자재·소모품 lot, 입고 시험 결과, 보관 조건",
+   "Measurement": "계측기 교정 상태, 분석법, 샘플링 위치·시점",
+   "Milieu": "환경 모니터링 결과, 차압·온습도 추이, 유틸리티 상태"
+  }
+ }
+}
