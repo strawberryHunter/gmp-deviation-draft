@@ -56,6 +56,10 @@ def _style(doc: Document) -> None:
         for attr in ("w:ascii", "w:hAnsi", "w:cs"):
             fonts.set(qn(attr), FONT)
         fonts.set(qn("w:eastAsia"), FONT_KO)
+        # The heading styles of the default template also name the theme fonts, and Word follows
+        # those over the names above: headings came out in Calibri. Remove them.
+        for attr in ("w:asciiTheme", "w:hAnsiTheme", "w:eastAsiaTheme", "w:cstheme"):
+            fonts.attrib.pop(qn(attr), None)
 
 
 def _mark_blank(run) -> None:

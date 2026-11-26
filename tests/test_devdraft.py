@@ -961,6 +961,18 @@ def test_docx_sets_korean_font():
     assert fonts.get(_qn("w:eastAsia")) == "Malgun Gothic"
 
 
+def test_docx_headings_use_the_named_fonts_not_the_theme():
+    """Opened in Word, headings came out in Calibri: the template's heading styles name the theme
+    fonts as well, and Word follows the theme over the font names we set."""
+    doc = _Document()
+    from devdraft.docx_out import _style
+    _style(doc)
+    for name in ("Normal", "Heading 1", "Heading 2", "Heading 3", "List Bullet"):
+        fonts = doc.styles[name].element.rPr.find(_qn("w:rFonts"))
+        attrs = {k.split("}")[1]: v for k, v in fonts.attrib.items()}
+        assert attrs == {"ascii": "Arial", "hAnsi": "Arial", "cs": "Arial", "eastAsia": "Malgun Gothic"}, (name, attrs)
+
+
 def test_inline_markdown_to_runs():
     doc = _Document()
     p = doc.add_paragraph()
