@@ -15,7 +15,7 @@
 | 반복성 조회 (같은 사업장·설비·유형, 과거 근본원인 기본 숨김) | ✅ |
 | 이력 CSV 점검 (`--check-history`) | ✅ |
 | 일괄 처리 요약표 (`--summary`) | ✅ |
-| Word 초안 (모든 쪽 "초안" 머리글, 빈칸 노란 강조) | ✅ — **실제 Word 화면 확인은 아직** |
+| Word 초안 (모든 쪽 "초안" 머리글, 빈칸 노란 강조) | ✅ — Microsoft Word 16.89에서 열어 확인 (2026-11-26, CLI·웹 화면 둘 다) |
 | 생성 근거 기록 (입력 파일명·SHA-256·기준일·버전) | ✅ |
 | 합성 이력이 실제 양식에 섞이는 것 차단 | ✅ |
 | SOP 반영 예시: 합성 SOP, 공개 SOP(Duke COMM-PAS-013) | ✅ |
@@ -79,6 +79,7 @@
 | [#32](https://github.com/strawberryHunter/gmp-deviation-draft/pull/32) | 웹: 저장 거절·저장 불가 상황을 저장 규격의 코드별로 처리, 시험용 대역이 규격(허용 확장자 등)을 따르게, Word 표 칸 안쪽 여백 (Microsoft Word로 열어 확인) |
 | [#33](https://github.com/strawberryHunter/gmp-deviation-draft/pull/33) | CLI Word 초안: 제목의 영문·숫자가 Calibri로 나오던 것을 Arial로 (Microsoft Word로 열어 확인) |
 | [#34](https://github.com/strawberryHunter/gmp-deviation-draft/pull/34) | 웹: 초안을 CLI 양식(YAML)으로 내보내기 (복사, `번호.yaml.txt` 저장). 내보낸 파일을 화면과 CLI가 같은 값으로 읽는지, CLI 결과가 원본과 같은지 테스트 |
+| [#35](https://github.com/strawberryHunter/gmp-deviation-draft/pull/35) | README: 화면과 CLI를 대조하다 찾은 결함 3건을 결함 표에 추가 (가짜 반복 건, Markdown 별표·규칙 해시, Word 표 폭), 브라우저 화면 스크린샷을 지금 화면으로 교체 (알림 문구가 카드를 가리지 않게 캡처) |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
@@ -97,7 +98,7 @@
   3. 이상하면 화면 캡처를 Claude에게 보내기
 - [ ] **② CI 결과 확인** — PR 화면 아래쪽 "Checks"가 초록색 ✅인지 봐 주세요. 빨간 ❌면 Claude에게 "CI 실패 고쳐줘"
 
-- [ ] **③ GitHub 브랜치 정리** — Claude가 지우려 했으나 권한 장치가 막았습니다 (2026-11-26). 남은 원격 브랜치 33개는 모두 머지된 PR의 마지막 커밋과 같아 지워도 잃는 것이 없음을 확인했습니다 (PR 화면에서 되살릴 수 있음). 머지가 끝난 아래 브랜치는 지워도 내용이 사라지지 않습니다. 포트폴리오 저장소가 깔끔해 보입니다.
+- [ ] **③ GitHub 브랜치 정리** — Claude가 지우려 했으나 권한 장치가 막았습니다 (2026-11-26). 남은 원격 브랜치(머지된 PR마다 1개)는 모두 머지된 PR의 마지막 커밋과 같아 지워도 잃는 것이 없음을 확인했습니다 (PR 화면에서 되살릴 수 있음). 머지가 끝난 아래 브랜치는 지워도 내용이 사라지지 않습니다. 포트폴리오 저장소가 깔끔해 보입니다.
   `fix/flag-validation-template`, `feat/history-check`, `feat/docx-format`, `feat/traceability`, `feat/public-sop-example`, `docs/handoff`, `ci/github-actions`, `feat/showcase`, `docs/readme-portfolio`, `feat/summary-docx`, `fix/verbatim-facts`, `decisions/resolve-open-items`, `feat/new-risk-questions`, `feat/summary-xlsx`, `fix/template-comment-leak`, `fix/recurrence-not-checked`, `fix/unused-yes-answers`
   - 지우는 곳: 저장소 → Branches → 각 줄의 휴지통 아이콘
   - 앞으로 자동으로 지우려면: Settings → General → **Automatically delete head branches** 켜기
