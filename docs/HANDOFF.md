@@ -73,6 +73,7 @@
 | [#26](https://github.com/strawberryHunter/gmp-deviation-draft/pull/26) | 웹: 내보내기 요약표가 한 화면에 들어오게 (1280px에서 보고 기한·행별 내보내기 버튼이 잘려 있었음), 좁은 화면에서는 표를 행마다 쌓아 표시, 번호·제목 없는 초안은 "번호 미입력 / 제목 없음" |
 | [#27](https://github.com/strawberryHunter/gmp-deviation-draft/pull/27) | 웹: 실제 양식에 합성 이력을 불러오면 가짜 반복 건을 보여 주지 않음 (거부는 하면서도 경고 아래에 5건과 목록, 제안 근거에 "유사 건 5건"이 그대로 나왔음) |
 | [#28](https://github.com/strawberryHunter/gmp-deviation-draft/pull/28) | 웹: Markdown 초안의 굵은 글씨 표시 깨짐 2줄 수정, 초안의 분류 규칙 해시를 CLI와 같은 rules.yaml 파일 해시로 (화면 내장 규칙 = rules.yaml임을 테스트로 고정) |
+| [#29](https://github.com/strawberryHunter/gmp-deviation-draft/pull/29) | 웹: Word 초안의 표 폭 지정 (macOS 훑어보기에서 표가 한 글자 폭으로 찌그러졌음), 글꼴·제목을 CLI Word와 같게 (Arial + 맑은 고딕, 검정 굵은 제목) |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
@@ -84,7 +85,7 @@
   - 같은 화면에서 함께: About(오른쪽 톱니)에 주제 태그 `gmp` `gxp` `deviation-management` `data-integrity` `quality-assurance` `python` 추가, 프로필에서 **Pin**
 - [ ] **⓪-2 포트폴리오 페이지 공유** — claude.ai 아티팩트(대화에서 받은 링크) 오른쪽 위 Share에서 링크 공유 켜기. 공유 후 README나 이력서에 링크를 넣을지 Claude에게 알려 주세요.
 
-- [ ] **⓪-3 웹 화면에서 Word 저장 한 번 눌러 보기** — 게시된 "Deviation 초안 데스크"에서 예시 불러오기 → 카드 열기 → 내보내기 → Word. 저장 확인 창이 뜨고 .docx가 받아지는지 알려 주세요. 테스트는 저장 기능의 대역으로만 했습니다.
+- [ ] **⓪-3 웹 화면에서 Word 저장 한 번 눌러 보기** — 게시된 "Deviation 초안 데스크"에서 예시 불러오기 → 카드 열기 → 내보내기 → Word. 저장 확인 창이 뜨고 .docx가 받아지는지 알려 주세요. 테스트는 저장 기능의 대역으로만 했습니다. 받은 .docx를 Word에서 열어 표와 제목 모양도 봐 주세요 (Claude는 macOS 훑어보기로만 그려 봤고 Word로는 열어 보지 못했습니다).
 
 - [ ] **① Word 초안을 실제 Word에서 열어 보기** — 작업 환경에 맑은 고딕이 없어 화면 확인을 못 했습니다.
   1. 바로 볼 수 있는 렌더링 결과: [`sample_output/showcase/`](../sample_output/showcase/)의 PDF (이 환경의 대체 글꼴로 렌더링됨). Word 원본이 필요하면 "프롬프트 A" 또는 `python scripts/make_showcase.py`
