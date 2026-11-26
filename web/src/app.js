@@ -168,6 +168,15 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
         h("button", { type: "button", class: "btn icon quiet", "aria-label": "닫기", onclick: () => close() }, ic("x")))),
       h("div", { class: "scroll" }, body));
     function close() { dim.remove(); panel.remove(); closeDrawer = null; if (back && back.isConnected) back.focus({ preventScroll: true }); }
+    // Tab stays inside the panel (it is a modal dialog): from the last control to the first, and back with Shift.
+    panel.addEventListener("keydown", e => {
+      if (e.key !== "Tab") return;
+      const stops = [...panel.querySelectorAll("button, a[href], input, select, textarea, [tabindex]")].filter(x => !x.disabled && x.tabIndex >= 0 && x.getClientRects().length);
+      if (!stops.length) return;
+      const first = stops[0], last = stops[stops.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
     $("#layer").append(dim, panel); closeDrawer = close;
     panel.querySelector("header .btn.icon").focus({ preventScroll: true });
     return panel;
@@ -283,9 +292,15 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
   }
   // "빠진 항목 3개" while everything stopping the draft is just unfilled; "고칠 곳 1개" once something has to be corrected.
   function blockedText(errs) { const b = E.blockCount(errs); return (b.missingOnly ? "빠진 항목 " : "고칠 곳 ") + b.n + "개"; }
+  // A draft with something to fill or correct is not exported in any form: show what stops it instead. true = stopped.
+  function blocked(uid) {
+    const i = item(draftOf(uid));
+    if (!i.errs.length) return false;
+    openPreview(uid); toast(blockedText(i.errs) + " · 초안 안 만듦"); return true;
+  }
   async function exportDraft(uid, kind) {
     const d = draftOf(uid), i = item(d);
-    if (i.errs.length) { openPreview(uid); toast(blockedText(i.errs) + " · 초안 안 만듦"); return; }
+    if (blocked(uid)) return;
     if (kind === "mail") { await copyText(E.mailSummary(i, S.settings.dueDays), "메일용 요약 복사함"); return; }
     const model = await E.buildModel(d.form, i.hist), base = E.fileBase(d.form.id);
     let ok = false;
@@ -297,6 +312,7 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
     if (ok) { d.exported = true; persist(); render(); }
   }
   function exportMenu(anchor, uid) {
+    if (blocked(uid)) return;   // no format to choose while nothing can be made: one click to what is missing
     openMenu(anchor, (m, close) => {
       const run = kind => () => { close(); exportDraft(uid, kind); };
       if (downloads) m.append(mItem("file-type", "Word (.docx)", run("docx")), mItem("file-down", "Markdown (.md)", run("md")));

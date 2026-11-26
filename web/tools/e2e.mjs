@@ -98,13 +98,15 @@ await job("2 빠진 항목 찾기", async () => {
   assert.equal(clicks() - before, 2);
   // An export attempt on an incomplete draft makes nothing and points at what is missing.
   await page.fill("#f-detected_by", "");
-  await click(".ebar .btn.primary"); await click('.menu button:has-text("본문 복사")');
+  const n = clicks();
+  await click(".ebar .btn.primary");                           // straight to what is missing: no format menu first
   assert.ok((await text(page, ".drawer .alert b")).startsWith("초안 안 만듦 · 빠진 항목 1개"));
+  assert.equal(await page.locator(".menu").count(), 0); assert.equal(clicks() - n, 1);
   await click('.drawer .panel button:has-text("발견자")');
   assert.equal(await page.evaluate(() => document.activeElement.id), "f-detected_by");
   assert.equal(await page.getAttribute("#f-detected_by", "aria-invalid"), "true");
   await ctx.close();
-  return "클릭 2번 (숫자 → 카드), 커서가 빠진 칸에 놓임";
+  return "클릭 2번 (숫자 → 카드), 커서가 빠진 칸에 놓임 · 덜 채운 초안의 내보내기는 클릭 1번에 빠진 항목 표시";
 });
 
 await job("3 등급 따져 보기 (제안과 근거만, 판단 칸은 빈칸)", async () => {
@@ -126,6 +128,12 @@ await job("3 등급 따져 보기 (제안과 근거만, 판단 칸은 빈칸)", 
   const doc = (await text(page, ".doc")).replace(/\n+/g, "\n");
   for (const h of ["6. 근본원인\n☐ 작성 필요", "7. 제품 품질 영향 평가\n☐ 작성 필요", "QA 검토자 확정 등급: ☐ 작성 필요"]) assert.ok(doc.includes(h), h);
   assert.equal(await page.locator(".doc .blank").count(), 14);
+  // The preview is a dialog: Tab goes round inside it and never lands on the form behind.
+  const inside = () => page.evaluate(() => !!document.activeElement.closest(".drawer"));
+  const stops = await page.evaluate(() => document.querySelectorAll(".drawer button").length);
+  assert.ok(stops >= 2, "controls in the preview: " + stops);
+  for (let n = 0; n < stops + 2; n++) { await page.keyboard.press("Tab"); assert.equal(await inside(), true, "Tab " + (n + 1) + " left the preview"); }
+  for (let n = 0; n < stops + 2; n++) { await page.keyboard.press("Shift+Tab"); assert.equal(await inside(), true, "Shift+Tab " + (n + 1) + " left the preview"); }
   await ctx.close();
   return "카드에 바로 표시 (클릭 0번), 근거는 클릭 1번";
 });

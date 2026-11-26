@@ -75,6 +75,7 @@
 | [#28](https://github.com/strawberryHunter/gmp-deviation-draft/pull/28) | 웹: Markdown 초안의 굵은 글씨 표시 깨짐 2줄 수정, 초안의 분류 규칙 해시를 CLI와 같은 rules.yaml 파일 해시로 (화면 내장 규칙 = rules.yaml임을 테스트로 고정) |
 | [#29](https://github.com/strawberryHunter/gmp-deviation-draft/pull/29) | 웹: Word 초안의 표 폭 지정 (macOS 훑어보기에서 표가 한 글자 폭으로 찌그러졌음), 글꼴·제목을 CLI Word와 같게 (Arial + 맑은 고딕, 검정 굵은 제목) |
 | [#30](https://github.com/strawberryHunter/gmp-deviation-draft/pull/30) | 웹: 검색·필터 중에는 맨 위 카드가 목록에 있는 초안 중 가장 급한 것을 보여 줌 (전에는 검색과 무관한 초안), 결과가 없으면 카드와 중복 버튼 없음 |
+| [#31](https://github.com/strawberryHunter/gmp-deviation-draft/pull/31) | 웹: 덜 채운 초안의 내보내기는 형식 메뉴 없이 바로 빠진 항목 표시 (2클릭 → 1클릭), 미리보기 패널 안에서 Tab이 뒤 화면으로 나가지 않음 |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
@@ -126,9 +127,10 @@ CLAUDE.md와 docs/HANDOFF.md를 읽고, "다음 개선 후보" 중 맨 위 항�
 
 **다음 개선 후보** (Claude가 끝낼 때마다 이 목록을 갱신, 포트폴리오 기준 우선순위)
 
-1. **웹: 다른 규칙 파일 선택** — 지금은 기본 rules.yaml만 내장. Duke 예시 규칙을 고를 수 있게 (CLI 기준값에 Duke 결과 추가).
-2. **웹: 미리보기 패널의 Tab 이동 가두기** — 지금은 Tab이 뒤 화면으로 나감 (Esc로는 닫힘).
-3. **웹: 초안을 YAML로 내보내기** — 화면에서 쓴 초안을 CLI 양식으로 저장.
+1. **웹: 초안을 YAML로 내보내기** — 화면에서 쓴 초안을 CLI 양식으로 저장 (화면 ↔ CLI 왕복. YAML 가져오기와 같은 기준값으로 대조 가능). 주의: claude.ai 아티팩트의 파일 저장은 .yaml·.yml 확장자를 받지 않음 (허용: txt, json, md, docx, csv 등). 그래서 "YAML 복사" + `번호.yaml.txt` 저장으로 만들고 가져오기가 .txt도 받게 해야 함 — 파일 이름 방식은 사용자 확인 후 진행.
+2. **웹: 다른 규칙 파일 선택** — 지금은 기본 rules.yaml만 내장. Duke 예시 규칙을 고를 수 있게 (CLI 기준값에 Duke 결과 추가).
+3. **웹: Word 초안을 Word에서 확인한 뒤 남는 차이 정리** — 사용자 확인(⓪-3) 결과에 따라. 표 열 폭은 CLI와 같이 균등 분할.
+4. **웹: 폰 화면의 숫자 줄이 4개 + 1개로 줄바꿈** — 보기만 불편, 기능 문제 없음.
 
 ## 5. 참고 문서
 - 사용법: [`docs/USAGE.md`](USAGE.md)
