@@ -25,7 +25,7 @@ CLI `devdraft`와 같은 판정 규칙으로, GMP deviation 보고서 초안을 
 | 같은 설비의 과거 건 | 이력 CSV를 한 번 고르면 모든 초안에 적용 |
 | 보고 기한 | 발견 일시를 넣으면 D-day (발견일 + N일, N은 설정값) |
 | 비슷한 건 새로 쓰기 | 복제 2클릭, 위치·설비·발견자 자동완성 |
-| CLI 양식(.yaml) | 여러 파일을 한 번에 가져오기 |
+| CLI 양식(.yaml) | 여러 파일을 한 번에 가져오기. 초안을 CLI 양식으로 내보내기 (복사, `번호.yaml.txt` 저장 — 덜 쓴 초안도 가능) |
 | 측정값 여러 행 | Excel 범위 붙여넣기 한 번 |
 
 ## 구조
@@ -54,6 +54,7 @@ npm run check              # 빌드 → 엔진 테스트 → 실제 입력 테�
 - `python web/tools/make_fixtures.py` (저장소 루트에서) → CLI 결과로 기준값을 다시 만듦. `--check`는 최신인지 검사만 (pytest와 CI가 실행)
 - `node tools/strings.mjs` → [`docs/ui-strings.md`](docs/ui-strings.md) (화면 문구 전체. 설명체가 남았는지 검사)
 - Chrome 위치가 다르면 `CHROME_PATH` 환경 변수로 지정
+- 엔진 테스트 2개는 화면이 내보낸 양식을 CLI로 직접 돌려 봄. 저장소의 `.venv`를 쓰고, 없으면 PATH의 `python3`(Windows는 `python`), `PYTHON` 환경 변수로 지정 가능
 
 파일 저장(Word·Markdown·CSV)은 게시된 화면(claude.ai 아티팩트)의 저장 기능을 씁니다. 로컬 파일로 열면 복사만 됩니다.
 
