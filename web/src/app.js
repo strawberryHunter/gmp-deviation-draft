@@ -193,9 +193,20 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
     if (!downloads) { toast("이 화면에서는 파일 저장 불가 · 복사 사용"); return false; }
     try { await downloads.save({ filename, data }); toast(okMsg); return true; }
     catch (e) {
+      // The viewer's refusals, by the code it gives (the save call's contract). Nothing is retried on its own.
       const c = e && e.code;
-      toast(c === "declined" ? "저장 취소함" : c === "rate_limited" ? "잠시 후 다시 시도" : c === "host_unavailable" ? "이 앱에서는 저장 불가 · 브라우저에서 열기"
-        : "저장 실패" + (e && e.message ? " · " + e.message : ""));
+      if (c === "declined") toast("저장 취소함");
+      else if (c === "rate_limited") toast("잠시 후 다시 시도");
+      else if (c === "host_unavailable") toast("이 앱에서는 저장 불가 · 브라우저에서 열기");
+      else if (c === "rejected_extension" || c === "extension_not_enabled") toast("이 화면에서는 이 형식 저장 불가 · 본문 복사 사용");
+      else if (c === "too_large" || c === "bad_request" || c === "transform_error") toast("저장 실패 · " + c);
+      else {
+        // Saving does not work in this view (or the code is one this page does not know, which the contract says to treat the same):
+        // the save controls go away and copying stays.
+        const known = ["unavailable", "not_granted", "capability_disabled", "capability_removed"].includes(c);
+        downloads = null; if (!S.edit) render();
+        toast("이 화면에서는 파일 저장 불가 · 복사 사용" + (known ? "" : " (" + (c || (e && e.message) || "오류") + ")"));
+      }
       return false;
     }
   }
