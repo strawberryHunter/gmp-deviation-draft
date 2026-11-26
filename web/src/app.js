@@ -474,22 +474,32 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
   }
   function viewRecurrence(list) {
     const rows = list.map(i => h("tr", { class: "click", tabindex: "0", onclick: () => openEditor(i.d.uid, 6), onkeydown: e => { if (e.key === "Enter") openEditor(i.d.uid, 6); } },
-      h("td", { class: "num", text: i.form.id || "번호 미입력" }), h("td", { text: i.form.equipment_id || "—" }), h("td", { text: catLabel(i.form.category) }),
-      h("td", { text: i.hist ? i.hist.name : "없음" }),
-      h("td", {}, i.look.checked ? (i.look.rec.length ? h("b", { text: i.look.rec.length + "건" }) : "없음") : "조회 안 함 · " + i.look.why)));
+      h("td", { class: "num key", text: i.form.id || "번호 미입력" }), h("td", { "data-label": "설비", text: i.form.equipment_id || "—" }), h("td", { "data-label": "분류", text: catLabel(i.form.category) }),
+      h("td", { "data-label": "이력", text: i.hist ? i.hist.name : "없음" }),
+      h("td", { "data-label": "결과" }, i.look.checked ? (i.look.rec.length ? h("b", { text: i.look.rec.length + "건" }) : "없음") : "조회 안 함 · " + i.look.why)));
     fill($("#view"), 
       h("div", { class: "title-row" }, h("h1", { text: "반복성 조회" }), h("span", { class: "count", text: "반복 건 있음 " + list.filter(i => i.look.checked && i.look.rec.length).length + "건" })),
       historyPanel(),
       h("section", { class: "panel" }, h("h2", { text: "초안별 결과" }),
-        list.length ? h("div", { class: "tw" }, h("table", {}, h("thead", {}, h("tr", {}, ["번호", "설비", "분류", "이력", "결과"].map(t => h("th", { text: t })))), h("tbody", {}, rows)))
+        list.length ? h("div", { class: "tw" }, h("table", { class: "stack" }, h("thead", {}, h("tr", {}, ["번호", "설비", "분류", "이력", "결과"].map(t => h("th", { text: t })))), h("tbody", {}, rows)))
           : h("p", { class: "muted", text: "초안 없음" })));
   }
   function viewExport(list) {
     const rows = E.summaryRows(list);
-    const table = h("table", { class: "summary" }, h("thead", {}, h("tr", {}, E.SUMMARY_HEAD.concat(["파일"]).map(t => h("th", { text: t })))),
-      h("tbody", {}, rows.map((r, k) => h("tr", {}, r.map((c, n) => h("td", { class: n === 0 || n > 3 ? "num" : "", text: c })),
-        h("td", { class: "num" }, list[k].errs.length ? h("button", { type: "button", class: "btn sm", onclick: () => openEditor(list[k].d.uid) }, "보완")
-          : h("button", { type: "button", class: "btn sm", "aria-haspopup": "menu", onclick: e => exportMenu(e.currentTarget, list[k].d.uid) }, ic("download"), "내보내기"))))));
+    // On screen the eight copied values sit in six columns so the row and its button fit without sideways scrolling:
+    // reasons (or what is missing) under the title, detection time under the due date. Copy and CSV keep the CLI's eight columns.
+    const table = h("table", { class: "summary stack" }, h("thead", {}, h("tr", {}, ["Deviation 번호", "제목 · 제안 근거", "제안 등급", "반복 건", "보고 기한 · 발견", "파일"].map(t => h("th", { text: t })))),
+      h("tbody", {}, rows.map((r, k) => { const i = list[k], [id, title, , why, rec, found, due, fix] = r;
+        return h("tr", {},
+          h("td", { class: "num key" + (id ? "" : " muted"), text: id || "번호 미입력" }),
+          h("td", { "data-label": "제목" }, h("span", { class: title ? "" : "muted", text: title || "제목 없음" }),
+            fix ? h("span", { class: "sub fix", text: "보완 필요 · " + fix }) : why ? h("span", { class: "sub", text: why }) : null),
+          h("td", { "data-label": "제안 등급" }, gradeChip(i), i.prop && !i.errs.length && i.prop.note ? h("span", { class: "sub", text: "반복 기준 미평가" }) : null),
+          h("td", { class: "num", "data-label": "반복 건", text: rec === "" ? "" : /^\d+$/.test(rec) ? rec + "건" : rec }),
+          h("td", { class: "num", "data-label": "보고 기한" }, due ? h("span", {}, i.status !== "done" && i.dd !== null ? h("b", { class: ddClass(i.dd), text: E.ddayLabel(i.dd) + " · " }) : null, due) : h("span", { class: "muted", text: "기한 미정" }),
+            found ? h("span", { class: "sub", text: "발견 " + found }) : null),
+          h("td", { class: "num act" }, i.errs.length ? h("button", { type: "button", class: "btn sm", onclick: () => openEditor(i.d.uid) }, "보완")
+            : h("button", { type: "button", class: "btn sm", "aria-haspopup": "menu", onclick: e => exportMenu(e.currentTarget, i.d.uid) }, ic("download"), "내보내기"))); })));
     const name = "deviation_summary_" + E.todayISO();
     fill($("#view"), 
       h("div", { class: "title-row" }, h("h1", { text: "내보내기" }), h("span", { class: "count", text: list.length + "건" })),
@@ -497,7 +507,8 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
         h("div", { class: "row" },
           h("button", { type: "button", class: "btn primary", disabled: !list.length, onclick: () => copyText(E.toTSV(E.SUMMARY_HEAD, rows), "표 복사함 · Excel에 붙여넣기") }, ic("table"), "표 복사"),
           downloads ? h("button", { type: "button", class: "btn", disabled: !list.length, onclick: () => saveFile(name + ".csv", E.toCSV(E.SUMMARY_HEAD, rows), "CSV 저장함") }, ic("file-down"), "CSV 저장") : null,
-          h("span", { class: "chip none", text: "확정 등급·우선순위 없음" })),
+          h("span", { class: "chip none", text: "확정 등급·우선순위 없음" }),
+          h("span", { class: "muted", text: "복사·CSV " + E.SUMMARY_HEAD.length + "열 · CLI 요약표와 같은 내용" })),
         list.length ? h("div", { class: "tw" }, table) : h("p", { class: "muted", text: "초안 없음" })));
   }
   function viewGuide() {
