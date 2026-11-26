@@ -327,7 +327,10 @@ kbd { font-family: var(--mono); font-size: 13px; border: 1px solid var(--line-st
   .yn { display: flex; } .yn label { flex: 1 1 0; } .yn span { width: 100%; }
   .top #themeSeg { display: none; }
   .top .chip.local { display: none; }
-  .stats .updated { margin-left: 0; width: 100%; padding: 0 12px; }
+  /* The five numbers stay on one line: equal columns, a name may take two lines. */
+  .stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; align-items: end; }
+  .stat { padding: 6px 4px 6px 6px; }
+  .stats .updated { grid-column: 1 / -1; margin-left: 0; width: 100%; padding: 0 6px; }
   .filters .sort { margin-left: 0; }
   input[type=text], input[type=search], input[type=date], input[type=datetime-local], input[type=number], select, textarea { font-size: 17px; }
   .etop .chip { display: none; }

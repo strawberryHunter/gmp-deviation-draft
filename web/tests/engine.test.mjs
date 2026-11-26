@@ -216,6 +216,16 @@ test("every rule set of the page is its rules file, key by key", () => {
     }
   }
 });
+test("the summary header names the lookup window of the rules in force", async () => {
+  const head = E.SUMMARY_HEAD;
+  assert.equal(head[4], "반복 건 (최근 365일)");
+  await withRules("duke", () => {
+    assert.equal(E.SUMMARY_HEAD, head, "the same array, so the page's reference stays valid");
+    assert.equal(head[4], "반복 건 (최근 730일)", "these rules look back two years: the copied table must not say 365");
+    assert.ok(E.toCSV(E.SUMMARY_HEAD, []).includes("반복 건 (최근 730일)"));
+  });
+  assert.equal(head[4], "반복 건 (최근 365일)"); assert.equal(head.length, 8);
+});
 test("useRules: swaps the rules in force in place, refuses an unknown name", async () => {
   const rules = E.RULES, file = E.RULES_FILE;
   assert.equal(E.activeRuleSet().id, "default");
@@ -595,4 +605,39 @@ test("toFormYAML: the CLI's loader reads the same values, and the CLI gives its 
     assert.deepEqual(md.match(/근거:\n\n?((?:- .*\n?)+)/)[1].trim().split("\n").map(x => x.slice(2)), want.reasons, name);
     assert.deepEqual([...md.matchAll(/^\| (DEV-\d{4}-\d{4}) \| \d{4}-\d{2}-\d{2} \|/gm)].map(x => x[1]), want.rec, name);
   }
+});
+
+/* ---------- several files in one .zip ---------- */
+test("crc32 and uniqueNames", () => {
+  assert.equal(E.crc32(new TextEncoder().encode("123456789")), 0xCBF43926);   // the standard check value of CRC-32
+  assert.equal(E.crc32(new Uint8Array(0)), 0);
+  assert.deepEqual(E.uniqueNames(["a_draft.docx", "b_draft.docx", "A_draft.docx", "a_draft.docx", "a_draft_2.docx", "noext", "noext"]),
+    ["a_draft.docx", "b_draft.docx", "A_draft_2.docx", "a_draft_3.docx", "a_draft_2_2.docx", "noext", "noext_2"]);
+  const out = E.uniqueNames(["x.docx", "x.docx", "X.DOCX", "x_2.docx"]);
+  assert.equal(new Set(out.map(n => n.toLowerCase())).size, 4, "no two names collide, whatever the case: " + out);
+});
+test("zipStore: Python's zipfile reads back every file, name and byte; bad names are refused", async () => {
+  const D = createRequire(import.meta.url)("../vendor/docx-8.5.0.umd.js");
+  const m = await E.buildModel(good(), history);
+  const docx = new Uint8Array(await D.Packer.toBuffer(E.buildDocx(m, D)));
+  const csv = new TextEncoder().encode(E.toCSV(E.SUMMARY_HEAD, [["DEV-1", "제목, \"따옴표\"", "", "", "", "", "", ""]]));
+  const files = [{ name: E.fileBase(m.id) + ".docx", data: docx }, { name: "요약표_2026-11-26.csv", data: csv }, { name: "empty.txt", data: new Uint8Array(0) }];
+  const zip = E.zipStore(files, new Date(2026, 10, 26, 15, 30, 44));
+  assert.equal(new TextDecoder("latin1").decode(zip.slice(0, 2)), "PK");
+  assert.equal(zip.length, files.reduce((n, f) => n + 30 + 46 + 2 * new TextEncoder().encode(f.name).length + f.data.length, 22), "nothing but headers, names and the stored bytes");
+  const dir = mkdtempSync(join(tmpdir(), "dz-")), file = join(dir, "t.zip");
+  writeFileSync(file, zip);
+  const read = JSON.parse(execFileSync(PY, ["-c", [
+    "import zipfile, sys, json, hashlib",
+    "z = zipfile.ZipFile(sys.argv[1])",
+    "print(json.dumps({'bad': z.testzip(), 'files': [[i.filename, i.file_size, i.compress_type, list(i.date_time), hashlib.sha256(z.read(i)).hexdigest()] for i in z.infolist()]}))",
+  ].join("\n"), file], { encoding: "utf8", env: Object.assign({}, process.env, { PYTHONUTF8: "1", PYTHONIOENCODING: "utf-8" }) }));
+  assert.equal(read.bad, null, "every stored CRC matches its file");
+  const sha = async b => [...new Uint8Array(await crypto.subtle.digest("SHA-256", b))].map(x => x.toString(16).padStart(2, "0")).join("");
+  assert.deepEqual(read.files, await Promise.all(files.map(async f => [f.name, f.data.length, 0, [2026, 11, 26, 15, 30, 44], await sha(f.data)])));
+  execFileSync("unzip", ["-tq", file]);   // the usual command-line tool accepts it too
+  for (const name of ["a/b.docx", "..", "", "a:b.txt", "x\\y.txt", "nul\u0000.txt"]) assert.throws(() => E.zipStore([{ name, data: new Uint8Array(1) }]), /쓸 수 없는 파일 이름/, JSON.stringify(name));
+  assert.throws(() => E.zipStore([{ name: "a.txt", data: new Uint8Array(1) }, { name: "A.TXT", data: new Uint8Array(1) }]), /같은 파일 이름이 두 번/);
+  assert.throws(() => E.zipStore([{ name: "a.txt", data: "text" }]), /바이트 배열이 아님/);
+  assert.throws(() => E.zipStore([]), /파일 수 0/);
 });

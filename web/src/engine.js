@@ -65,12 +65,15 @@ export const RULE_SETS = [
 // The rules in force and their file. useRules() swaps the contents in place, so every reader sees the change (the bundled page holds these two objects).
 export const RULES_FILE = {};
 export const RULES = {};
+// Column names of the summary table (the CLI's eight). The fifth names the lookup window of the rules in force.
+export const SUMMARY_HEAD = ["Deviation 번호", "제목", "제안 등급", "제안 근거", "", "발견 일시", "보고 기한", "보완 필요"];
 export function useRules(id) {
   const set = RULE_SETS.find(x => x.id === id);
   if (!set) throw new Error("모르는 규칙 묶음: " + id);
   Object.keys(RULES).forEach(k => delete RULES[k]);
   Object.assign(RULES, JSON.parse(JSON.stringify(set.rules)));
   RULES_FILE.name = set.file; RULES_FILE.sha256 = set.sha256;
+  SUMMARY_HEAD[4] = "반복 건 (최근 " + RULES.recurrence.window_days + "일)";
   return set;
 }
 export function activeRuleSet() { return RULE_SETS.find(x => x.file === RULES_FILE.name); }
@@ -788,7 +791,6 @@ export function guardCell(v) {
   const s = String(v == null ? "" : v);
   return /^[=+\-@\t\r]/.test(s) ? "'" + s : s;
 }
-export const SUMMARY_HEAD = ["Deviation 번호", "제목", "제안 등급", "제안 근거", "반복 건 (최근 365일)", "발견 일시", "보고 기한", "보완 필요"];
 // Same content as the CLI summary: proposals only. No final grade, no priority, no root cause, no process values.
 export function summaryRows(items) {
   return items.map(i => {
@@ -828,3 +830,63 @@ export function mailSummary(item, dueDays) {
   ].join("\n");
 }
 export function fileBase(id) { return (String(id || "").trim() || "deviation").replace(/[^\w.\-가-힣]+/g, "_") + "_draft"; }
+
+/* ---------- several files in one .zip ---------- */
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+  return t;
+})();
+export function crc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+// Names for the files of one archive. A name used twice (two drafts with the same number) gets _2, _3 before its extension,
+// so no file replaces another when the archive is unpacked. Compared without case: Windows and macOS folders ignore it.
+export function uniqueNames(names) {
+  const used = new Set();
+  return names.map(name => {
+    const dot = name.lastIndexOf("."), stem = dot > 0 ? name.slice(0, dot) : name, ext = dot > 0 ? name.slice(dot) : "";
+    let out = name, n = 1;
+    while (used.has(out.toLowerCase())) out = stem + "_" + (++n) + ext;
+    used.add(out.toLowerCase());
+    return out;
+  });
+}
+// A .zip that holds the given files as they are (stored, not compressed: a .docx is compressed already and the rest is small).
+// files: [{ name, data: Uint8Array }]. Names are written as UTF-8. A name with a folder part or a character Windows refuses is an error.
+export function zipStore(files, when = new Date()) {
+  if (!files.length || files.length > 65535) throw new Error("zip: 파일 수 " + files.length);
+  const enc = new TextEncoder();
+  const time = (when.getHours() << 11) | (when.getMinutes() << 5) | (when.getSeconds() >> 1);
+  const date = ((when.getFullYear() - 1980) << 9) | ((when.getMonth() + 1) << 5) | when.getDate();
+  const seen = new Set(), body = [], central = [];
+  let offset = 0;
+  for (const f of files) {
+    if (typeof f.name !== "string" || !f.name || /[\\/:*?"<>|\u0000-\u001f]/.test(f.name) || /^\.+$/.test(f.name)) throw new Error("zip: 쓸 수 없는 파일 이름 (" + f.name + ")");
+    if (seen.has(f.name.toLowerCase())) throw new Error("zip: 같은 파일 이름이 두 번 (" + f.name + ")");
+    seen.add(f.name.toLowerCase());
+    if (!(f.data instanceof Uint8Array)) throw new Error("zip: 파일 내용이 바이트 배열이 아님 (" + f.name + ")");
+    const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+    const local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true); local.setUint16(6, 0x0800, true);   // 0x0800: the name is UTF-8
+    local.setUint16(10, time, true); local.setUint16(12, date, true); local.setUint32(14, crc, true);
+    local.setUint32(18, size, true); local.setUint32(22, size, true); local.setUint16(26, name.length, true);
+    const entry = new DataView(new ArrayBuffer(46));
+    entry.setUint32(0, 0x02014b50, true); entry.setUint16(4, 20, true); entry.setUint16(6, 20, true); entry.setUint16(8, 0x0800, true);
+    entry.setUint16(12, time, true); entry.setUint16(14, date, true); entry.setUint32(16, crc, true);
+    entry.setUint32(20, size, true); entry.setUint32(24, size, true); entry.setUint16(28, name.length, true); entry.setUint32(42, offset, true);
+    body.push(new Uint8Array(local.buffer), name, f.data);
+    central.push(new Uint8Array(entry.buffer), name);
+    offset += 30 + name.length + size;
+  }
+  const centralSize = central.reduce((n, b) => n + b.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, centralSize, true); end.setUint32(16, offset, true);
+  const out = new Uint8Array(offset + centralSize + 22);
+  let at = 0;
+  for (const b of body.concat(central, [new Uint8Array(end.buffer)])) { out.set(b, at); at += b.length; }
+  return out;
+}

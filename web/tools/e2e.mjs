@@ -2,7 +2,10 @@
 // node tools/e2e.mjs   (headless only: it never touches the real mouse or keyboard)
 import { chromium } from "playwright-core";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { CHROME } from "./browser.mjs";
 
 const url = new URL("../dist/local.html", import.meta.url).href;
@@ -32,7 +35,8 @@ async function open({ downloads = true, storage, phone } = {}) {
       if (window.__refuse) { const code = window.__refuse; window.__refuse = null; refuse(code); }
       const size = typeof data === "string" ? data.length : data.size;
       const head = typeof data === "string" ? data.slice(0, 80) : new TextDecoder("latin1").decode(new Uint8Array(await data.slice(0, 2).arrayBuffer()));
-      window.__saved.push({ filename, size, head, text: typeof data === "string" ? data : null }); return { status: "saved" };
+      const bytes = typeof data !== "string" && size <= 2e6 ? Array.from(new Uint8Array(await data.arrayBuffer())) : null;   // small files whole, for the tests that open them
+      window.__saved.push({ filename, size, head, text: typeof data === "string" ? data : null, bytes }); return { status: "saved" };
     } } : null };
   });
   if (storage) await page.addInitScript(s => { for (const [k, v] of Object.entries(s)) localStorage.setItem(k, v); }, storage);
@@ -512,6 +516,52 @@ await job("분류 규칙 바꾸기: 공개 SOP 예시(Duke)로 모든 초안을 
   assert.equal(await page.locator("#side .ruleset").count(), 0);
   await ctx.close();
   return "기본 규칙으로만 판정 → 클릭 " + used + "번 (더보기 → 분류 규칙)";
+});
+
+await job("내보내기: 완성된 초안 전체를 Word로 한 번에 (.zip), 요약표 포함", async () => {
+  const { page, click, clicks, reset, ctx } = await open();
+  await click("#loadExamples"); await page.waitForSelector(".card");
+  const toastHas = t => page.waitForFunction(x => document.querySelector("#toast").textContent.includes(x), t, { timeout: 20000 });
+  const count = name => text(page, '#side .nav-item:has-text("' + name + '") .n');
+  reset();
+  await click('#side .nav-item:has-text("내보내기")');
+  assert.equal(await text(page, "#exportAll + .muted"), "Word 7건 + 요약표 CSV · 보완 필요 1건 제외");
+  // The viewer may refuse (the person cancels): nothing is saved and no draft changes its state.
+  await page.evaluate(() => { window.__refuse = "declined"; });
+  await click("#exportAll"); await toastHas("저장 취소함");
+  assert.equal(await count("검토 대기"), "0"); assert.equal(await page.evaluate(() => window.__saved.length), 0);
+  reset();
+  await click("#exportAll"); await toastHas("Word 7건 + 요약표 저장함 · 보완 필요 1건 제외 · 검토 대기로 옮김");
+  const used = clicks() + 1;   // the 내보내기 view, then the button
+  const saved = await page.evaluate(() => window.__saved[0]);
+  assert.ok(/^deviation_drafts_\d{4}-\d{2}-\d{2}\.zip$/.test(saved.filename), saved.filename); assert.equal(saved.head, "PK");
+  // Open what was saved the way the receiver would: unzip it, then open one Word file and the table.
+  const dir = mkdtempSync(join(tmpdir(), "dz-")), zip = join(dir, "all.zip");
+  writeFileSync(zip, Buffer.from(saved.bytes));
+  execFileSync("unzip", ["-tq", zip]);
+  const names = execFileSync("unzip", ["-Z1", zip], { encoding: "utf8" }).trim().split("\n");
+  const day = saved.filename.slice(17, 27);
+  assert.deepEqual(names.slice().sort(), ["2201", "2202", "2203", "2301", "2302", "2303", "2304"].map(n => "DEV-2026-" + n + "_draft.docx").concat(["deviation_summary_" + day + ".csv"]).sort(),
+    "seven Word files and the table; the form with something missing (2204) gets no Word file");
+  execFileSync("unzip", ["-q", zip, "-d", dir]);
+  const part = (docx, name) => execFileSync("unzip", ["-p", join(dir, docx), name], { encoding: "utf8" });
+  assert.ok(part("DEV-2026-2201_draft.docx", "word/header1.xml").includes("초안 — 승인 문서 아님"));
+  const body = part("DEV-2026-2201_draft.docx", "word/document.xml");
+  assert.ok(body.includes("Protein A 크로마토그래피 용출 pH 상한 이탈") && body.includes("제안 등급: MAJOR"));
+  assert.ok(body.split('<w:highlight w:val="yellow"/>').length - 1 >= 10, "the judgement blanks are still blank and highlighted");
+  const csv = readFileSync(join(dir, "deviation_summary_" + day + ".csv"), "utf8");
+  assert.ok(csv.startsWith("﻿Deviation 번호,제목,제안 등급,"));
+  assert.equal(csv.trim().split("\r\n").length, 9, "header + all 8 drafts, the incomplete one too");
+  assert.ok(/DEV-2026-2204,.*필수 항목 누락: 발견자/.test(csv), "the table says what the left-out draft still needs");
+  // The seven exported drafts wait for review; the incomplete one stays where it was.
+  assert.equal(await count("검토 대기"), "7"); assert.equal(await count("작성 중"), "1");
+  // Nothing that can be made: the button is off.
+  await click("#moreBtn"); await click('.menu button:has-text("전체 지움")'); await click('.menu button:has-text("한 번 더 누르면 전체 지움")');
+  await click("#side .new"); await page.keyboard.press("Escape"); await page.keyboard.press("Escape");
+  await click('#side .nav-item:has-text("내보내기")');
+  assert.equal(await page.locator("#exportAll").isDisabled(), true);
+  await ctx.close();
+  return "초안마다 내보내기 → Word (건당 클릭 3번, 7건 21번) → 클릭 " + used + "번";
 });
 
 await browser.close();

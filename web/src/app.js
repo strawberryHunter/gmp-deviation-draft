@@ -331,6 +331,23 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
     else ok = await copyText(E.toMarkdown(model), "본문 복사함 · 검토 대기로 옮김");
     if (ok) { d.exported = true; persist(); render(); }
   }
+  // Every draft that can be made, as Word files in one .zip, with the summary table of all drafts beside them.
+  // A draft with something missing gets no file (as when exported alone); the summary says what it still needs.
+  async function exportAll(list) {
+    const ready = list.filter(i => !i.errs.length), skipped = list.length - ready.length;
+    if (!ready.length) { toast("만들 수 있는 초안 없음 · 보완 필요 " + skipped + "건"); return; }
+    if (!window.docx) { toast("Word 변환 모듈 로드 실패 · Markdown 사용"); return; }
+    const names = E.uniqueNames(ready.map(i => E.fileBase(i.form.id) + ".docx")), files = [];
+    for (let k = 0; k < ready.length; k++) {
+      const blob = await window.docx.Packer.toBlob(E.buildDocx(await E.buildModel(ready[k].form, ready[k].hist), window.docx));
+      files.push({ name: names[k], data: new Uint8Array(await blob.arrayBuffer()) });
+    }
+    const day = E.todayISO();
+    files.push({ name: "deviation_summary_" + day + ".csv", data: new TextEncoder().encode(E.toCSV(E.SUMMARY_HEAD, E.summaryRows(list))) });
+    const ok = await saveFile("deviation_drafts_" + day + ".zip", new Blob([E.zipStore(files)], { type: "application/zip" }),
+      "Word " + ready.length + "건 + 요약표 저장함" + (skipped ? " · 보완 필요 " + skipped + "건 제외" : "") + " · 검토 대기로 옮김");
+    if (ok) { ready.forEach(i => { i.d.exported = true; }); persist(); render(); }
+  }
   function exportMenu(anchor, uid) {
     if (blocked(uid)) return;   // no format to choose while nothing can be made: one click to what is missing
     openMenu(anchor, (m, close) => {
@@ -544,12 +561,16 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
             found ? h("span", { class: "sub", text: "발견 " + found }) : null),
           h("td", { class: "num act" }, i.errs.length ? h("button", { type: "button", class: "btn sm", onclick: () => openEditor(i.d.uid) }, "보완")
             : h("button", { type: "button", class: "btn sm", "aria-haspopup": "menu", onclick: e => exportMenu(e.currentTarget, i.d.uid) }, ic("download"), "내보내기"))); })));
-    const name = "deviation_summary_" + E.todayISO();
+    const name = "deviation_summary_" + E.todayISO(), ready = list.filter(i => !i.errs.length).length;
     fill($("#view"), 
       h("div", { class: "title-row" }, h("h1", { text: "내보내기" }), h("span", { class: "count", text: list.length + "건" })),
+      downloads ? h("section", { class: "panel" }, h("h2", { text: "초안 전체" }),
+        h("div", { class: "row" },
+          h("button", { type: "button", class: "btn primary", id: "exportAll", disabled: !ready, onclick: () => exportAll(list) }, ic("download"), "Word 전체 저장 (.zip)"),
+          h("span", { class: "muted", text: "Word " + ready + "건 + 요약표 CSV" + (list.length - ready ? " · 보완 필요 " + (list.length - ready) + "건 제외" : "") }))) : null,
       h("section", { class: "panel" }, h("h2", { text: "요약표" }),
         h("div", { class: "row" },
-          h("button", { type: "button", class: "btn primary", disabled: !list.length, onclick: () => copyText(E.toTSV(E.SUMMARY_HEAD, rows), "표 복사함 · Excel에 붙여넣기") }, ic("table"), "표 복사"),
+          h("button", { type: "button", class: "btn" + (downloads ? "" : " primary"), disabled: !list.length, onclick: () => copyText(E.toTSV(E.SUMMARY_HEAD, rows), "표 복사함 · Excel에 붙여넣기") }, ic("table"), "표 복사"),   // one green button on the screen: saving all when files can be saved, else this
           downloads ? h("button", { type: "button", class: "btn", disabled: !list.length, onclick: () => saveFile(name + ".csv", E.toCSV(E.SUMMARY_HEAD, rows), "CSV 저장함") }, ic("file-down"), "CSV 저장") : null,
           h("span", { class: "chip none", text: "확정 등급·우선순위 없음" }),
           h("span", { class: "muted", text: "복사·CSV " + E.SUMMARY_HEAD.length + "열 · CLI 요약표와 같은 내용" })),
