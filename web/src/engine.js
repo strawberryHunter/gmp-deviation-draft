@@ -5,35 +5,78 @@
 
 export const VERSION = "devdraft-web 0.6.0";
 
-// These rules are config/rules.yaml of this repository, and RULES_FILE.sha256 is that file's SHA-256: the value the CLI prints in a draft.
-// tests/engine.test.mjs compares both with the file (through tests/fixtures/rules.json), so the page and the file cannot drift apart unnoticed.
-export const RULES_FILE = { name: "rules.yaml", sha256: "31e23d7599804a61cc23c868c1b16a9c00ad999b99100b83d88365eeb1c3b63f" };
-export const RULES = {
-  sop_reference: "",
-  required_fields: ["id", "title", "site", "area", "product", "batch", "detected_at", "detected_by", "process_step", "description", "immediate_actions"],
-  required_flags: ["cpp_excursion", "spec_oos", "other_batches_possibly_affected", "sterility_assurance_impacted", "released_product_affected", "data_integrity_concern", "patient_safety_impact", "regulatory_report_required"],
-  levels: [{ id: "critical", label: "CRITICAL" }, { id: "major", label: "MAJOR" }, { id: "minor", label: "MINOR" }],
-  default_level: "minor",
-  default_reason: "상위 등급 트리거에 해당 없음 (보고자 입력 기준) — 검토자 확인 필요",
-  classes: {
-    critical: [
-      { field: "sterility_assurance_impacted", equals: true, reason: "무균 보증에 영향 가능성" },
-      { field: "released_product_affected", equals: true, reason: "출하된 제품에 영향 가능성" },
-      { field: "data_integrity_concern", equals: true, reason: "데이터 완전성(ALCOA+) 우려" },
-      { field: "patient_safety_impact", equals: true, reason: "환자 안전에 영향 가능성" }],
-    major: [
-      { field: "cpp_excursion", equals: true, reason: "주요 공정 변수(CPP) 기준 이탈" },
-      { field: "spec_oos", equals: true, reason: "규격 이탈(OOS) 결과" },
-      { field: "other_batches_possibly_affected", equals: true, reason: "다른 배치 영향 가능성" },
-      { field: "recurrence_count", min: 2, reason: "조회 기간 내 동일 사업장·설비·유형 반복 (2회 이상)" }],
-  },
-  manual_checks: [],
-  recurrence: { window_days: 365, match_on: ["site", "equipment_id", "category"] },
-  categories: ["equipment", "environmental_monitoring", "documentation", "process_parameter", "material", "personnel", "utilities"],
-  ishikawa: [["Man", "작업자 교육 이력, 해당 SOP 숙지 여부, 교대 인수인계"], ["Machine", "설비 정비·교정 이력, 알람 로그, 최근 변경"],
-    ["Method", "SOP 버전, 배치 기록서 지시 내용과 실제 수행 비교"], ["Material", "원자재·소모품 lot, 입고 시험 결과, 보관 조건"],
-    ["Measurement", "계측기 교정 상태, 분석법, 샘플링 위치·시점"], ["Milieu", "환경 모니터링 결과, 차압·온습도 추이, 유틸리티 상태"]],
-};
+// The rule sets of the page. Each is a rules file of this repository as the CLI reads it, and sha256 is that file's SHA-256:
+// the value the CLI prints in a draft. tests/engine.test.mjs compares each with its file (through tests/fixtures/rules*.json),
+// so the page and the files cannot drift apart unnoticed. The page does not read rule files of its own.
+const REQUIRED_FIELDS = ["id", "title", "site", "area", "product", "batch", "detected_at", "detected_by", "process_step", "description", "immediate_actions"];
+const REQUIRED_FLAGS = ["cpp_excursion", "spec_oos", "other_batches_possibly_affected", "sterility_assurance_impacted", "released_product_affected", "data_integrity_concern", "patient_safety_impact", "regulatory_report_required"];
+const CATEGORIES = ["equipment", "environmental_monitoring", "documentation", "process_parameter", "material", "personnel", "utilities"];
+const ISHIKAWA = [["Man", "작업자 교육 이력, 해당 SOP 숙지 여부, 교대 인수인계"], ["Machine", "설비 정비·교정 이력, 알람 로그, 최근 변경"],
+  ["Method", "SOP 버전, 배치 기록서 지시 내용과 실제 수행 비교"], ["Material", "원자재·소모품 lot, 입고 시험 결과, 보관 조건"],
+  ["Measurement", "계측기 교정 상태, 분석법, 샘플링 위치·시점"], ["Milieu", "환경 모니터링 결과, 차압·온습도 추이, 유틸리티 상태"]];
+export const RULE_SETS = [
+  { id: "default", label: "기본 규칙", file: "rules.yaml", sha256: "31e23d7599804a61cc23c868c1b16a9c00ad999b99100b83d88365eeb1c3b63f", rules: {
+    sop_reference: "",
+    required_fields: REQUIRED_FIELDS,
+    required_flags: REQUIRED_FLAGS,
+    levels: [{ id: "critical", label: "CRITICAL" }, { id: "major", label: "MAJOR" }, { id: "minor", label: "MINOR" }],
+    default_level: "minor",
+    default_reason: "상위 등급 트리거에 해당 없음 (보고자 입력 기준) — 검토자 확인 필요",
+    classes: {
+      critical: [
+        { field: "sterility_assurance_impacted", equals: true, reason: "무균 보증에 영향 가능성" },
+        { field: "released_product_affected", equals: true, reason: "출하된 제품에 영향 가능성" },
+        { field: "data_integrity_concern", equals: true, reason: "데이터 완전성(ALCOA+) 우려" },
+        { field: "patient_safety_impact", equals: true, reason: "환자 안전에 영향 가능성" }],
+      major: [
+        { field: "cpp_excursion", equals: true, reason: "주요 공정 변수(CPP) 기준 이탈" },
+        { field: "spec_oos", equals: true, reason: "규격 이탈(OOS) 결과" },
+        { field: "other_batches_possibly_affected", equals: true, reason: "다른 배치 영향 가능성" },
+        { field: "recurrence_count", min: 2, reason: "조회 기간 내 동일 사업장·설비·유형 반복 (2회 이상)" }],
+    },
+    manual_checks: [],
+    recurrence: { window_days: 365, match_on: ["site", "equipment_id", "category"] },
+    categories: CATEGORIES,
+    ishikawa: ISHIKAWA,
+  } },
+  // config/examples/rules_Duke_COMM-PAS-013.yaml: a public SOP without Critical/Major/Minor. The tool proposes only what the SOP defines
+  // (Repeat Deviation, clause 4.26) and leaves the SOP's other criteria to the reviewer as manual checks.
+  { id: "duke", label: "공개 SOP 예시 · Duke COMM-PAS-013", file: "rules_Duke_COMM-PAS-013.yaml", sha256: "e80bad546c19e73189b9f7168ecf1d08592de6776d61293863739b0db5e94215", rules: {
+    sop_reference: "Duke COMM-PAS-013 Rev 01 (eff. 2025-07-01) — 공개 SOP 기반 예시, Duke와 무관",
+    required_fields: REQUIRED_FIELDS,
+    required_flags: REQUIRED_FLAGS,
+    levels: [{ id: "repeat", label: "Repeat Deviation (SOP 4.26)" }, { id: "not_repeat", label: "Repeat Deviation 해당 없음" }],
+    default_level: "not_repeat",
+    default_reason: "최근 2년 내 같은 사업장·설비·유형 deviation 없음 — 검토자 확인 필요 (SOP 4.26)",
+    classes: { repeat: [{ field: "recurrence_count", min: 1, reason: "최근 2년 내 같은 사업장·설비·유형 deviation 재발 (SOP 4.26)" }] },
+    manual_checks: [
+      { clause: "3.4", text: "발견 후 3영업일 안에 deviation이 개시되었는가 (발견 일시와 QMS 개시일 대조)" },
+      { clause: "8.4.2", text: "Severity·Probability·Detectability 각 1–5점과 근거를 COMM-PAS-014 기준으로 기재하고, 세 점수를 곱한 Combined Risk Score 기재 — 도구는 점수를 매기지 않음" },
+      { clause: "8.4.2.1", text: "이번에 일어나지 않았지만 생길 수 있는 관련 결과까지 위험 평가에 포함했는가" },
+      { clause: "8.4.3.1", text: "어느 파라미터라도 5점이면 CAPA를 검토했는가 — CAPA를 열지 않으면 Risk Assessment Summary에 근거 기재" },
+      { clause: "8.8.1.2", text: "Repeat Deviation이면 trend 조사와 이전 조치의 효과성 평가를 포함했는가 (아래 4. 반복성 검토 목록 참고)" },
+      { clause: "3.7.2.1", text: "관련 제품을 quarantine 했는가, 해제는 CQP 승인 후인가" }],
+    history_class_labels: ["critical", "major", "minor"],   // the page shows a history row's grade as written and never warns about it
+    recurrence: { window_days: 730, match_on: ["site", "equipment_id", "category"] },
+    categories: CATEGORIES,
+    ishikawa: ISHIKAWA,
+  } },
+];
+// The rules in force and their file. useRules() swaps the contents in place, so every reader sees the change (the bundled page holds these two objects).
+export const RULES_FILE = {};
+export const RULES = {};
+export function useRules(id) {
+  const set = RULE_SETS.find(x => x.id === id);
+  if (!set) throw new Error("모르는 규칙 묶음: " + id);
+  Object.keys(RULES).forEach(k => delete RULES[k]);
+  Object.assign(RULES, JSON.parse(JSON.stringify(set.rules)));
+  RULES_FILE.name = set.file; RULES_FILE.sha256 = set.sha256;
+  return set;
+}
+export function activeRuleSet() { return RULE_SETS.find(x => x.file === RULES_FILE.name); }
+useRules("default");
+// Colour of a grade chip. The three grades of the default rules keep their own; in any other rule set the default level is grey and the rest orange.
+export function levelTone(id) { return ["critical", "major", "minor"].includes(id) ? id : id === RULES.default_level ? "minor" : "major"; }
 
 export const FIELD_LABEL = { id: "Deviation 번호", title: "제목", category: "유형", site: "사업장", area: "구역/실", product: "제품", batch: "배치",
   equipment_id: "설비 ID", detected_at: "발견 일시", detected_by: "발견자", process_step: "공정 단계", description: "사건 경위",
@@ -434,11 +477,12 @@ export function plan(f) {
 }
 
 /* ---------- the draft as a neutral model: rendered to screen, Markdown and Word ---------- */
-// A run: {t: text, user: entered value?, b: bold?, blank: ☐ placeholder?}
+// A run: {t: text, user: entered value?, b: bold?, blank: ☐ placeholder?, box: ☐ for the reviewer to tick?}
 const U = t => ({ t: String(t), user: true });
 const T = t => ({ t });
 const B = t => ({ t, b: true });
 const BL = () => ({ t: TBD, blank: true, b: true });
+const BOX = () => ({ t: "☐", box: true, b: true });
 export async function buildModel(f, history) {
   const recChecked = !!history && unmatchedKeys(f).length === 0;
   const rec = recChecked ? findRecurrence(f, history) : [];
@@ -476,6 +520,10 @@ export async function buildModel(f, history) {
     B_.push({ k: "ul", items: [[BL(), T(" SOP에 따라 이 답변이 등급에 영향을 주는지 확인")]] });
   }
   B_.push({ k: "p", runs: [T("분류 기준 출처: "), ...(RULES.sop_reference ? [T(RULES.sop_reference)] : [BL(), T(" — 분류 기준 출처 미기재. 사내 SOP와 대조 필요.")])] });
+  if (RULES.manual_checks.length) {
+    B_.push({ k: "p", runs: [B("도구가 판단하지 않은 SOP 기준 — 검토자가 직접 확인"), T(" (해당하면 위 제안 등급과 다를 수 있음):")] });
+    B_.push({ k: "ul", items: RULES.manual_checks.map(m => [BOX(), T(" SOP " + m.clause + ": " + m.text)]) });
+  }
   B_.push({ k: "table", head: ["확인 항목", "보고자 입력"], rows: DRAFT_FLAG_ORDER.map(k => [[T(FLAG_NAME[k])], [T(f.flags[k] ? "예" : "아니오")]]) });
   if (f.flags.regulatory_report_required) {
     B_.push({ k: "p", runs: [B("보고자 입력: 규제기관 신고 대상 가능성 \"예\""), T(" — 도구는 신고 여부를 판단하지 않습니다.")] });
@@ -512,7 +560,7 @@ export async function buildModel(f, history) {
     [[T("반복성 조회 이력")], [history ? U(history.name + " (SHA-256 " + history.sha + ", " + history.rows.length + "행" + (history.synthetic ? ", 합성 데이터" : "") + ")") : T("사용 안 함")]],
     [[T("기준일")], [U(f.today)]], [[T("생성 도구")], [T(VERSION)]]] });
   const blanks = B_.reduce((n, b) => n + canonical(b).split('"blank":true').length - 1, 0);
-  return { blocks: B_, id: f.id, today: f.today, synthetic: f.synthetic, level: c.level, note: c.note, recChecked, recCount: rec.length, blanks, formSha };
+  return { blocks: B_, id: f.id, today: f.today, synthetic: f.synthetic, level: c.level, note: c.note, recChecked, recCount: rec.length, blanks, boxes: RULES.manual_checks.length, formSha };
 }
 
 // Markdown: entered values are escaped so they show exactly as entered (same rules as devdraft.mdtext).
@@ -528,7 +576,7 @@ function mdRuns(runs, multi) {
   return runs.map(r => {
     let t = r.user ? (multi ? r.t.split(/\r?\n/).map(l => mdInline(l.replace(/\s+$/, ""))).join("  \n") : mdInline(r.t.replace(/[\r\n]+/g, " "))) : r.t;
     // The markers hug the words: "**label:** " and not "**label: **", which Markdown shows as literal asterisks.
-    if (r.blank) t = "☐ **작성 필요**"; else if (r.b && t.trim()) t = t.replace(/^(\s*)([\s\S]*?)(\s*)$/, "$1**$2**$3");
+    if (r.blank) t = "☐ **작성 필요**"; else if (r.box) t = "☐"; else if (r.b && t.trim()) t = t.replace(/^(\s*)([\s\S]*?)(\s*)$/, "$1**$2**$3");
     return t;
   }).join("");
 }
@@ -556,7 +604,7 @@ export function buildDocx(m, D) {
     const lines = r.t.split(/\r?\n/);
     // bold only where it is wanted: an explicit "not bold" on a run would switch off the bold of a heading style.
     return lines.map((line, i) => new D.TextRun(Object.assign({ text: line, break: i > 0 ? 1 : 0 }, r.b || r.blank ? { bold: true } : {},
-      r.blank ? { highlight: "yellow" } : {})));
+      r.blank || r.box ? { highlight: "yellow" } : {})));
   });
   const para = (rs, opts) => new D.Paragraph(Object.assign({ children: runs(rs) }, opts || {}));
   // Every table and cell gets its width in twips. Left out, the library writes 100 twips (under 2 mm) per column,

@@ -201,6 +201,64 @@ test("the rules in the page are config/rules.yaml, and a draft records that file
   const md = E.toMarkdown(await E.buildModel(good(), history));
   assert.ok(md.includes("| 분류 규칙 | rules.yaml (SHA-256 " + F.sha256 + ") |"), "the same line as in a CLI draft");
 });
+// Runs fn with another rule set in force and puts the default rules back, whatever happens.
+async function withRules(id, fn) { E.useRules(id); try { return await fn(); } finally { E.useRules("default"); } }
+test("every rule set of the page is its rules file, key by key", () => {
+  assert.deepEqual(E.RULE_SETS.map(x => x.id), ["default", "duke"]);
+  for (const [set, fixture] of [[E.RULE_SETS[0], "rules.json"], [E.RULE_SETS[1], "rules_duke.json"]]) {
+    const F = JSON.parse(readFileSync(here("./fixtures/" + fixture))), R = F.rules;
+    assert.deepEqual([set.file, set.sha256], [F.file, F.sha256], set.id);
+    assert.deepEqual(Object.keys(set.rules).sort(), Object.keys(R).sort(), set.id + ": a key the page does not know, or one it made up");
+    for (const k of Object.keys(R)) {
+      if (k === "recurrence") { assert.deepEqual(set.rules[k], { window_days: R[k].window_days, match_on: R[k].match_on }, set.id); assert.equal(R[k].show_root_cause, false); }
+      else if (k === "ishikawa") assert.deepEqual(set.rules[k], Object.entries(R[k]), set.id);
+      else assert.deepEqual(set.rules[k], R[k], set.id + " " + k);
+    }
+  }
+});
+test("useRules: swaps the rules in force in place, refuses an unknown name", async () => {
+  const rules = E.RULES, file = E.RULES_FILE;
+  assert.equal(E.activeRuleSet().id, "default");
+  await withRules("duke", () => {
+    assert.equal(E.RULES, rules, "the same object, so the page's reference stays valid"); assert.equal(E.RULES_FILE, file);
+    assert.equal(E.activeRuleSet().id, "duke");
+    assert.deepEqual(E.RULES.levels.map(l => l.id), ["repeat", "not_repeat"]);
+    assert.equal(E.RULES.recurrence.window_days, 730);
+    assert.equal(E.RULES_FILE.name, "rules_Duke_COMM-PAS-013.yaml");
+    assert.deepEqual([E.levelTone("repeat"), E.levelTone("not_repeat")], ["major", "minor"], "no red for a rule set without a critical grade");
+    E.RULES.levels.push({ id: "x", label: "x" });   // a change to the rules in force must not reach the stored set
+  });
+  assert.equal(E.activeRuleSet().id, "default");
+  assert.deepEqual(E.RULES.levels.map(l => l.id), ["critical", "major", "minor"]);
+  assert.deepEqual(E.RULE_SETS[1].rules.levels.map(l => l.id), ["repeat", "not_repeat"]);
+  assert.deepEqual(["critical", "major", "minor"].map(E.levelTone), ["critical", "major", "minor"]);
+  assert.throws(() => E.useRules("nope"), /모르는 규칙 묶음: nope/);
+  assert.equal(E.activeRuleSet().id, "default", "a refused name changes nothing");
+});
+test("8 synthetic forms under the Duke example rules: same proposal and the same draft sections 3 and 4 as the CLI", async () => {
+  const DUKE = JSON.parse(readFileSync(here("./fixtures/cli_expected_duke.json")));
+  const lines = t => t.split("\n").map(l => l.trimEnd()).filter(Boolean).join("\n");   // the two writers differ only in blank lines
+  await withRules("duke", async () => {
+    let drafted = 0;
+    for (const { file, form } of FORMS) {
+      const want = DUKE[file], rejected = E.validate(form, history).length > 0;
+      assert.equal(rejected, want.rejected, file);
+      if (rejected) continue;
+      const m = await E.buildModel(form, history), md = E.toMarkdown(m);
+      assert.equal(md.match(/\*\*제안 등급: (.+?)\*\*/)[1], want.grade, file);
+      assert.equal(lines(md.slice(md.indexOf("## 3. 분류 (제안)"), md.indexOf("## 5. 조사 계획"))), lines(want.sections), file);
+      assert.equal(E.proposal(form, history).level, m.level, file);
+      assert.ok(md.includes("| 분류 규칙 | rules_Duke_COMM-PAS-013.yaml (SHA-256 " + E.RULE_SETS[1].sha256 + ") |"), file);
+      assert.equal(md.split("- ☐ SOP ").length - 1, 6, file + ": the six clauses the tool does not judge, each a box for the reviewer");
+      assert.equal(m.boxes, 6); drafted++;
+    }
+    assert.equal(drafted, 7);
+    assert.deepEqual(Object.values(DUKE).filter(w => !w.rejected).map(w => w.grade).sort().filter((g, i, a) => a.indexOf(g) === i),
+      ["Repeat Deviation (SOP 4.26)", "Repeat Deviation 해당 없음"], "both levels occur in the reference");
+  });
+  // Back on the default rules the same form gets its usual proposal: nothing of the other set is left behind.
+  assert.equal((await result(FORMS[0].form)).grade, CLI[FORMS[0].file].grade);
+});
 test("toMarkdown: bold markers hug the words (a space inside them shows as literal asterisks)", async () => {
   for (const { form } of FORMS) {
     if (E.validate(form, history).length) continue;
@@ -237,6 +295,15 @@ test("buildDocx: draft stamp in the header, blanks highlighted, entered text pre
   assert.equal(doc.split('<w:highlight w:val="yellow"/>').length - 1, m.blanks);
   assert.ok(doc.includes("SEC-HPLC 순도 시험 수동 재적분"));
   assert.throws(() => E.buildDocx(m, null), /Word 변환 모듈 없음/);
+  await withRules("duke", async () => {   // the reviewer's check boxes of another rule set are highlighted like the blanks
+    const md = await E.buildModel(good(), history), f2 = join(dir, "d.docx");
+    writeFileSync(f2, await D.Packer.toBuffer(E.buildDocx(md, D)));
+    const x = execFileSync("unzip", ["-p", f2, "word/document.xml"], { encoding: "utf8" });
+    assert.equal(md.boxes, 6);
+    assert.equal(x.split('<w:highlight w:val="yellow"/>').length - 1, md.blanks + md.boxes);
+    assert.ok(x.includes("SOP 8.4.2: Severity"));
+  });
+  assert.equal(m.boxes, 0);
   // Fonts and headings as in the CLI's Word file, not the library's blue defaults.
   const styles = xml("word/styles.xml"), style = id => styles.match(new RegExp('<w:style [^>]*w:styleId="' + id + '"[\\s\\S]*?</w:style>'))[0];
   const fonts = styles.match(/<w:rFonts[^>]*>/g);

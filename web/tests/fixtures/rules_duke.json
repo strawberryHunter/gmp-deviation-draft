@@ -1,0 +1,108 @@
+{
+ "file": "rules_Duke_COMM-PAS-013.yaml",
+ "sha256": "e80bad546c19e73189b9f7168ecf1d08592de6776d61293863739b0db5e94215",
+ "rules": {
+  "required_fields": [
+   "id",
+   "title",
+   "site",
+   "area",
+   "product",
+   "batch",
+   "detected_at",
+   "detected_by",
+   "process_step",
+   "description",
+   "immediate_actions"
+  ],
+  "required_flags": [
+   "cpp_excursion",
+   "spec_oos",
+   "other_batches_possibly_affected",
+   "sterility_assurance_impacted",
+   "released_product_affected",
+   "data_integrity_concern",
+   "patient_safety_impact",
+   "regulatory_report_required"
+  ],
+  "sop_reference": "Duke COMM-PAS-013 Rev 01 (eff. 2025-07-01) — 공개 SOP 기반 예시, Duke와 무관",
+  "levels": [
+   {
+    "id": "repeat",
+    "label": "Repeat Deviation (SOP 4.26)"
+   },
+   {
+    "id": "not_repeat",
+    "label": "Repeat Deviation 해당 없음"
+   }
+  ],
+  "default_level": "not_repeat",
+  "default_reason": "최근 2년 내 같은 사업장·설비·유형 deviation 없음 — 검토자 확인 필요 (SOP 4.26)",
+  "classes": {
+   "repeat": [
+    {
+     "field": "recurrence_count",
+     "min": 1,
+     "reason": "최근 2년 내 같은 사업장·설비·유형 deviation 재발 (SOP 4.26)"
+    }
+   ]
+  },
+  "manual_checks": [
+   {
+    "clause": "3.4",
+    "text": "발견 후 3영업일 안에 deviation이 개시되었는가 (발견 일시와 QMS 개시일 대조)"
+   },
+   {
+    "clause": "8.4.2",
+    "text": "Severity·Probability·Detectability 각 1–5점과 근거를 COMM-PAS-014 기준으로 기재하고, 세 점수를 곱한 Combined Risk Score 기재 — 도구는 점수를 매기지 않음"
+   },
+   {
+    "clause": "8.4.2.1",
+    "text": "이번에 일어나지 않았지만 생길 수 있는 관련 결과까지 위험 평가에 포함했는가"
+   },
+   {
+    "clause": "8.4.3.1",
+    "text": "어느 파라미터라도 5점이면 CAPA를 검토했는가 — CAPA를 열지 않으면 Risk Assessment Summary에 근거 기재"
+   },
+   {
+    "clause": "8.8.1.2",
+    "text": "Repeat Deviation이면 trend 조사와 이전 조치의 효과성 평가를 포함했는가 (아래 4. 반복성 검토 목록 참고)"
+   },
+   {
+    "clause": "3.7.2.1",
+    "text": "관련 제품을 quarantine 했는가, 해제는 CQP 승인 후인가"
+   }
+  ],
+  "history_class_labels": [
+   "critical",
+   "major",
+   "minor"
+  ],
+  "recurrence": {
+   "window_days": 730,
+   "match_on": [
+    "site",
+    "equipment_id",
+    "category"
+   ],
+   "show_root_cause": false
+  },
+  "categories": [
+   "equipment",
+   "environmental_monitoring",
+   "documentation",
+   "process_parameter",
+   "material",
+   "personnel",
+   "utilities"
+  ],
+  "ishikawa": {
+   "Man": "작업자 교육 이력, 해당 SOP 숙지 여부, 교대 인수인계",
+   "Machine": "설비 정비·교정 이력, 알람 로그, 최근 변경",
+   "Method": "SOP 버전, 배치 기록서 지시 내용과 실제 수행 비교",
+   "Material": "원자재·소모품 lot, 입고 시험 결과, 보관 조건",
+   "Measurement": "계측기 교정 상태, 분석법, 샘플링 위치·시점",
+   "Milieu": "환경 모니터링 결과, 차압·온습도 추이, 유틸리티 상태"
+  }
+ }
+}

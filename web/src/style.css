@@ -79,6 +79,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); }
 .side .new { width: 100%; color: var(--brand); border-color: var(--brand); background: var(--card); }
 .side .new:hover { background: var(--brand-tint); }
 .side h2 { font-size: 13px; font-weight: 400; color: var(--muted); padding: 14px 12px 2px; }
+.side .ruleset { font-size: 13px; font-weight: 700; color: var(--ink); padding: 0 12px 4px; display: flex; flex-wrap: wrap; gap: 0 6px; }
+.side .ruleset span { white-space: nowrap; }
 .nav { display: grid; gap: 0; }
 .nav-item { position: relative; display: flex; align-items: center; gap: 8px; width: 100%; height: 32px; padding: 0 12px; border: 0; border-radius: var(--r-ctl);
   background: none; text-align: left; cursor: pointer; }
@@ -136,6 +138,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); }
 .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .filters select { width: auto; height: 40px; }
 .filters .sort { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+/* Grade names of another rule set can be long: the buttons wrap inside the box instead of widening the page.
+   Every button carries a top and left line and is pulled 1px up and left, so the outer ones hide under the box edge. */
+.filters .seg { flex-wrap: wrap; max-width: 100%; }
+.filters .seg button { flex: 1 1 auto; margin: -1px 0 0 -1px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-card); padding: 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
 .card:hover { border-color: var(--brand); }
@@ -149,7 +155,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); }
 .card .line { font-size: 13px; color: var(--muted); }
 .card .line b.done { color: var(--muted); }
 .card .line b.late { color: var(--crit); } .card .line b.soon { color: var(--major); } .card .line b { color: var(--ink); }
-.card .foot { display: flex; align-items: center; gap: 10px; }
+.card .foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }   /* a long grade name takes the first line; the bar and its count move under it together */
+.card .foot .meter { flex: 1 1 130px; min-width: 130px; display: flex; align-items: center; gap: 10px; }
+.card .foot .small { white-space: nowrap; }
 .bar { flex: 1 1 60px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--bright); border-radius: 3px; }
 .card .saved { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
@@ -250,6 +258,8 @@ kbd { font-family: var(--mono); font-size: 13px; border: 1px solid var(--line-st
 .menu .mrow { cursor: default; justify-content: space-between; }
 .menu .mrow > span:first-child { white-space: nowrap; }
 .menu .mrow input[type=number] { width: 72px; height: 32px; }
+.menu .mrow.stack { flex-direction: column; align-items: stretch; gap: 4px; padding: 6px 10px; }
+.menu .mrow.stack select { width: 100%; height: 36px; }
 .menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100%; }
 .menu .note { font-size: 13px; color: var(--muted); padding: 4px 10px; }
 .switch { position: relative; width: 40px; height: 24px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--bg); cursor: pointer; padding: 0; flex: 0 0 auto; }

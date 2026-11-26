@@ -1,7 +1,7 @@
 # HANDOFF — 현재 상태와 다음 할 일
 
 > 작업이 끝날 때마다 갱신합니다 (규칙: [`CLAUDE.md`](../CLAUDE.md)).
-> **마지막 갱신: 2026-11-26** · 기준 브랜치 `main` · 테스트 323개 통과 + 웹 화면 검사(엔진 42 · 실제 입력 18 · 화면) · **CI 통과 시 Claude가 자동 머지** (CI 6개: Ubuntu Python 3.10–3.13, Windows 3.12, web) · 도구 버전 `devdraft 0.5.0`
+> **마지막 갱신: 2026-11-26** · 기준 브랜치 `main` · 테스트 323개 통과 + 웹 화면 검사(엔진 45 · 실제 입력 19 · 화면) · **CI 통과 시 Claude가 자동 머지** (CI 6개: Ubuntu Python 3.10–3.13, Windows 3.12, web) · 도구 버전 `devdraft 0.5.0`
 >
 > **프로젝트 목적: 입사 포트폴리오.** 실제 회사 도입이 아니므로 회사 SOP·사내 적격성 평가는 범위 밖입니다. 우선순위는 "검토자가 처음 1분에 보고 이해하는가"입니다.
 
@@ -81,6 +81,7 @@
 | [#34](https://github.com/strawberryHunter/gmp-deviation-draft/pull/34) | 웹: 초안을 CLI 양식(YAML)으로 내보내기 (복사, `번호.yaml.txt` 저장). 내보낸 파일을 화면과 CLI가 같은 값으로 읽는지, CLI 결과가 원본과 같은지 테스트 |
 | [#35](https://github.com/strawberryHunter/gmp-deviation-draft/pull/35) | README: 화면과 CLI를 대조하다 찾은 결함 3건을 결함 표에 추가 (가짜 반복 건, Markdown 별표·규칙 해시, Word 표 폭), 브라우저 화면 스크린샷을 지금 화면으로 교체 (알림 문구가 카드를 가리지 않게 캡처) |
 | [#36](https://github.com/strawberryHunter/gmp-deviation-draft/pull/36) | CLI Word 초안을 A4·여백 1인치로 (웹 화면의 Word와 같은 용지), CLI·웹 Word 표의 행이 쪽 사이에서 나뉘지 않게. 저장소 미리보기(PDF·이미지)를 Microsoft Word가 그린 것으로 교체, `scripts/make_showcase.py --word` |
+| [#37](https://github.com/strawberryHunter/gmp-deviation-draft/pull/37) | 웹: 분류 규칙 고르기 (기본 규칙 · 공개 SOP 예시 Duke). 규칙 두 벌을 파일과 키 단위로, 초안의 분류·반복성 절을 CLI 출력과 줄 단위로 대조. 긴 등급 이름이 카드·필터에서 줄을 바꿈 |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
@@ -131,8 +132,7 @@ CLAUDE.md와 docs/HANDOFF.md를 읽고, "다음 개선 후보" 중 맨 위 항�
 
 **다음 개선 후보** (Claude가 끝낼 때마다 이 목록을 갱신, 포트폴리오 기준 우선순위)
 
-1. **웹: 다른 규칙 파일 선택** — 지금은 기본 rules.yaml만 내장. Duke 예시 규칙을 고를 수 있게 (CLI 기준값에 Duke 결과 추가).
-2. **웹: 폰 화면의 숫자 줄이 4개 + 1개로 줄바꿈** — 보기만 불편, 기능 문제 없음.
+1. **웹: 폰 화면의 숫자 줄이 4개 + 1개로 줄바꿈** — 보기만 불편, 기능 문제 없음.
 
 ## 5. 참고 문서
 - 사용법: [`docs/USAGE.md`](USAGE.md)
