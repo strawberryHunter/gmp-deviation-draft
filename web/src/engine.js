@@ -529,14 +529,21 @@ export function toMarkdown(m) {
   return out.join("\n\n") + "\n\n---\n*이 초안은 화면 입력으로부터 자동 생성되었습니다. 생성 도구는 사실을 재배열할 뿐, 조사 결과나 결론을 생성하지 않습니다.*\n";
 }
 // Word document object from the model. D is the docx library (window.docx in the page).
+// Width of the text area in twips: A4 (11906) minus the library's default 1-inch margins (1440 each). A test reads both back from the file.
+export const DOCX_TEXT_WIDTH = 11906 - 2 * 1440;
 export function buildDocx(m, D) {
   if (!D) throw new Error("Word 변환 모듈 없음");
   const runs = (rs) => rs.flatMap(r => {
     const lines = r.t.split(/\r?\n/);
-    return lines.map((line, i) => new D.TextRun(Object.assign({ text: line, bold: !!(r.b || r.blank), break: i > 0 ? 1 : 0 },
+    // bold only where it is wanted: an explicit "not bold" on a run would switch off the bold of a heading style.
+    return lines.map((line, i) => new D.TextRun(Object.assign({ text: line, break: i > 0 ? 1 : 0 }, r.b || r.blank ? { bold: true } : {},
       r.blank ? { highlight: "yellow" } : {})));
   });
   const para = (rs, opts) => new D.Paragraph(Object.assign({ children: runs(rs) }, opts || {}));
+  // Every table and cell gets its width in twips. Left out, the library writes 100 twips (under 2 mm) per column,
+  // and a viewer that draws the table as written (seen in macOS Quick Look) shows one letter per line.
+  const full = { size: DOCX_TEXT_WIDTH, type: D.WidthType.DXA };
+  const split = n => Array(n).fill(Math.floor(DOCX_TEXT_WIDTH / n));
   const kids = [];
   m.blocks.forEach(b => {
     if (b.k === "h1") kids.push(para(b.runs, { heading: D.HeadingLevel.HEADING_1 }));
@@ -544,18 +551,24 @@ export function buildDocx(m, D) {
     else if (b.k === "h3") kids.push(para(b.runs, { heading: D.HeadingLevel.HEADING_3 }));
     else if (b.k === "p" || b.k === "pre") kids.push(para(b.runs));
     else if (b.k === "ul") b.items.forEach(i => kids.push(para(i, { bullet: { level: 0 } })));
-    else if (b.k === "banner") kids.push(new D.Table({ width: { size: 100, type: D.WidthType.PERCENTAGE },
-      rows: [new D.TableRow({ children: [new D.TableCell({ shading: { fill: "FFF2CC", type: D.ShadingType.CLEAR, color: "auto" },
+    else if (b.k === "banner") kids.push(new D.Table({ width: full, columnWidths: [DOCX_TEXT_WIDTH],
+      rows: [new D.TableRow({ children: [new D.TableCell({ width: full, shading: { fill: "FFF2CC", type: D.ShadingType.CLEAR, color: "auto" },
         children: b.lines.map(l => para(l)) })] })] }), new D.Paragraph(""));
     else if (b.k === "table") {
-      const cell = (rs, head) => new D.TableCell({ children: [para(head ? [B(rs)] : rs)], shading: head ? { fill: "D9D9D9", type: D.ShadingType.CLEAR, color: "auto" } : undefined });
-      kids.push(new D.Table({ width: { size: 100, type: D.WidthType.PERCENTAGE }, rows:
+      const widths = split(b.head.length);
+      const cell = (rs, head) => new D.TableCell({ width: { size: widths[0], type: D.WidthType.DXA }, children: [para(head ? [B(rs)] : rs)], shading: head ? { fill: "D9D9D9", type: D.ShadingType.CLEAR, color: "auto" } : undefined });
+      kids.push(new D.Table({ width: full, columnWidths: widths, rows:
         [new D.TableRow({ tableHeader: true, children: b.head.map(h => cell(h, true)) })].concat(b.rows.map(r => new D.TableRow({ children: r.map(c => cell(c)) }))) }));
     }
   });
   const band = (m.synthetic ? "합성 데이터 — 실제 문서 아님 · " : "") + "초안 — 승인 문서 아님 · " + m.id + " · 초안 생성일 " + m.today;
+  // The look of the CLI's Word file: Arial for Latin letters, Malgun Gothic for Korean, black bold headings (30/24/22 half-points).
+  // Left alone, the library gives blue headings and one font name for every script.
+  const font = { ascii: "Arial", hAnsi: "Arial", cs: "Arial", eastAsia: "Malgun Gothic" };
+  const heading = size => ({ run: { font, size, bold: true, color: "000000" } });
   return new D.Document({
-    styles: { default: { document: { run: { font: "Malgun Gothic", size: 20 } } } },
+    styles: { default: { document: { run: { font, size: 20 } }, heading1: heading(30), heading2: heading(24), heading3: heading(22) },
+      paragraphStyles: [{ id: "Normal", name: "Normal", quickFormat: true, run: { font, size: 20 } }] },   // the heading styles are based on Normal; the library writes no such style unless asked
     sections: [{
       headers: { default: new D.Header({ children: [new D.Paragraph({ children: [new D.TextRun({ text: band, color: "C00000", bold: true, size: 18 })] })] }) },
       footers: { default: new D.Footer({ children: [new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [

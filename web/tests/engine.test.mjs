@@ -237,6 +237,31 @@ test("buildDocx: draft stamp in the header, blanks highlighted, entered text pre
   assert.equal(doc.split('<w:highlight w:val="yellow"/>').length - 1, m.blanks);
   assert.ok(doc.includes("SEC-HPLC 순도 시험 수동 재적분"));
   assert.throws(() => E.buildDocx(m, null), /Word 변환 모듈 없음/);
+  // Fonts and headings as in the CLI's Word file, not the library's blue defaults.
+  const styles = xml("word/styles.xml"), style = id => styles.match(new RegExp('<w:style [^>]*w:styleId="' + id + '"[\\s\\S]*?</w:style>'))[0];
+  const fonts = styles.match(/<w:rFonts[^>]*>/g);
+  assert.ok(fonts.length >= 5, "document default, Normal and three headings");
+  assert.ok(style("Normal").includes('w:eastAsia="Malgun Gothic"'));
+  assert.ok(!doc.includes('<w:b w:val="false"/>'), "no run switches bold off (it would undo the heading style)");
+  assert.ok(/<w:pStyle w:val="Heading1"\/><\/w:pPr><w:r><w:t[^>]*>Deviation 보고서 초안/.test(doc), "heading text carries no formatting of its own");
+  for (const f of fonts) for (const a of ['w:ascii="Arial"', 'w:hAnsi="Arial"', 'w:cs="Arial"', 'w:eastAsia="Malgun Gothic"']) assert.ok(f.includes(a), "Arial for Latin, Malgun Gothic for Korean: " + f);
+  for (const [id, size] of [["Heading1", 30], ["Heading2", 24], ["Heading3", 22]]) {
+    const s = style(id);
+    assert.ok(s.includes("<w:b/>") && s.includes('<w:color w:val="000000"/>') && s.includes('<w:sz w:val="' + size + '"/>'), id + ": " + s);
+  }
+  // Tables carry real widths (the library's default of 100 twips per column draws as one letter per line outside Word).
+  const page = doc.match(/<w:pgSz w:w="(\d+)"[^>]*\/><w:pgMar[^>]*w:right="(\d+)"[^>]*w:left="(\d+)"/);
+  assert.equal(Number(page[1]) - Number(page[2]) - Number(page[3]), E.DOCX_TEXT_WIDTH, "text width of the page the library writes");
+  const tables = doc.match(/<w:tbl>[\s\S]*?<\/w:tbl>/g);
+  assert.ok(tables.length >= 6, "tables found: " + tables.length);
+  for (const t of tables) {
+    const grid = [...t.matchAll(/<w:gridCol w:w="(\d+)"\/>/g)].map(x => Number(x[1])), sum = grid.reduce((a, b) => a + b, 0);
+    assert.ok(grid.every(w => w >= 2000), "column widths " + grid.join(","));
+    assert.ok(sum <= E.DOCX_TEXT_WIDTH && sum > E.DOCX_TEXT_WIDTH - grid.length, "columns fill the text width: " + sum);
+    assert.ok(t.includes('<w:tblW w:type="dxa" w:w="' + E.DOCX_TEXT_WIDTH + '"/>'));
+    const cells = t.split("<w:tc>").length - 1, sized = [...t.matchAll(/<w:tcW w:type="dxa" w:w="(\d+)"\/>/g)].map(x => Number(x[1]));
+    assert.equal(sized.length, cells, "every cell has a width"); assert.ok(sized.every(w => w === grid[0]));
+  }
 });
 
 /* ---------- workspace calculations ---------- */
