@@ -572,13 +572,14 @@ export function buildDocx(m, D) {
     else if (b.k === "p" || b.k === "pre") kids.push(para(b.runs));
     else if (b.k === "ul") b.items.forEach(i => kids.push(para(i, { bullet: { level: 0 } })));
     else if (b.k === "banner") kids.push(new D.Table({ width: full, columnWidths: [DOCX_TEXT_WIDTH], margins: pad,
-      rows: [new D.TableRow({ children: [new D.TableCell({ width: full, shading: { fill: "FFF2CC", type: D.ShadingType.CLEAR, color: "auto" },
+      rows: [new D.TableRow({ cantSplit: true, children: [new D.TableCell({ width: full, shading: { fill: "FFF2CC", type: D.ShadingType.CLEAR, color: "auto" },
         children: b.lines.map(l => para(l)) })] })] }), new D.Paragraph(""));
     else if (b.k === "table") {
       const widths = split(b.head.length);
       const cell = (rs, head) => new D.TableCell({ width: { size: widths[0], type: D.WidthType.DXA }, children: [para(head ? [B(rs)] : rs)], shading: head ? { fill: "D9D9D9", type: D.ShadingType.CLEAR, color: "auto" } : undefined });
       kids.push(new D.Table({ width: full, columnWidths: widths, margins: pad, rows:
-        [new D.TableRow({ tableHeader: true, children: b.head.map(h => cell(h, true)) })].concat(b.rows.map(r => new D.TableRow({ children: r.map(c => cell(c)) }))) }));
+        // cantSplit: Word moves a whole row to the next page instead of breaking a cell mid-sentence (the CLI's file does the same).
+        [new D.TableRow({ tableHeader: true, cantSplit: true, children: b.head.map(h => cell(h, true)) })].concat(b.rows.map(r => new D.TableRow({ cantSplit: true, children: r.map(c => cell(c)) }))) }));
     }
   });
   const band = (m.synthetic ? "합성 데이터 — 실제 문서 아님 · " : "") + "초안 — 승인 문서 아님 · " + m.id + " · 초안 생성일 " + m.today;

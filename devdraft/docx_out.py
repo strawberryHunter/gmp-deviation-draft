@@ -6,7 +6,8 @@ finished document and cannot overlook a blank that still needs writing:
 - every page carries a "draft — not an approved document" header;
 - every "작성 필요" blank keeps its ☐ and is bold + highlighted;
 - the warning banner is a shaded box, not body text;
-- table header rows repeat on each page.
+- table header rows repeat on each page, and no row is cut in two by a page break;
+- the sheet is A4 with 1-inch margins, the same as the Word file of the browser screen.
 """
 from __future__ import annotations
 
@@ -18,11 +19,14 @@ from docx.enum.section import WD_ORIENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_COLOR_INDEX
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Pt, RGBColor
+from docx.shared import Pt, RGBColor, Twips
 
 FONT = "Arial"
 FONT_KO = "Malgun Gothic"  # Arial has no Hangul; Word would otherwise substitute per machine
 BLANK = "작성 필요"
+# A4 (210 x 297 mm) and 1-inch (25.4 mm) margins, in twips (1/1440 inch): web/src/engine.js writes the same sheet.
+# The template of the library is US Letter with 1.25-inch side margins.
+PAGE_W, PAGE_H, MARGIN = 11906, 16838, 1440
 
 # **bold**, `code`, *italic* — in that order of precedence
 _INLINE = re.compile(r"(\*\*.+?\*\*|`[^`]+`|(?<!\*)\*(?!\*).+?(?<!\*)\*(?!\*))")
@@ -112,6 +116,20 @@ def _repeat_header(row) -> None:
     trpr.append(h)
 
 
+def _keep_together(row) -> None:
+    """Word moves the whole row to the next page instead of breaking a cell mid-sentence."""
+    row._tr.get_or_add_trPr().append(OxmlElement("w:cantSplit"))
+
+
+def _page(doc: Document, landscape: bool) -> None:
+    sec = doc.sections[0]
+    sec.page_width, sec.page_height = Twips(PAGE_W), Twips(PAGE_H)
+    sec.top_margin = sec.bottom_margin = sec.left_margin = sec.right_margin = Twips(MARGIN)
+    if landscape:  # wide tables (batch summary) need the width
+        sec.orientation = WD_ORIENT.LANDSCAPE
+        sec.page_width, sec.page_height = sec.page_height, sec.page_width
+
+
 def _field(par, instr: str) -> None:
     for kind, text in (("begin", None), (None, instr), ("separate", None), (None, "1"), ("end", None)):
         run = par.add_run()
@@ -154,6 +172,7 @@ def _table(doc: Document, rows: list[list[str]]) -> None:
     t.style = "Table Grid"
     for n, r in enumerate(rows):
         row = t.add_row()
+        _keep_together(row)
         if n == 0:
             _repeat_header(row)
         for c, val in enumerate(r + [""] * (width - len(r))):
@@ -168,6 +187,7 @@ def _table(doc: Document, rows: list[list[str]]) -> None:
 def _banner(doc: Document, lines: list[str]) -> None:
     t = doc.add_table(rows=1, cols=1)
     t.style = "Table Grid"
+    _keep_together(t.rows[0])
     cell = t.rows[0].cells[0]
     _shade(cell, "FFF2CC")
     par = cell.paragraphs[0]
@@ -218,10 +238,7 @@ def markdown_to_docx(md: str, out_path: str | Path, *, label: str | None = None,
     md = _protect(md)
     doc = Document()
     _style(doc)
-    if landscape:  # wide tables (batch summary) need the width
-        sec = doc.sections[0]
-        sec.orientation = WD_ORIENT.LANDSCAPE
-        sec.page_width, sec.page_height = sec.page_height, sec.page_width
+    _page(doc, landscape)  # before any table: a table takes its width from the page
     if label is None:
         title = re.search(r"^# .*?(\S+)\s*$", md, flags=re.M)
         label = title.group(1) if title else ""

@@ -263,6 +263,8 @@ test("buildDocx: draft stamp in the header, blanks highlighted, entered text pre
     for (const [side, w] of [["top", 40], ["bottom", 40], ["left", 100], ["right", 100]]) assert.ok(mar.includes('<w:' + side + ' w:type="dxa" w:w="' + w + '"/>'), "cell padding " + side + ": " + mar);
     const cells = t.split("<w:tc>").length - 1, sized = [...t.matchAll(/<w:tcW w:type="dxa" w:w="(\d+)"\/>/g)].map(x => Number(x[1]));
     assert.equal(sized.length, cells, "every cell has a width"); assert.ok(sized.every(w => w === grid[0]));
+    const rows = t.match(/<w:tr>[\s\S]*?<\/w:tr>/g);
+    assert.ok(rows.length >= 1 && rows.every(r => /^<w:tr><w:trPr>(?:(?!<\/w:trPr>).)*<w:cantSplit\/>/.test(r)), "no row is split across two pages");
   }
 });
 

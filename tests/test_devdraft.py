@@ -939,6 +939,33 @@ def test_docx_table_headers_repeat_and_are_shaded(sop_docx):
         assert first.cells[0]._tc.tcPr.find(_qn("w:shd")) is not None
 
 
+def _twips(length):
+    return round(length / 635)  # python-docx keeps lengths in EMU; 635 EMU = 1 twip (1/1440 inch)
+
+
+def test_docx_page_is_a4_with_one_inch_margins(sop_docx):
+    """The same sheet as the Word file of the browser screen (web/src/engine.js DOCX_TEXT_WIDTH):
+    A4 210 x 297 mm = 11906 x 16838 twips, margins 1440 twips (25.4 mm) on every side."""
+    _, doc = sop_docx
+    sec = doc.sections[0]
+    assert (_twips(sec.page_width), _twips(sec.page_height)) == (11906, 16838)
+    assert [_twips(m) for m in (sec.top_margin, sec.bottom_margin, sec.left_margin, sec.right_margin)] == [1440] * 4
+    text_width = 11906 - 2 * 1440
+    engine = (ROOT / "web/src/engine.js").read_text(encoding="utf-8")
+    assert "export const DOCX_TEXT_WIDTH = 11906 - 2 * 1440;" in engine
+    for t in doc.tables:  # tables are laid out for that width (each column is rounded to a whole twip)
+        grid = [int(c.get(_qn("w:w"))) for c in t._tbl.tblGrid.findall(_qn("w:gridCol"))]
+        assert abs(sum(grid) - text_width) < len(grid), grid
+
+
+def test_docx_table_rows_are_not_split_across_pages(sop_docx):
+    _, doc = sop_docx
+    rows = [r for t in doc.tables for r in t.rows]
+    assert len(rows) > 20
+    for r in rows:
+        assert r._tr.trPr is not None and r._tr.trPr.find(_qn("w:cantSplit")) is not None, [c.text for c in r.cells]
+
+
 def test_docx_has_no_raw_markdown(sop_docx):
     _, doc = sop_docx
     for p in _all_paragraphs(doc):
@@ -1298,7 +1325,7 @@ def test_showcase_cases_cover_each_risk_path(name, level, reason):
 
 
 def test_showcase_outputs_are_up_to_date_and_complete(tmp_path):
-    """Regenerate with: python scripts/make_showcase.py (needs LibreOffice)."""
+    """Regenerate with: python scripts/make_showcase.py --word (Microsoft Word on macOS), or without --word (LibreOffice)."""
     run_batch(sorted(SHOWCASE.glob("*.yaml")), ROOT / "config/rules.yaml",
               ROOT / "data/synthetic/history.csv", tmp_path, TODAY, want_summary=True)
     produced = sorted(tmp_path.glob("*.md"))
@@ -1309,6 +1336,57 @@ def test_showcase_outputs_are_up_to_date_and_complete(tmp_path):
     for yml in SHOWCASE.glob("*.yaml"):
         assert (SHOWCASE_OUT / f"{yml.stem}_draft.pdf").stat().st_size > 10_000
         assert (SHOWCASE_OUT / f"{yml.stem}_p1.png").stat().st_size > 10_000
+
+
+def _png_size(path):
+    data = path.read_bytes()[:24]
+    assert data[:8] == b"\x89PNG\r\n\x1a\n" and data[12:16] == b"IHDR", path
+    return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+
+
+def test_showcase_page_images_are_a4():
+    """The README shows these images: they must be pictures of the sheet the tool writes now (A4, 210 x 297 mm)."""
+    drafts = sorted(SHOWCASE_OUT.glob("DEV-*_p*.png"))
+    summary = sorted(SHOWCASE_OUT.glob("_summary_*_p*.png"))
+    assert len(drafts) >= 8 and summary
+    for png in drafts:
+        w, h = _png_size(png)
+        assert abs(h / w - 297 / 210) < 0.01, f"{png.name}: {w} x {h} is not an A4 page"
+    for png in summary:
+        w, h = _png_size(png)
+        assert abs(w / h - 297 / 210) < 0.01, f"{png.name}: {w} x {h} is not an A4 page on its side"
+
+
+def _showcase_script():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("make_showcase", ROOT / "scripts/make_showcase.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_showcase_script_names_page_images_like_the_readme_links():
+    mod = _showcase_script()
+    assert mod.page_image_name("DEV-2026-2301_draft", 1) == "DEV-2026-2301_p1.png"
+    assert mod.page_image_name("_summary_2026-11-24", 2) == "_summary_2026-11-24_p2.png"
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "sample_output/showcase/" + mod.page_image_name("DEV-2026-2301_draft", 1) in text
+
+
+def test_showcase_script_says_what_is_missing(tmp_path, monkeypatch):
+    """Without the program that draws the pages, the script stops with the name of what is needed
+    and writes nothing (it does not leave half a showcase)."""
+    mod = _showcase_script()
+    monkeypatch.setattr(mod.sys, "platform", "linux")
+    with pytest.raises(SystemExit, match="--word 는 Microsoft Word가 설치된 macOS"):
+        mod.word_to_pdf([tmp_path / "a.docx"], tmp_path)
+    monkeypatch.setattr(mod.shutil, "which", lambda name: None)
+    with pytest.raises(SystemExit, match="soffice 가 필요합니다"):
+        mod.soffice_to_pdf([tmp_path / "a.docx"], tmp_path)
+    monkeypatch.setitem(sys.modules, "pymupdf", None)  # import pymupdf -> ImportError
+    with pytest.raises(SystemExit, match="pdftoppm .* 또는 PyMuPDF"):
+        mod.pdf_to_pngs(tmp_path / "a.pdf", tmp_path)
+    assert not list(tmp_path.iterdir())
 
 
 def test_readme_shows_showcase_images():
@@ -1332,7 +1410,8 @@ def test_summary_docx_written_with_summary_header(tmp_path):
     assert any(r[0] == "DEV-2026-2204.yaml" and "detected_by" in r[1] for r in rows)
     assert all("**" not in c and "`" not in c for r in rows for c in r)
     sec = doc.sections[0]
-    assert sec.page_width > sec.page_height  # landscape for the wide table
+    assert (_twips(sec.page_width), _twips(sec.page_height)) == (16838, 11906)  # A4 on its side for the wide table
+    assert all(r._tr.trPr.find(_qn("w:cantSplit")) is not None for t in doc.tables for r in t.rows)
 
 
 def test_summary_docx_only_with_docx_flag(tmp_path):
