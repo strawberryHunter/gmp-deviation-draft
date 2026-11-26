@@ -1,7 +1,7 @@
 # HANDOFF — 현재 상태와 다음 할 일
 
 > 작업이 끝날 때마다 갱신합니다 (규칙: [`CLAUDE.md`](../CLAUDE.md)).
-> **마지막 갱신: 2026-11-26** · 기준 브랜치 `main` · 테스트 317개 통과 + 웹 화면 검사(엔진 40 · 실제 입력 17 · 화면) · **CI 통과 시 Claude가 자동 머지** (CI 6개: Ubuntu Python 3.10–3.13, Windows 3.12, web) · 도구 버전 `devdraft 0.5.0`
+> **마지막 갱신: 2026-11-26** · 기준 브랜치 `main` · 테스트 318개 통과 + 웹 화면 검사(엔진 40 · 실제 입력 17 · 화면) · **CI 통과 시 Claude가 자동 머지** (CI 6개: Ubuntu Python 3.10–3.13, Windows 3.12, web) · 도구 버전 `devdraft 0.5.0`
 >
 > **프로젝트 목적: 입사 포트폴리오.** 실제 회사 도입이 아니므로 회사 SOP·사내 적격성 평가는 범위 밖입니다. 우선순위는 "검토자가 처음 1분에 보고 이해하는가"입니다.
 
@@ -77,6 +77,7 @@
 | [#30](https://github.com/strawberryHunter/gmp-deviation-draft/pull/30) | 웹: 검색·필터 중에는 맨 위 카드가 목록에 있는 초안 중 가장 급한 것을 보여 줌 (전에는 검색과 무관한 초안), 결과가 없으면 카드와 중복 버튼 없음 |
 | [#31](https://github.com/strawberryHunter/gmp-deviation-draft/pull/31) | 웹: 덜 채운 초안의 내보내기는 형식 메뉴 없이 바로 빠진 항목 표시 (2클릭 → 1클릭), 미리보기 패널 안에서 Tab이 뒤 화면으로 나가지 않음 |
 | [#32](https://github.com/strawberryHunter/gmp-deviation-draft/pull/32) | 웹: 저장 거절·저장 불가 상황을 저장 규격의 코드별로 처리, 시험용 대역이 규격(허용 확장자 등)을 따르게, Word 표 칸 안쪽 여백 (Microsoft Word로 열어 확인) |
+| [#33](https://github.com/strawberryHunter/gmp-deviation-draft/pull/33) | CLI Word 초안: 제목의 영문·숫자가 Calibri로 나오던 것을 Arial로 (Microsoft Word로 열어 확인) |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
@@ -90,7 +91,6 @@
 
 - [ ] **⓪-3 웹 화면에서 Word 저장 한 번 눌러 보기** — 게시된 "Deviation 초안 데스크"에서 예시 불러오기 → 카드 열기 → 내보내기 → Word. 저장 확인 창이 뜨고 .docx가 받아지는지만 알려 주세요. Claude 세션에는 claude.ai에 로그인된 브라우저 도구가 없어 이 버튼만은 직접 누르지 못했습니다 (2026-11-26). 대신 저장 기능의 공식 규격(허용 확장자, 거절 코드)을 그대로 따르는 대역으로 시험했고, 받은 파일의 모양은 Microsoft Word 16.89로 열어 확인했습니다 (표 폭·여백, 검정 굵은 제목, Arial + 맑은 고딕, 3쪽).
 
-- [ ] **① Word 초안을 실제 Word에서 열어 보기** — 작업 환경에 맑은 고딕이 없어 화면 확인을 못 했습니다.
   1. 바로 볼 수 있는 렌더링 결과: [`sample_output/showcase/`](../sample_output/showcase/)의 PDF (이 환경의 대체 글꼴로 렌더링됨). Word 원본이 필요하면 "프롬프트 A" 또는 `python scripts/make_showcase.py`
   2. 확인할 것: 모든 쪽 머리글의 빨간 "초안 — 승인 문서 아님" · 빈칸 노란 강조 · 한글이 맑은 고딕으로 보이는지
   3. 이상하면 화면 캡처를 Claude에게 보내기
