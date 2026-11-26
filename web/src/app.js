@@ -281,9 +281,11 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
       onchange: e => { const f = e.target.files && e.target.files[0]; if (f) pickHistoryFile(f); e.target.value = ""; } });
     return [input, h("button", { type: "button", class: "btn", onclick: () => input.click() }, ic("upload"), "이력 CSV 선택")];
   }
+  // "빠진 항목 3개" while everything stopping the draft is just unfilled; "고칠 곳 1개" once something has to be corrected.
+  function blockedText(errs) { const b = E.blockCount(errs); return (b.missingOnly ? "빠진 항목 " : "고칠 곳 ") + b.n + "개"; }
   async function exportDraft(uid, kind) {
     const d = draftOf(uid), i = item(d);
-    if (i.errs.length) { openPreview(uid); toast("빠진 항목 " + i.errs.reduce((n, e) => n + e.targets.length, 0) + "개 · 초안 안 만듦"); return; }
+    if (i.errs.length) { openPreview(uid); toast(blockedText(i.errs) + " · 초안 안 만듦"); return; }
     if (kind === "mail") { await copyText(E.mailSummary(i, S.settings.dueDays), "메일용 요약 복사함"); return; }
     const model = await E.buildModel(d.form, i.hist), base = E.fileBase(d.form.id);
     let ok = false;
@@ -752,7 +754,7 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
       if (S.edit) { S.edit.checked = true; markInvalid(d); }
       const label = t => t.startsWith("flag-") ? E.FLAG_NAME[t.slice(5)] : t === "step-s7" ? "반복성 조회" : E.FIELD_LABEL[t];
       openDrawer("미리보기", null, [
-        h("div", { class: "alert", role: "alert" }, h("b", { text: "초안 안 만듦 · 빠진 항목 " + i.errs.reduce((n, e) => n + e.targets.length, 0) + "개" }), h("span", { class: "next", text: "다음: 아래 항목을 눌러 채우기" })),
+        h("div", { class: "alert", role: "alert" }, h("b", { text: "초안 안 만듦 · " + blockedText(i.errs) }), h("span", { class: "next", text: "다음: 아래 항목을 눌러 " + (E.blockCount(i.errs).missingOnly ? "채우기" : "고치기") })),
         i.errs.map(e => h("section", { class: "panel" }, h("p", { text: e.text }),
           h("div", { class: "row" }, e.targets.map(t => h("button", { type: "button", class: "btn sm", onclick: () => { if (!S.edit) openEditor(uid, E.stepOfTarget(t), t); else goTo(t); } }, label(t), ic("arrow-right"))))))]);
       return;

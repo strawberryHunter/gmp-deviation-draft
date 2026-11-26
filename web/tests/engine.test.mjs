@@ -129,6 +129,30 @@ test("lookup: says why a lookup was not done", () => {
   assert.deepEqual([E.lookup(f, history).checked, E.lookup(f, history).why], [false, "설비·유형 미기재"]);
   assert.deepEqual(E.unmatchedKeys(f), ["equipment_id", "category"]);
 });
+test("a real form never gets matches from a synthetic history", () => {
+  const f = good(); f.site = "Plant A"; f.equipment_id = "CHR-03"; f.category = "process_parameter";
+  assert.equal(history.synthetic, true);
+  assert.equal(E.lookup(f, history).rec.length, 5, "the practice form does get them");
+  f.synthetic = false;
+  assert.equal(E.historyBlocked(f, history), true);
+  assert.deepEqual(E.lookup(f, history), { checked: false, rec: [], why: "합성 이력" });
+  const p = E.proposal(f, history);
+  assert.deepEqual([p.checked, p.rec.length], [false, 0]);
+  assert.ok(p.reasons.some(r => r.startsWith("반복성 조회를 하지 않음(합성 이력)")), p.reasons.join(" / "));
+  assert.ok(!p.reasons.some(r => r.includes("유사 건")), "no reason built on made-up past cases");
+  assert.equal(E.validate(f, history).some(e => e.code === "synthetic-history"), true, "and the form is still refused, as in the CLI");
+  assert.equal(E.historyBlocked(f, null), false);
+  const real = Object.assign({}, history, { synthetic: false });
+  assert.equal(E.historyBlocked(f, real), false); assert.equal(E.lookup(f, real).rec.length, 5);
+});
+test("blockCount: only unfilled places, or something to correct", () => {
+  const f = good();
+  assert.deepEqual(E.blockCount(E.validate(f, history)), { n: 0, missingOnly: true });
+  f.detected_by = ""; f.flags[E.RULES.required_flags[0]] = null;
+  assert.deepEqual(E.blockCount(E.validate(f, history)), { n: 2, missingOnly: true });
+  f.synthetic = false;
+  assert.deepEqual(E.blockCount(E.validate(f, history)), { n: 3, missingOnly: false });
+});
 test("classify: top level reasons, lower triggers, unevaluated recurrence", () => {
   const f = good(); f.flags.cpp_excursion = true;
   const c = E.classify(f, [], true, history);
