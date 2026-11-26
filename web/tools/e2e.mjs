@@ -18,9 +18,18 @@ async function open({ downloads = true, storage, phone } = {}) {
   page.on("pageerror", e => bad.push("page error: " + e.message));
   page.on("request", r => { if (!/^(file|data|blob):/.test(r.url())) bad.push("outside request: " + r.url()); });
   // The claude.ai viewer gives the page a save function; here a stand-in records what would be saved.
+  // It follows the save call's contract (the platform's type definitions, contract 0.2.99): the extension list, the filename and
+  // data rules, and refusals as {code, message}. window.__refuse = "<code>" makes the next save refuse the way the viewer would.
   if (downloads) await page.addInitScript(() => {
-    window.__saved = [];
+    window.__saved = []; window.__refuse = null;
+    const allowed = "gif png jpg jpeg webp mp4 webm mov txt json md docx pptx epub csv ttf html svg pdf xlsx zip fig".split(" ");
     window.claude = { use: async name => name === "downloads" ? { save: async ({ filename, data }) => {
+      const refuse = code => { throw { code, message: "stand-in: " + code }; };
+      if (typeof filename !== "string" || filename.length > 512) refuse("bad_request");
+      const ext = (filename.match(/\.([A-Za-z0-9]+)$/) || [])[1];
+      if (!ext || !allowed.includes(ext.toLowerCase())) refuse("rejected_extension");
+      if (!(typeof data === "string" ? data.length : data && data.size)) refuse("bad_request");
+      if (window.__refuse) { const code = window.__refuse; window.__refuse = null; refuse(code); }
       const size = typeof data === "string" ? data.length : data.size;
       const head = typeof data === "string" ? data.slice(0, 80) : new TextDecoder("latin1").decode(new Uint8Array(await data.slice(0, 2).arrayBuffer()));
       window.__saved.push({ filename, size, head }); return { status: "saved" };
@@ -304,6 +313,29 @@ await job("저장: 기본은 탭에만 보관, 켜면 새로고침 뒤에도 남
   assert.equal(await page.getAttribute('.seg button:has-text("MAJOR")', "aria-pressed"), "true");
   await click("#moreBtn"); await click('.menu .switch'); await page.keyboard.press("Escape");
   assert.equal(await page.evaluate(() => localStorage.getItem("deviation-desk-data-v1")), null, "turning it off removes what was stored");
+  await ctx.close();
+});
+
+await job("저장: 뷰어가 거절하거나 저장을 못 쓰는 화면", async () => {
+  const { page, click, ctx } = await open();
+  await click("#loadExamples"); await page.waitForSelector(".card");
+  await click('.card:has-text("DEV-2026-2201") .open');
+  const toastHas = t => page.waitForFunction(x => document.querySelector("#toast").textContent.includes(x), t);
+  // The viewer says no: nothing is saved and the draft does not move to 검토 대기.
+  await page.evaluate(() => { window.__refuse = "declined"; });
+  await click(".ebar .btn.primary"); await click('.menu button:has-text("Word")'); await toastHas("저장 취소함");
+  assert.equal(await page.evaluate(() => window.__saved.length), 0); assert.equal(await text(page, "#e-chips .chip"), "작성 중");
+  // A format the view does not take: say so, keep the other ways.
+  await page.evaluate(() => { window.__refuse = "extension_not_enabled"; });
+  await click(".ebar .btn.primary"); await click('.menu button:has-text("Word")'); await toastHas("이 형식 저장 불가");
+  await click(".ebar .btn.primary"); assert.equal(await page.locator('.menu button:has-text("Markdown")').count(), 1); await page.keyboard.press("Escape");
+  // Saving stops working in this view: the save choices go away, copying stays, and a copy still counts as an export.
+  await page.evaluate(() => { window.__refuse = "unavailable"; });
+  await click(".ebar .btn.primary"); await click('.menu button:has-text("Markdown")'); await toastHas("파일 저장 불가 · 복사 사용");
+  await click(".ebar .btn.primary");
+  assert.deepEqual(await page.locator(".menu button").allInnerTexts(), ["본문 복사", "메일용 요약 복사"]);
+  await click('.menu button:has-text("본문 복사")'); await toastHas("복사함");
+  assert.equal(await text(page, "#e-chips .chip"), "검토 대기"); assert.equal(await page.evaluate(() => window.__saved.length), 0);
   await ctx.close();
 });
 

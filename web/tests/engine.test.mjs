@@ -259,6 +259,8 @@ test("buildDocx: draft stamp in the header, blanks highlighted, entered text pre
     assert.ok(grid.every(w => w >= 2000), "column widths " + grid.join(","));
     assert.ok(sum <= E.DOCX_TEXT_WIDTH && sum > E.DOCX_TEXT_WIDTH - grid.length, "columns fill the text width: " + sum);
     assert.ok(t.includes('<w:tblW w:type="dxa" w:w="' + E.DOCX_TEXT_WIDTH + '"/>'));
+    const mar = (t.match(/<w:tblCellMar>.*?<\/w:tblCellMar>/) || [""])[0];
+    for (const [side, w] of [["top", 40], ["bottom", 40], ["left", 100], ["right", 100]]) assert.ok(mar.includes('<w:' + side + ' w:type="dxa" w:w="' + w + '"/>'), "cell padding " + side + ": " + mar);
     const cells = t.split("<w:tc>").length - 1, sized = [...t.matchAll(/<w:tcW w:type="dxa" w:w="(\d+)"\/>/g)].map(x => Number(x[1]));
     assert.equal(sized.length, cells, "every cell has a width"); assert.ok(sized.every(w => w === grid[0]));
   }

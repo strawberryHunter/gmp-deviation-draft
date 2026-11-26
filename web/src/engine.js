@@ -543,6 +543,7 @@ export function buildDocx(m, D) {
   // Every table and cell gets its width in twips. Left out, the library writes 100 twips (under 2 mm) per column,
   // and a viewer that draws the table as written (seen in macOS Quick Look) shows one letter per line.
   const full = { size: DOCX_TEXT_WIDTH, type: D.WidthType.DXA };
+  const pad = { top: 40, bottom: 40, left: 100, right: 100 };   // space inside every cell, in twips; without it Word sets the text against the lines
   const split = n => Array(n).fill(Math.floor(DOCX_TEXT_WIDTH / n));
   const kids = [];
   m.blocks.forEach(b => {
@@ -551,13 +552,13 @@ export function buildDocx(m, D) {
     else if (b.k === "h3") kids.push(para(b.runs, { heading: D.HeadingLevel.HEADING_3 }));
     else if (b.k === "p" || b.k === "pre") kids.push(para(b.runs));
     else if (b.k === "ul") b.items.forEach(i => kids.push(para(i, { bullet: { level: 0 } })));
-    else if (b.k === "banner") kids.push(new D.Table({ width: full, columnWidths: [DOCX_TEXT_WIDTH],
+    else if (b.k === "banner") kids.push(new D.Table({ width: full, columnWidths: [DOCX_TEXT_WIDTH], margins: pad,
       rows: [new D.TableRow({ children: [new D.TableCell({ width: full, shading: { fill: "FFF2CC", type: D.ShadingType.CLEAR, color: "auto" },
         children: b.lines.map(l => para(l)) })] })] }), new D.Paragraph(""));
     else if (b.k === "table") {
       const widths = split(b.head.length);
       const cell = (rs, head) => new D.TableCell({ width: { size: widths[0], type: D.WidthType.DXA }, children: [para(head ? [B(rs)] : rs)], shading: head ? { fill: "D9D9D9", type: D.ShadingType.CLEAR, color: "auto" } : undefined });
-      kids.push(new D.Table({ width: full, columnWidths: widths, rows:
+      kids.push(new D.Table({ width: full, columnWidths: widths, margins: pad, rows:
         [new D.TableRow({ tableHeader: true, children: b.head.map(h => cell(h, true)) })].concat(b.rows.map(r => new D.TableRow({ children: r.map(c => cell(c)) }))) }));
     }
   });
