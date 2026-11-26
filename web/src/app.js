@@ -405,7 +405,9 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
         f.synthetic ? h("span", { class: "chip info", text: "합성" }) : null,
         h("button", { type: "button", class: "btn sm icon quiet more", "aria-label": "초안 메뉴", "aria-haspopup": "menu", onclick: e => draftMenu(e.currentTarget, uid) }, ic("ellipsis"))),
       h("h3", {}, h("button", { type: "button", class: "open", text: f.title || "제목 없음", onclick: () => openEditor(uid) })),
-      h("p", { class: "line" }, i.dd === null ? "기한 미정" : [h("b", { class: ddClass(i.dd), text: E.ddayLabel(i.dd) }), " · " + E.shortDate(i.due)], " · " + catLabel(f.category)),
+      // A finished draft has no countdown: its due date stays, the red "D+n" does not.
+      h("p", { class: "line" }, i.status === "done" ? [h("b", { class: "done", text: "완료" }), i.due ? " · 기한 " + E.shortDate(i.due) : ""]
+        : i.dd === null ? "기한 미정" : [h("b", { class: ddClass(i.dd), text: E.ddayLabel(i.dd) }), " · " + E.shortDate(i.due)], " · " + catLabel(f.category)),
       h("div", { class: "foot" }, gradeChip(i), h("div", { class: "bar", role: "img", "aria-label": "완성도 " + i.comp.done + "/" + i.comp.total }, h("i", { style: "width:" + Math.round(100 * i.comp.done / i.comp.total) + "%" })),
         h("span", { class: "small muted", text: i.comp.done + "/" + i.comp.total })),
       h("p", { class: "saved" }, h("span", {}, h("span", { class: "id", text: f.id || "번호 미입력" }), " · " + E.STATUS_LABEL[i.status]), h("span", { text: E.agoLabel(i.savedAt, Date.now()) })));
