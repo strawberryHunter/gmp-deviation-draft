@@ -7,6 +7,7 @@ finished document and cannot overlook a blank that still needs writing:
 - every "작성 필요" blank keeps its ☐ and is bold + highlighted;
 - the warning banner is a shaded box, not body text;
 - table header rows repeat on each page, and no row is cut in two by a page break;
+- the proposed grade stays on the page of its reasons (a lead-in line is kept with what follows);
 - the sheet is A4 with 1-inch margins, the same as the Word file of the browser screen.
 """
 from __future__ import annotations
@@ -20,6 +21,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_COLOR_INDEX
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor, Twips
+from docx.text.paragraph import Paragraph
 
 FONT = "Arial"
 FONT_KO = "Malgun Gothic"  # Arial has no Hangul; Word would otherwise substitute per machine
@@ -166,6 +168,14 @@ def _header_footer(doc: Document, dev_id: str, generated: str, synthetic: bool =
     _field(fp, "NUMPAGES")
 
 
+def _gap(doc: Document) -> None:
+    """The space after a table: an exact 8 pt line (Word needs a paragraph between two tables).
+    A full empty line here, seven times a draft, put the last sentence of a three-page draft on a fourth page."""
+    fmt = doc.add_paragraph().paragraph_format
+    fmt.space_after = Pt(0)
+    fmt.line_spacing = Pt(8)
+
+
 def _table(doc: Document, rows: list[list[str]]) -> None:
     width = max(len(r) for r in rows)
     t = doc.add_table(rows=0, cols=width)
@@ -181,7 +191,7 @@ def _table(doc: Document, rows: list[list[str]]) -> None:
             _add_inline(par, val, bold=(n == 0))
             if n == 0:
                 _shade(cell, "D9D9D9")
-    doc.add_paragraph()
+    _gap(doc)
 
 
 def _banner(doc: Document, lines: list[str]) -> None:
@@ -195,7 +205,22 @@ def _banner(doc: Document, lines: list[str]) -> None:
         if k:
             par = cell.add_paragraph()
         _add_inline(par, line.rstrip("\\ ").rstrip())
-    doc.add_paragraph()
+    _gap(doc)
+
+
+def _keep_last_section_together(doc: Document) -> None:
+    """Everything from the last heading to the end stays on one page (the appendix of a draft).
+    Without this a draft that is a line too long ends with one sentence alone on an extra page;
+    with it the appendix moves there whole."""
+    body = list(doc.element.body)
+    heads = [n for n, el in enumerate(body) if el.tag == qn("w:p") and el.pPr is not None
+             and el.pPr.pStyle is not None and el.pPr.pStyle.val.startswith("Heading")]
+    if not heads:
+        return
+    tail = [el for el in body[heads[-1] + 1:] if el.tag in (qn("w:p"), qn("w:tbl"))]
+    for el in tail[:-1]:  # the last block has nothing after it
+        for par in ([el] if el.tag == qn("w:p") else el.iter(qn("w:p"))):
+            Paragraph(par, None).paragraph_format.keep_with_next = True  # python-docx puts the element in schema order
 
 
 # Both the draft banner and the summary banner start with this phrase.
@@ -258,6 +283,11 @@ def markdown_to_docx(md: str, out_path: str | Path, *, label: str | None = None,
                 if k:
                     p.add_run().add_break()
                 _add_inline(p, chunk.rstrip())
+            # The proposed grade, and any line that leads into a list or table, stays on the page of what
+            # follows: a page must not end with "제안 등급: ..." and leave the reasons to the next one.
+            text = p.text.rstrip()
+            if text.endswith(":") or text.startswith("제안 등급:"):
+                p.paragraph_format.keep_with_next = True
             para.clear()
 
     while i < len(lines):
@@ -286,7 +316,10 @@ def markdown_to_docx(md: str, out_path: str | Path, *, label: str | None = None,
             doc.add_heading(line.lstrip("# ").strip(), level=min(level, 4))
         elif line.startswith("- "):
             flush()
-            _add_inline(doc.add_paragraph(style="List Bullet"), line[2:])
+            item = doc.add_paragraph(style="List Bullet")
+            _add_inline(item, line[2:])
+            if i + 1 < len(lines) and lines[i + 1].startswith("- "):  # the items of one list share a page
+                item.paragraph_format.keep_with_next = True
         elif not line.strip() or line.startswith("---"):
             flush()
         else:
@@ -298,6 +331,8 @@ def markdown_to_docx(md: str, out_path: str | Path, *, label: str | None = None,
                 para.append(line)
         i += 1
     flush()
+    if not landscape:  # a draft; the wide summary is one long table and has no appendix
+        _keep_last_section_together(doc)
     _restore(doc)
 
     out = Path(out_path)

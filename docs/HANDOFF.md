@@ -1,7 +1,7 @@
 # HANDOFF — 현재 상태와 다음 할 일
 
 > 작업이 끝날 때마다 갱신합니다 (규칙: [`CLAUDE.md`](../CLAUDE.md)).
-> **마지막 갱신: 2026-11-26** · 기준 브랜치 `main` · 테스트 323개 통과 + 웹 화면 검사(엔진 48 · 실제 입력 20 · 화면) · **CI 통과 시 Claude가 자동 머지** (CI 6개: Ubuntu Python 3.10–3.13, Windows 3.12, web) · 도구 버전 `devdraft 0.5.0`
+> **마지막 갱신: 2026-11-26** · 기준 브랜치 `main` · 테스트 326개 통과 + 웹 화면 검사(엔진 48 · 실제 입력 20 · 화면) · **CI 통과 시 Claude가 자동 머지** (CI 6개: Ubuntu Python 3.10–3.13, Windows 3.12, web) · 도구 버전 `devdraft 0.5.0`
 >
 > **프로젝트 목적: 입사 포트폴리오.** 실제 회사 도입이 아니므로 회사 SOP·사내 적격성 평가는 범위 밖입니다. 우선순위는 "검토자가 처음 1분에 보고 이해하는가"입니다.
 
@@ -15,7 +15,7 @@
 | 반복성 조회 (같은 사업장·설비·유형, 과거 근본원인 기본 숨김) | ✅ |
 | 이력 CSV 점검 (`--check-history`) | ✅ |
 | 일괄 처리 요약표 (`--summary`) | ✅ |
-| Word 초안 (모든 쪽 "초안" 머리글, 빈칸 노란 강조, A4, 표의 행은 쪽 사이에서 안 나뉨) | ✅ — Microsoft Word 16.89에서 열어 확인 (2026-11-26, CLI·웹 화면 둘 다 같은 용지, 3쪽) |
+| Word 초안 (모든 쪽 "초안" 머리글, 빈칸 노란 강조, A4, 표의 행은 쪽 사이에서 안 나뉨, 제안 등급과 근거는 같은 쪽) | ✅ — Microsoft Word 16.89에서 열어 확인 (2026-11-26, CLI·웹 화면 둘 다 같은 용지, 합성 사례 3쪽·1건은 4쪽) |
 | 생성 근거 기록 (입력 파일명·SHA-256·기준일·버전) | ✅ |
 | 합성 이력이 실제 양식에 섞이는 것 차단 | ✅ |
 | SOP 반영 예시: 합성 SOP, 공개 SOP(Duke COMM-PAS-013) | ✅ |
@@ -83,6 +83,7 @@
 | [#36](https://github.com/strawberryHunter/gmp-deviation-draft/pull/36) | CLI Word 초안을 A4·여백 1인치로 (웹 화면의 Word와 같은 용지), CLI·웹 Word 표의 행이 쪽 사이에서 나뉘지 않게. 저장소 미리보기(PDF·이미지)를 Microsoft Word가 그린 것으로 교체, `scripts/make_showcase.py --word` |
 | [#37](https://github.com/strawberryHunter/gmp-deviation-draft/pull/37) | 웹: 분류 규칙 고르기 (기본 규칙 · 공개 SOP 예시 Duke). 규칙 두 벌을 파일과 키 단위로, 초안의 분류·반복성 절을 CLI 출력과 줄 단위로 대조. 긴 등급 이름이 카드·필터에서 줄을 바꿈 |
 | [#38](https://github.com/strawberryHunter/gmp-deviation-draft/pull/38) | 웹: 완성된 초안 전체를 Word로 한 번에 받기 (.zip, 요약표 CSV 포함). 요약표 머리글의 조회 기간이 고른 규칙을 따르게 수정. 폰에서 숫자 5개가 한 줄 |
+| [#39](https://github.com/strawberryHunter/gmp-deviation-draft/pull/39) | Word 초안에서 제안 등급과 근거 목록이 다른 쪽으로 갈리지 않게 (CLI·웹). CLI: 표 뒤 빈 줄을 얇게, 부록은 한 쪽에. 미리보기 다시 그림 |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 

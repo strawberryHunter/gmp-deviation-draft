@@ -45,7 +45,7 @@ GxP 문서에서 가장 위험한 것은 **조사로 뒷받침되지 않은 그�
 <td><img src="sample_output/showcase/DEV-2026-2301_p1.png" width="380" alt="DEV-2026-2301 초안 1쪽"></td>
 <td><img src="sample_output/showcase/DEV-2026-2301_p2.png" width="380" alt="DEV-2026-2301 초안 2쪽"></td>
 </tr>
-<tr><td colspan="2" align="center">DEV-2026-2301 — 1쪽: 사실 정리·분류 제안과 근거 · 2쪽: 판단 칸은 모두 비워 둠</td></tr>
+<tr><td colspan="2" align="center">DEV-2026-2301 — 1쪽: 사실 정리 · 2쪽: 분류 제안과 근거, 확정 등급과 조사 결과는 비워 둠</td></tr>
 </table>
 
 | 사례 | 상황 | 도구 제안 | 초안 |
@@ -112,6 +112,7 @@ GxP 문서에서 가장 위험한 것은 **조사로 뒷받침되지 않은 그�
 | 웹 화면이 만든 Word 초안의 표 | 표와 칸에 폭이 없어 Word가 아닌 뷰어(macOS 훑어보기)에서 열이 2mm로 찌그러져 **한 글자씩 세로로** 흐름, 제목도 굵지 않음 (파일을 브라우저 밖에서 그려 보다 발견) | 모든 표·칸에 실제 폭, 글꼴·제목을 CLI의 Word와 같게, Microsoft Word로 열어 확인 |
 | Word 제목 글꼴 | Word로 열면 제목의 영문·숫자가 지정한 Arial이 아니라 Calibri로 나옴 (템플릿의 제목 스타일에 테마 글꼴 이름이 남아 Word가 그쪽을 따름. Microsoft Word로 직접 열어 보다 발견) | 제목 스타일에서 테마 글꼴 이름 제거, Word에서 Arial + 맑은 고딕 확인 |
 | Word 초안의 용지와 표 행 | 용지가 US Letter였고(라이브러리 기본값), 요약표에서 한 건의 행이 쪽 경계에서 둘로 나뉘어 제목 칸의 뒷부분만 다음 쪽으로 넘어감 (Microsoft Word로 직접 열어 보다 발견) | A4·여백 1인치로 웹 화면의 Word와 같은 용지, 표의 행은 쪽 사이에서 나뉘지 않음, Word에서 3쪽·210 × 297 mm 확인 |
+| Word 초안의 쪽 나눔 | "제안 등급: MAJOR"와 "근거:"가 1쪽 맨 아래에 남고 근거 목록은 2쪽으로 넘어감. 1쪽만 본 사람은 근거 없는 등급을 보게 됨 (Microsoft Word로 직접 열어 보다 발견) | 제안 등급·근거 목록은 한 쪽에 같이 있도록 묶음(CLI·웹 화면 둘 다), 부록도 한 쪽에, 표 뒤 빈 줄은 얇게. Word에서 합성 사례 4건 확인 |
 
 판단 과정은 [`DECISIONS.md`](DECISIONS.md)에 한 줄씩 남겼습니다 (무엇을 · 왜 · 대안 · 확인 필요 여부).
 
@@ -128,7 +129,7 @@ python -m devdraft.cli data/synthetic/showcase/*.yaml --docx --summary --today 2
 
 ## 검증
 
-- 테스트 323개 — GitHub Actions에서 Ubuntu Python 3.10–3.13, Windows 3.12로 PR마다 실행
+- 테스트 326개 — GitHub Actions에서 Ubuntu Python 3.10–3.13, Windows 3.12로 PR마다 실행
 - 웹 화면: 엔진 테스트 48개 + 실제 입력 테스트 20개 + 화면 검사 (콘솔 오류 0, 외부 요청 0, 1280·390px, 라이트·다크) — 같은 CI에서 Chrome으로 실행
 - 튜토리얼에 실린 명령 출력·입력 파일·초안 발췌가 실제와 같은지 테스트가 대조
 - 같은 입력이면 바이트 단위로 같은 초안 (생성 근거의 SHA-256으로 대조 가능)
