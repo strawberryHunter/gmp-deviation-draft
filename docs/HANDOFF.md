@@ -74,6 +74,7 @@
 | [#27](https://github.com/strawberryHunter/gmp-deviation-draft/pull/27) | 웹: 실제 양식에 합성 이력을 불러오면 가짜 반복 건을 보여 주지 않음 (거부는 하면서도 경고 아래에 5건과 목록, 제안 근거에 "유사 건 5건"이 그대로 나왔음) |
 | [#28](https://github.com/strawberryHunter/gmp-deviation-draft/pull/28) | 웹: Markdown 초안의 굵은 글씨 표시 깨짐 2줄 수정, 초안의 분류 규칙 해시를 CLI와 같은 rules.yaml 파일 해시로 (화면 내장 규칙 = rules.yaml임을 테스트로 고정) |
 | [#29](https://github.com/strawberryHunter/gmp-deviation-draft/pull/29) | 웹: Word 초안의 표 폭 지정 (macOS 훑어보기에서 표가 한 글자 폭으로 찌그러졌음), 글꼴·제목을 CLI Word와 같게 (Arial + 맑은 고딕, 검정 굵은 제목) |
+| [#30](https://github.com/strawberryHunter/gmp-deviation-draft/pull/30) | 웹: 검색·필터 중에는 맨 위 카드가 목록에 있는 초안 중 가장 급한 것을 보여 줌 (전에는 검색과 무관한 초안), 결과가 없으면 카드와 중복 버튼 없음 |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
