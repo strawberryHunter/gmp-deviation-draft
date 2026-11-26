@@ -9,8 +9,8 @@ const browser = await chromium.launch({ executablePath: CHROME, headless: true }
 const results = [];
 const bad = [];
 
-async function open({ downloads = true, storage } = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: "ko-KR" });
+async function open({ downloads = true, storage, phone } = {}) {
+  const ctx = await browser.newContext(phone ? { viewport: phone, isMobile: true, hasTouch: true, locale: "ko-KR" } : { viewport: { width: 1280, height: 900 }, locale: "ko-KR" });
   await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
   const page = await ctx.newPage();
   page.on("console", m => { if (m.type() === "error") bad.push("console error: " + m.text()); });
@@ -255,7 +255,12 @@ await job("저장: 기본은 탭에만 보관, 켜면 새로고침 뒤에도 남
   const { page, click, ctx } = await open();
   await click("#loadExamples"); await page.waitForSelector(".card");
   assert.equal(await page.evaluate(() => localStorage.getItem("deviation-desk-data-v1")), null);
-  await click("#moreBtn"); await click('.menu .switch'); await page.keyboard.press("Escape");
+  await click("#moreBtn");
+  // The settings rows must read as rows: label on one line, a real switch beside it (this once collapsed to one letter per line).
+  const row = await page.evaluate(() => { const r = document.querySelector(".menu .mrow"), s = r.querySelector(".switch"), l = r.querySelector("span");
+    return { label: l.textContent, labelH: l.getBoundingClientRect().height, switchW: s.getBoundingClientRect().width, switchH: s.getBoundingClientRect().height }; });
+  assert.deepEqual([row.label, row.switchW, row.switchH], ["브라우저 저장", 40, 24]); assert.ok(row.labelH < 30, "label height " + row.labelH);
+  await click('.menu .switch'); await page.keyboard.press("Escape");
   await page.evaluate(() => { const D = window.__desk; D.S.ui.filter.level = "critical"; D.render(); });
   await click('.seg button:has-text("MAJOR")');
   await page.reload({ waitUntil: "load" }); await page.waitForSelector(".card");
@@ -283,8 +288,31 @@ await job("목록: 검색, 필터, 삭제 되돌리기, 완료 표시, 키보드
   await page.keyboard.press("Escape");
   await click('.card:has-text("DEV-2026-2301") .more'); await click('.menu button:has-text("완료로 표시")');
   assert.equal(await text(page, '#side .nav-item:has-text("완료") .n'), "1");
+  // A finished draft shows no countdown, even when its due date has passed.
+  await page.evaluate(() => { const D = window.__desk; D.S.settings.dueDays = 0; D.render(); });
+  assert.ok((await text(page, '.card:has-text("DEV-2026-2301") .line')).startsWith("완료 · 기한 11/24"));
+  assert.equal(await page.locator('.card:has-text("DEV-2026-2301") .line b.late').count(), 0);
+  assert.ok((await text(page, '.card:has-text("DEV-2026-2201") .line')).startsWith("D+"));
+  await page.evaluate(() => { const D = window.__desk; D.S.settings.dueDays = 30; D.render(); });
   await click('.card:has-text("DEV-2026-2301") .open'); await page.keyboard.press("Escape"); await page.keyboard.press("Escape");
   assert.equal(await page.locator("#editor").isVisible(), false, "Esc leaves the editor");
+  await ctx.close();
+});
+
+await job("폰: 메뉴 서랍이 화면 안에 들어오고 맨 아래 사용법까지 닿음", async () => {
+  // A short phone (iPhone SE height). The drawer was once as tall as its content, so its last rows sat below the screen with no way to scroll.
+  const { page, ctx } = await open({ phone: { width: 375, height: 667 } });
+  await page.tap("#loadExamples"); await page.waitForSelector(".card");
+  await page.tap("#menuBtn"); await page.waitForSelector(".shell.nav-open");
+  const m = await page.evaluate(() => { const s = document.getElementById("side"), r = s.getBoundingClientRect();
+    return { bottom: Math.round(r.bottom), vh: innerHeight, scrolls: s.scrollHeight > s.clientHeight }; });
+  assert.equal(m.bottom, m.vh, "drawer ends at the screen's bottom edge"); assert.equal(m.scrolls, true, "content longer than the screen scrolls inside the drawer");
+  await page.locator('#side .nav-item:has-text("사용법")').scrollIntoViewIfNeeded();
+  const foot = await page.evaluate(() => { const r = document.querySelector("#side .foot p").getBoundingClientRect(); return { text: document.querySelector("#side .foot p").textContent, bottom: Math.round(r.bottom), vh: innerHeight }; });
+  assert.equal(foot.text, "개인 프로젝트 · 셀트리온과 무관"); assert.ok(foot.bottom <= foot.vh, "last line on screen: " + foot.bottom + " > " + foot.vh);
+  await page.tap('#side .nav-item:has-text("사용법")');
+  assert.equal(await text(page, "#view h1"), "사용법");
+  assert.equal(await page.evaluate(() => document.querySelector(".shell").classList.contains("nav-open")), false, "drawer closes after choosing");
   await ctx.close();
 });
 

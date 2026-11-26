@@ -147,6 +147,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); }
 .card .open::after { content: ""; position: absolute; inset: 0; border-radius: var(--r-card); }
 .card .open:focus-visible::after { outline: 2px solid var(--brand); outline-offset: 2px; }
 .card .line { font-size: 13px; color: var(--muted); }
+.card .line b.done { color: var(--muted); }
 .card .line b.late { color: var(--crit); } .card .line b.soon { color: var(--major); } .card .line b { color: var(--ink); }
 .card .foot { display: flex; align-items: center; gap: 10px; }
 .bar { flex: 1 1 60px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
@@ -240,10 +241,12 @@ kbd { font-family: var(--mono); font-size: 13px; border: 1px solid var(--line-st
 .notes { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
 .sumline { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 13px; color: var(--muted); }
 .menu { position: absolute; z-index: 30; min-width: 220px; max-width: min(340px, calc(100vw - 16px)); background: var(--card); border: 1px solid var(--line-strong); border-radius: 12px; padding: 6px; display: grid; gap: 2px; }
-.menu button, .menu .mrow { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 0 10px; border: 0; border-radius: 8px; background: none; text-align: left; cursor: pointer; }
-.menu button:hover { background: var(--brand-tint); }
-.menu button.danger { color: var(--crit); }
+/* Only the menu's own items get the item look; a switch or a segmented control inside a row keeps its own. */
+.menu > button, .menu .mrow { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 0 10px; border: 0; border-radius: 8px; background: none; text-align: left; cursor: pointer; }
+.menu > button:hover { background: var(--brand-tint); }
+.menu > button.danger { color: var(--crit); }
 .menu .mrow { cursor: default; justify-content: space-between; }
+.menu .mrow > span:first-child { white-space: nowrap; }
 .menu .mrow input[type=number] { width: 72px; height: 32px; }
 .menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100%; }
 .menu .note { font-size: 13px; color: var(--muted); padding: 4px 10px; }
@@ -281,7 +284,8 @@ kbd { font-family: var(--mono); font-size: 13px; border: 1px solid var(--line-st
 }
 @media (max-width: 1024px) {
   .shell { grid-template-columns: minmax(0, 1fr); }
-  .side { position: fixed; inset: 0 auto 0 0; z-index: 22; width: 280px; height: auto; padding-top: calc(20px + env(safe-area-inset-top, 0px)); padding-left: max(12px, env(safe-area-inset-left, 0px)); transform: translateX(-100%); visibility: hidden; }
+  /* align-self: start (from the desktop rule) would size this fixed drawer to its content, taller than a short screen and not scrollable. */
+  .side { position: fixed; inset: 0 auto 0 0; z-index: 22; width: 280px; height: auto; align-self: stretch; max-height: 100%; padding-top: calc(20px + env(safe-area-inset-top, 0px)); padding-left: max(12px, env(safe-area-inset-left, 0px)); transform: translateX(-100%); visibility: hidden; }
   .shell.nav-open .side { transform: none; visibility: visible; }
   #menuBtn { display: inline-flex; }
   .top, .content { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }

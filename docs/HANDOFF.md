@@ -1,7 +1,7 @@
 # HANDOFF — 현재 상태와 다음 할 일
 
 > 작업이 끝날 때마다 갱신합니다 (규칙: [`CLAUDE.md`](../CLAUDE.md)).
-> **마지막 갱신: 2026-11-26** · 기준 브랜치 `main` · 테스트 317개 통과 + 웹 화면 검사(엔진 36 · 실제 입력 14 · 화면) · **CI 통과 시 Claude가 자동 머지** (CI 6개: Ubuntu Python 3.10–3.13, Windows 3.12, web) · 도구 버전 `devdraft 0.5.0`
+> **마지막 갱신: 2026-11-26** · 기준 브랜치 `main` · 테스트 317개 통과 + 웹 화면 검사(엔진 36 · 실제 입력 15 · 화면) · **CI 통과 시 Claude가 자동 머지** (CI 6개: Ubuntu Python 3.10–3.13, Windows 3.12, web) · 도구 버전 `devdraft 0.5.0`
 >
 > **프로젝트 목적: 입사 포트폴리오.** 실제 회사 도입이 아니므로 회사 SOP·사내 적격성 평가는 범위 밖입니다. 우선순위는 "검토자가 처음 1분에 보고 이해하는가"입니다.
 
@@ -69,6 +69,7 @@
 | [#22](https://github.com/strawberryHunter/gmp-deviation-draft/pull/22) | 양식의 숫자 모양 값(0412, 1:30, 3.40)을 적힌 그대로 읽음 (이전에는 값이 바뀌고 오류로 중단) |
 | [#23](https://github.com/strawberryHunter/gmp-deviation-draft/pull/23) | 브라우저 화면 `web/` 추가 (사이드바 리디자인, YAML 가져오기), CI에 web 작업, CLI 기준값 대조 |
 | [#24](https://github.com/strawberryHunter/gmp-deviation-draft/pull/24) | 같은 항목이 두 번 있는 양식·rules.yaml 거부 (이전에는 뒤의 값을 말없이 사용) |
+| [#25](https://github.com/strawberryHunter/gmp-deviation-draft/pull/25) | 웹: 더보기 메뉴 깨짐(글자가 세로로 쌓임), 완료한 초안 카드의 빨간 D+ 표시, 낮은 화면에서 메뉴 서랍 맨 아래(사용법)에 닿지 않던 문제 수정 |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
