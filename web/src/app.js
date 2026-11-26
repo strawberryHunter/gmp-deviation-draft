@@ -61,7 +61,7 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
     history: null,         // the user's QMS history file
     sampleHistory: null,   // bundled synthetic history, used by synthetic drafts only
     histError: null,
-    settings: { persist: false, dueDays: 30 },
+    settings: { persist: false, dueDays: 30, rules: "default" },   // rules: which rule set of E.RULE_SETS judges the drafts
     ui: { view: "drafts", filter: { status: "all", category: "", level: "", site: "", quick: "" }, sort: "due", theme: "system" },
     query: "", hero: 0, edit: null, navOpen: false,
   };
@@ -76,7 +76,12 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { store.fail(e); return false; } },
     del(k) { try { localStorage.removeItem(k); return true; } catch (e) { store.fail(e); return false; } },
   };
-  function saveUI() { store.set(UI_KEY, { filter: S.ui.filter, sort: S.ui.sort, theme: S.ui.theme, dueDays: S.settings.dueDays }); }
+  function saveUI() { store.set(UI_KEY, { filter: S.ui.filter, sort: S.ui.sort, theme: S.ui.theme, dueDays: S.settings.dueDays, rules: S.settings.rules }); }
+  // Every draft is judged by the chosen rule set. A grade filter of the other set would hide everything, so it is dropped.
+  function setRules(id) {
+    S.settings.rules = E.useRules(id).id;
+    if (S.ui.filter.level && S.ui.filter.level !== "none" && !E.RULES.levels.some(l => l.id === S.ui.filter.level)) S.ui.filter.level = "";
+  }
   function persistNow() {
     clearTimeout(persistTimer);
     if (!S.settings.persist) return;
@@ -92,6 +97,7 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
       if (["due", "saved", "id"].includes(ui.sort)) S.ui.sort = ui.sort;
       if (["light", "dark", "system"].includes(ui.theme)) S.ui.theme = ui.theme;
       if (Number.isInteger(ui.dueDays) && ui.dueDays >= 0 && ui.dueDays <= 365) S.settings.dueDays = ui.dueDays;
+      setRules(E.RULE_SETS.some(x => x.id === ui.rules) ? ui.rules : "default");   // also drops a stored grade filter the rules do not have
     }
     const data = store.get(DATA_KEY);
     if (data && Array.isArray(data.drafts)) {
@@ -130,7 +136,7 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
     const waiting = E.missingLabel(i.form) || (i.errs.length ? "입력 오류 " + i.errs.length + "건" : "제안 전");
     if (!i.prop) return h("span", { class: "chip none", text: live ? "질문 " + i.comp.flags.length + "개 남음" : waiting });
     if (i.errs.length) return h("span", { class: "chip none", text: live ? E.levelLabel(i.prop.level) + " · 입력 완료 전" : waiting });
-    return h("span", { class: "chip " + i.prop.level, text: E.levelLabel(i.prop.level) + (suffix || " 제안") });
+    return h("span", { class: "chip " + E.levelTone(i.prop.level), text: E.levelLabel(i.prop.level) + (suffix || " 제안") });
   }
 
   /* ---------- toast, menu, drawer ---------- */
@@ -357,6 +363,7 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
       h("nav", { class: "nav", "aria-label": "분류" }, cats.map(([c, name]) =>
         navItem(name, n(i => (i.form.category || "none") === c), onDrafts && F.category === c, () => setFilter("category", c)))),
       h("h2", { text: "도구 제안 등급" }),
+      S.settings.rules === "default" ? null : h("p", { class: "ruleset" }, E.activeRuleSet().label.split(" · ").map(t => h("span", { text: t }))),   // which rules give these grades, when not the usual ones
       h("nav", { class: "nav", "aria-label": "도구 제안 등급" }, levels.map(([l, name]) =>
         navItem(name, n(i => i.level === l), onDrafts && F.level === l, () => setFilter("level", l)))),
       h("h2", { text: "도구" }),
@@ -380,6 +387,8 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
           if (S.settings.persist) { persistNow(); if (S.settings.persist) toast("브라우저 저장 켬"); } else { store.del(DATA_KEY); toast("브라우저 저장 끔 · 저장분 지움"); }
           sw.setAttribute("aria-checked", String(S.settings.persist)); render();
         } });
+      const rules = h("select", { "aria-label": "분류 규칙", onchange: () => { setRules(rules.value); saveUI(); S.hero = 0; close(); render(); toast("분류 규칙 · " + E.activeRuleSet().label); } },
+        E.RULE_SETS.map(x => { const o = h("option", { value: x.id, text: x.label }); o.selected = x.id === S.settings.rules; return o; }));
       const days = h("input", { type: "number", min: "0", max: "365", step: "1", value: String(S.settings.dueDays), "aria-label": "보고 기한 일수",
         onchange: () => { const v = Number(days.value); if (Number.isInteger(v) && v >= 0 && v <= 365) { S.settings.dueDays = v; saveUI(); render(); } else days.value = String(S.settings.dueDays); } });
       let armed = false;
@@ -396,6 +405,7 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
         h("div", { class: "mrow" }, h("span", { text: "브라우저 저장" }), sw),
         store.ok ? null : h("p", { class: "note", text: "브라우저 저장소 사용 불가" }),
         h("div", { class: "mrow" }, h("span", { text: "보고 기한 · 발견일 +" }), h("span", {}, days, " 일")),
+        h("div", { class: "mrow stack" }, h("span", { text: "분류 규칙" }), rules),
         h("hr"),
         mItem("upload", "YAML 양식 가져오기", () => { close(); $("#yamlFile").click(); }),
         mItem("clipboard-list", "예시 불러오기 (합성 8건)", () => { close(); loadExamples(); }),
@@ -442,8 +452,8 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
       // A finished draft has no countdown: its due date stays, the red "D+n" does not.
       h("p", { class: "line" }, i.status === "done" ? [h("b", { class: "done", text: "완료" }), i.due ? " · 기한 " + E.shortDate(i.due) : ""]
         : i.dd === null ? "기한 미정" : [h("b", { class: ddClass(i.dd), text: E.ddayLabel(i.dd) }), " · " + E.shortDate(i.due)], " · " + catLabel(f.category)),
-      h("div", { class: "foot" }, gradeChip(i), h("div", { class: "bar", role: "img", "aria-label": "완성도 " + i.comp.done + "/" + i.comp.total }, h("i", { style: "width:" + Math.round(100 * i.comp.done / i.comp.total) + "%" })),
-        h("span", { class: "small muted", text: i.comp.done + "/" + i.comp.total })),
+      h("div", { class: "foot" }, gradeChip(i), h("div", { class: "meter" }, h("div", { class: "bar", role: "img", "aria-label": "완성도 " + i.comp.done + "/" + i.comp.total }, h("i", { style: "width:" + Math.round(100 * i.comp.done / i.comp.total) + "%" })),
+        h("span", { class: "small muted", text: i.comp.done + "/" + i.comp.total }))),
       h("p", { class: "saved" }, h("span", {}, h("span", { class: "id", text: f.id || "번호 미입력" }), " · " + E.STATUS_LABEL[i.status]), h("span", { text: E.agoLabel(i.savedAt, Date.now()) })));
   }
   function viewHome(list) {
@@ -556,9 +566,10 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
           "CLI 양식(.yaml)은 더보기 → YAML 양식 가져오기 · 값은 적힌 그대로 읽음",
           "초안을 CLI 양식으로: 카드 ⋯ → YAML 양식 저장 (.yaml.txt) · 덜 쓴 초안도 가능 · 그대로 다시 가져오기와 CLI 실행 가능"])),
         P("도구가 비워 두는 칸", li(E.JUDGEMENT_FIELDS.concat(["6M 조사 결과"])), h("p", { class: "muted small", text: "초안과 근거 정리까지만. 승인 문서 아님 · 서명과 승인은 검증된 QMS에서" })),
-        P("등급 제안 기준", h("div", { class: "tw" }, h("table", {}, h("tbody", {}, E.RULES.levels.map(l => h("tr", {}, h("td", { class: "num" }, h("span", { class: "chip " + l.id, text: l.label })),
+        P("등급 제안 기준", h("div", { class: "tw" }, h("table", {}, h("tbody", {}, E.RULES.levels.map(l => h("tr", {}, h("td", { class: "num" }, h("span", { class: "chip " + E.levelTone(l.id), text: l.label })),
           h("td", { text: (E.RULES.classes[l.id] || []).map(t => t.reason).join(" · ") || "위 기준에 해당 없음" })))))),
-          h("p", { class: "muted small", text: "기본 규칙의 예시 값 · 사내 SOP 대조 전 · 확정은 QA 검토자" })),
+          E.RULES.manual_checks.length ? h("p", { class: "muted small", text: "도구가 판단하지 않는 SOP 기준 " + E.RULES.manual_checks.length + "개 · 초안에 ☐ 확인 항목으로 표시" }) : null,
+          h("p", { class: "muted small", text: E.activeRuleSet().label + " (" + E.RULES_FILE.name + ") · 더보기 메뉴에서 변경 · 사내 SOP 대조 전 · 확정은 QA 검토자" })),
         P("반복성 조회", li(["사업장·설비·유형이 모두 같은 과거 건 · 최근 " + E.RULES.recurrence.window_days + "일", "이력 CSV가 없거나 설비·유형이 비면 '조회 안 함' (반복 없음 아님)", "목록만 표시 · 원인 연관성은 판단 안 함"])),
         P("보고 기한", li(["발견일 + " + S.settings.dueDays + "일 (더보기 메뉴에서 변경)", "작업 관리용 설정값 · SOP 규칙 아님 · 초안 문서에는 안 들어감"])),
         P("저장과 전송", li(["입력과 파일은 이 브라우저 안에서만 처리 · 외부 전송 없음", "기본은 탭에만 보관 · 새로고침하면 사라짐", "더보기 → 브라우저 저장을 켜면 이 기기에 보관", "공용 PC에서는 저장을 켜지 않음"])),
@@ -661,7 +672,7 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
     if (s.id === "s6") return [h("div", { id: "f-flags" }, E.FLAGS.map(([key, name, q]) => {
       const lvl = E.RULES.levels.find(l => (E.RULES.classes[l.id] || []).some(t => t.field === key && t.equals === true));
       return h("div", { class: "flag", id: "flag-" + key },
-        h("div", { class: "q" }, h("span", { text: q }), lvl ? h("span", { class: "chip " + lvl.id, text: lvl.label + " 기준" }) : h("span", { class: "chip none", text: "등급과 별개" })),
+        h("div", { class: "q" }, h("span", { text: q }), lvl ? h("span", { class: "chip " + E.levelTone(lvl.id), text: lvl.label + " 기준" }) : h("span", { class: "chip none", text: "등급과 별개" })),
         h("div", { class: "yn", role: "radiogroup", "aria-label": name }, [[true, "예"], [false, "아니오"]].map(([val, text]) => {
           const r = h("input", { type: "radio", name: key, id: key + "-" + val, onchange: () => { f.flags[key] = val; edited(d); }, onfocus: () => focused(d, "flag:" + key, 5) });
           r.checked = f.flags[key] === val;
@@ -764,7 +775,7 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
 
   /* ---------- preview ---------- */
   function runs(rs, el) {
-    rs.forEach(r => { el.append(r.blank ? h("span", { class: "blank", text: r.t }) : r.b ? h("strong", { text: r.t }) : r.t); });
+    rs.forEach(r => { el.append(r.blank || r.box ? h("span", { class: "blank", text: r.t }) : r.b ? h("strong", { text: r.t }) : r.t); });
     return el;
   }
   function docView(m) {
@@ -796,6 +807,7 @@ import { SAMPLE_FORMS, SAMPLE_HISTORY, TEMPLATE_COMMENTS } from "./sample.js";
     const exp = h("button", { type: "button", class: "btn primary", "aria-haspopup": "menu", onclick: e => exportMenu(e.currentTarget, uid) }, ic("download"), "내보내기");
     openDrawer("미리보기", exp, [
       h("div", { class: "sumline" }, gradeChip(i, " (제안)"), h("span", { text: "판단 칸 " + m.blanks + "곳 비움" }), h("span", { class: "chip human", text: "담당자 작성" }),
+        m.boxes ? h("span", { text: "검토자 확인 " + m.boxes + "항목" }) : null,
         h("span", { text: i.look.checked ? "반복 건 " + i.look.rec.length + "건" : "반복성 조회 안 함" }), i.due ? h("span", { text: "보고 기한 " + i.due }) : null),
       docView(m)]);
   }

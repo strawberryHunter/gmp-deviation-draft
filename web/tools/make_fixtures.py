@@ -8,6 +8,8 @@ Files (all generated, do not edit by hand):
     web/tests/fixtures/cli_expected.json  CLI result per form: rejected, or grade / reasons / recurrence ids
     web/tests/fixtures/yaml_cases.json    YAML texts with what the CLI's form loader reads from each
     web/tests/fixtures/rules.json         config/rules.yaml as the CLI reads it, with the file's SHA-256 (what a draft records)
+    web/tests/fixtures/rules_duke.json    the same for config/examples/rules_Duke_COMM-PAS-013.yaml (the second rule set of the page)
+    web/tests/fixtures/cli_expected_duke.json  CLI result per form under those rules, with the text of draft sections 3 and 4
     web/src/sample.js                     the same forms + synthetic history + template guidance, bundled into the page
 """
 import hashlib
@@ -35,6 +37,33 @@ FLAGS = ["cpp_excursion", "spec_oos", "other_batches_possibly_affected", "steril
 paths = sorted((REPO / "data/synthetic/intake").glob("*.yaml")) + sorted((REPO / "data/synthetic/showcase").glob("*.yaml"))
 assert len(paths) == 8, f"expected 8 synthetic forms, found {len(paths)}"
 
+DUKE = REPO / "config/examples/rules_Duke_COMM-PAS-013.yaml"
+
+
+def cli_result(p, rules=None):
+    """What the CLI gives for one form: refused, or the proposal read from the draft it writes.
+    With `rules`, also the text of sections 3 and 4 (classification and recurrence) for a line-by-line comparison."""
+    with tempfile.TemporaryDirectory() as out:
+        r = subprocess.run([sys.executable, "-m", "devdraft.cli", str(p), "--today", TODAY, "--out", out]
+                           + (["--rules", str(rules)] if rules else []),
+                           cwd=REPO, capture_output=True, text=True, encoding="utf-8")
+        mds = list(Path(out).glob("*_draft.md"))
+        if r.returncode not in (0, 1):
+            sys.exit(f"CLI failed on {p.name}: exit {r.returncode}\n{r.stdout}\n{r.stderr}")
+        if not mds:
+            err = next((ln for ln in r.stdout.splitlines() if ln.startswith("ERR ")), "")
+            return {"rejected": True, "error": err}
+        md = mds[0].read_text(encoding="utf-8")
+    grade = re.search(r"\*\*제안 등급: (.+?)\*\*", md).group(1)
+    reasons = [ln[2:] for ln in re.search(r"근거:\n((?:- .*\n)+)", md).group(1).strip().split("\n")]
+    rec = re.findall(r"^\| (DEV-\d{4}-\d{4}) \| \d{4}-\d{2}-\d{2} \|", md, re.M)
+    unchecked = "반복성 조회를 하지 않았습니다" in md
+    res = {"rejected": False, "grade": grade, "reasons": reasons, "rec": rec, "recUnchecked": unchecked}
+    if rules:
+        res["sections"] = md[md.index("## 3. 분류 (제안)"):md.index("## 5. 조사 계획")]
+    return res
+
+
 forms, expected = [], {}
 for p in paths:
     raw = form_load(p.read_text(encoding="utf-8"))
@@ -47,22 +76,7 @@ for p in paths:
         form[k] = "" if v is None else str(v)
     forms.append({"file": p.name, "form": form})
 
-    with tempfile.TemporaryDirectory() as out:
-        r = subprocess.run([sys.executable, "-m", "devdraft.cli", str(p), "--today", TODAY, "--out", out],
-                           cwd=REPO, capture_output=True, text=True, encoding="utf-8")
-        mds = list(Path(out).glob("*_draft.md"))
-        if r.returncode not in (0, 1):
-            sys.exit(f"CLI failed on {p.name}: exit {r.returncode}\n{r.stdout}\n{r.stderr}")
-        if not mds:
-            err = next((ln for ln in r.stdout.splitlines() if ln.startswith("ERR ")), "")
-            expected[p.name] = {"rejected": True, "error": err}
-            continue
-        md = mds[0].read_text(encoding="utf-8")
-        grade = re.search(r"\*\*제안 등급: (\w+)\*\*", md).group(1)
-        reasons = [ln[2:] for ln in re.search(r"근거:\n((?:- .*\n)+)", md).group(1).strip().split("\n")]
-        rec = re.findall(r"^\| (DEV-\d{4}-\d{4}) \| \d{4}-\d{2}-\d{2} \|", md, re.M)
-        unchecked = "반복성 조회를 하지 않았습니다" in md
-        expected[p.name] = {"rejected": False, "grade": grade, "reasons": reasons, "rec": rec, "recUnchecked": unchecked}
+    expected[p.name] = cli_result(p)
 
 history = (REPO / "data/synthetic/history.csv").read_text(encoding="utf-8")
 OUT = {
@@ -128,6 +142,9 @@ OUT["src/sample.js"] = sample
 rules_path = REPO / "config/rules.yaml"
 OUT["tests/fixtures/rules.json"] = json.dumps({"file": rules_path.name, "sha256": hashlib.sha256(rules_path.read_bytes()).hexdigest(),
                                                "rules": load_rules(rules_path)}, ensure_ascii=False, indent=1) + "\n"
+OUT["tests/fixtures/rules_duke.json"] = json.dumps({"file": DUKE.name, "sha256": hashlib.sha256(DUKE.read_bytes()).hexdigest(),
+                                                    "rules": load_rules(DUKE)}, ensure_ascii=False, indent=1) + "\n"
+OUT["tests/fixtures/cli_expected_duke.json"] = json.dumps({p.name: cli_result(p, DUKE) for p in paths}, ensure_ascii=False, indent=1) + "\n"
 
 stale = [name for name, text in OUT.items() if not (HERE / name).exists() or (HERE / name).read_text(encoding="utf-8") != text]
 if CHECK:

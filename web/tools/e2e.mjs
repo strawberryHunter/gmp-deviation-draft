@@ -465,6 +465,55 @@ await job("내보내기: 요약표 복사와 CSV, 메일용 요약", async () =>
   await ctx.close();
 });
 
+await job("분류 규칙 바꾸기: 공개 SOP 예시(Duke)로 모든 초안을 다시 제안, 받은 초안이 CLI와 같음", async () => {
+  const { page, click, clicks, reset, ctx } = await open();
+  await click("#loadExamples"); await page.waitForSelector(".card");
+  const grades = () => page.evaluate(() => Object.fromEntries([...document.querySelectorAll(".card")].map(c => { const chip = c.querySelector(".foot .chip");
+    return [c.querySelector(".saved .id").textContent, chip.textContent + " / " + chip.className]; })));
+  const levels = () => page.evaluate(() => [...document.querySelectorAll('#view .seg[aria-label="도구 제안 등급"] button')].map(b => b.innerText.replace(/\s+/g, " ").trim()));
+  const before = await grades();
+  assert.equal(before["DEV-2026-2201"], "MAJOR 제안 / chip major");
+  assert.deepEqual(await levels(), ["전체 8", "CRITICAL 3", "MAJOR 3", "MINOR 1"]);
+  // A grade filter of the usual rules is on. The other rules have no such grade: after the switch it must not leave an empty list.
+  await click('#view .seg[aria-label="도구 제안 등급"] button:has-text("CRITICAL")');
+  assert.equal(Object.keys(await grades()).length, 3);
+  reset();
+  await click("#moreBtn"); await page.selectOption('.menu select[aria-label="분류 규칙"]', "duke");
+  const used = clicks() + 1;   // the menu button, then one choice in the list
+  await page.waitForFunction(() => document.querySelector("#toast").textContent.includes("분류 규칙 · 공개 SOP 예시 · Duke COMM-PAS-013"));
+  const after = await grades();
+  assert.equal(Object.keys(after).length, 8, "the old grade filter is dropped");
+  assert.equal(after["DEV-2026-2201"], "Repeat Deviation (SOP 4.26) 제안 / chip major");
+  assert.equal(after["DEV-2026-2202"], "Repeat Deviation (SOP 4.26) 제안 / chip major");
+  assert.equal(after["DEV-2026-2301"], "Repeat Deviation 해당 없음 제안 / chip minor", "no red chip: these rules have no critical grade");
+  assert.equal(after["DEV-2026-2204"], before["DEV-2026-2204"], "a form with something missing still gets no proposal");
+  assert.deepEqual(await levels(), ["전체 8", "Repeat Deviation (SOP 4.26) 2", "Repeat Deviation 해당 없음 5"]);
+  assert.equal((await text(page, "#side .ruleset")).replace(/\s+/g, " "), "공개 SOP 예시 Duke COMM-PAS-013");   // which rules give these grades, named above them
+  // The draft a reviewer receives: the proposal, the six clauses left to the reviewer and the rules file, as the CLI writes them.
+  await click('.card:has(.id:text-is("DEV-2026-2201")) .open');
+  await click(".ebar .btn.primary"); await click('.menu button:has-text("Markdown")');
+  await page.waitForFunction(() => window.__saved.length === 1);
+  const md = await page.evaluate(() => window.__saved[0].text);
+  const cli = JSON.parse(readFileSync(new URL("../tests/fixtures/cli_expected_duke.json", import.meta.url), "utf8"))["DEV-2026-2201.yaml"];
+  const lines = t => t.split("\n").map(l => l.trimEnd()).filter(Boolean).join("\n");
+  assert.equal(lines(md.slice(md.indexOf("## 3. 분류 (제안)"), md.indexOf("## 5. 조사 계획"))), lines(cli.sections));
+  assert.equal(md.split("- ☐ SOP ").length - 1, 6);
+  assert.ok(md.includes("| 분류 규칙 | rules_Duke_COMM-PAS-013.yaml (SHA-256 e80bad546c19e73189b9f7168ecf1d08592de6776d61293863739b0db5e94215) |"));
+  for (const blank of ["## 6. 근본원인\n\n☐ **작성 필요**", "## 7. 제품 품질 영향 평가\n\n☐ **작성 필요**", "**QA 검토자 확정 등급:** ☐ **작성 필요**"]) assert.ok(md.includes(blank), blank);
+  // The choice is a setting of this browser: it is still on after a reload, shown in the menu, and one choice puts the usual rules back.
+  await page.reload(); await page.waitForSelector("#loadExamples");
+  await click("#loadExamples"); await page.waitForSelector(".card");
+  assert.equal((await grades())["DEV-2026-2201"], "Repeat Deviation (SOP 4.26) 제안 / chip major");
+  await click("#moreBtn");
+  assert.equal(await page.inputValue('.menu select[aria-label="분류 규칙"]'), "duke");
+  await page.selectOption('.menu select[aria-label="분류 규칙"]', "default");
+  await page.waitForFunction(() => document.querySelector("#toast").textContent.includes("분류 규칙 · 기본 규칙"));
+  assert.deepEqual(await grades(), before);
+  assert.equal(await page.locator("#side .ruleset").count(), 0);
+  await ctx.close();
+  return "기본 규칙으로만 판정 → 클릭 " + used + "번 (더보기 → 분류 규칙)";
+});
+
 await browser.close();
 for (const [s, n, note] of results) console.log((s === "ok" ? "ok   " : "FAIL ") + n + (note ? "  — " + note : ""));
 if (bad.length) console.log("PROBLEMS\n" + [...new Set(bad)].join("\n"));
