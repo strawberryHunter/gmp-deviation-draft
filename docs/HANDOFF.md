@@ -20,6 +20,7 @@
 | 합성 이력이 실제 양식에 섞이는 것 차단 | ✅ |
 | SOP 반영 예시: 합성 SOP, 공개 SOP(Duke COMM-PAS-013) | ✅ |
 | 자동 테스트(CI) — PR·main마다 GitHub에서 테스트 실행 | ✅ Ubuntu 3.10–3.13 + Windows |
+| 저장소 공개, 외부인이 매뉴얼대로 따라 하기 | ✅ 2026-11-27 — 로그인 없이 ZIP을 받아 새 환경에 설치, 매뉴얼의 명령으로 초안 4건 생성 확인 |
 | 영문 Windows 콘솔에서 한국어 메시지 | ✅ (이전에는 오류로 종료) |
 | 포트폴리오용 결과물 미리보기 — 현실적 합성 사례 4건의 초안 PDF·이미지, README 갤러리 | ✅ `sample_output/showcase/` |
 | README를 포트폴리오 첫 화면으로 (설계 판단·재현해서 고친 결함·영문 요약) | ✅ |
@@ -85,15 +86,16 @@
 | [#38](https://github.com/strawberryHunter/gmp-deviation-draft/pull/38) | 웹: 완성된 초안 전체를 Word로 한 번에 받기 (.zip, 요약표 CSV 포함). 요약표 머리글의 조회 기간이 고른 규칙을 따르게 수정. 폰에서 숫자 5개가 한 줄 |
 | [#39](https://github.com/strawberryHunter/gmp-deviation-draft/pull/39) | Word 초안에서 제안 등급과 근거 목록이 다른 쪽으로 갈리지 않게 (CLI·웹). CLI: 표 뒤 빈 줄을 얇게, 부록은 한 쪽에. 미리보기 다시 그림 |
 | [#40](https://github.com/strawberryHunter/gmp-deviation-draft/pull/40) | 문서: HANDOFF의 "사용자가 해야 할 일"을 지금 상태로 (브랜치 정리 끝, 포트폴리오 페이지에서 면접 준비를 분리, 저장 버튼 확인 2개) |
+| [#41](https://github.com/strawberryHunter/gmp-deviation-draft/pull/41) | 문서: 저장소 공개 전환을 HANDOFF에 반영 (공개 후 확인한 것, 남은 선택 항목: 주제 태그·라이선스) |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
 위에서부터 중요한 순서입니다. 끝나면 Claude에게 결과를 알려 주세요.
 
-- [ ] **⓪ (선택) 저장소를 공개(Public)로 전환** — 지원서에는 포트폴리오 PDF(대화에서 받은 파일)만 첨부해도 됩니다. 면접관이 코드를 보고 싶어 할 때 전환하십시오. 비공개 상태에서는 링크가 404입니다. 이 세션은 저장소 설정을 바꿀 권한이 없습니다(2026-11-25 시도, 403).
-  - Settings → General → 맨 아래 Danger Zone → **Change visibility** → Public
-  - 공개 전 점검 완료 (2026-11-27 다시 확인): 전체 커밋 기록에 비밀값·개인 이메일·내 컴퓨터 경로 없음, 커밋 이메일은 GitHub noreply 주소. 공개하면 `CLAUDE.md`·이 문서·커밋 작성자(Claude)도 함께 보입니다
-  - 같은 화면에서 함께: About(오른쪽 톱니)에 주제 태그 `gmp` `gxp` `deviation-management` `data-integrity` `quality-assurance` `python` 추가, 프로필에서 **Pin**
+- [ ] **⓪ (선택) 공개 저장소 꾸미기** — 저장소는 2026-11-27에 공개로 바뀌었습니다 (사용자가 전환). 로그인 없이 저장소·README·그림·ZIP 내려받기가 열리는 것, ZIP을 받아 매뉴얼대로 설치하고 실행하면 초안 4건이 나오는 것을 Claude가 확인했습니다. 남은 것은 선택입니다.
+  - About(오른쪽 톱니)에 주제 태그 `gmp` `gxp` `deviation-management` `data-integrity` `quality-assurance` `python` 추가, 프로필에서 **Pin**
+  - LICENSE 파일이 없습니다. 없으면 "보기만 가능, 재사용 불가"가 기본입니다. 라이선스를 둘지, 어떤 것으로 할지 정해서 Claude에게 알려 주세요
+  - 공개 상태에서는 `CLAUDE.md`·이 문서·커밋 작성자(Claude)도 보입니다. 저장소 설정은 Claude가 바꿀 수 없습니다 (권한 장치가 막음)
 - [ ] **⓪-2 포트폴리오 페이지 공유** — claude.ai 아티팩트 "GMP Deviation Draft"(대화에서 받은 링크) 오른쪽 위 Share에서 링크 공유 켜기. 이 페이지에는 포트폴리오와 사용 매뉴얼만 있습니다. 면접 준비와 오픈소스 기여 안내는 2026-11-27에 따로 떼어 개인용 페이지 "GMP 면접 준비 노트"로 옮겼으니, 포트폴리오 페이지를 공유해도 같이 나가지 않습니다. 브라우저 화면("Deviation 초안 데스크")은 공유 설정이 따로입니다. 공유 설정은 Claude가 바꿀 수 없습니다. 공유 후 README나 이력서에 링크를 넣을지 Claude에게 알려 주세요.
 
 - [ ] **⓪-3 웹 화면에서 저장 버튼 두 개 눌러 보기** — 게시된 "Deviation 초안 데스크"에서 예시 불러오기 → ① 카드 열기 → 내보내기 → Word, ② 왼쪽 메뉴 내보내기 → Word 전체 저장 (.zip). 저장 확인 창이 뜨고 파일이 받아지는지만 알려 주세요. Claude 세션에는 claude.ai에 로그인된 브라우저 도구가 없어 이 버튼만은 직접 누르지 못했습니다 (2026-11-26). 대신 저장 기능의 공식 규격(허용 확장자, 거절 코드)을 그대로 따르는 대역으로 시험했고, 받은 파일의 모양은 Microsoft Word 16.89로 열어 확인했습니다 (표 폭·여백, 검정 굵은 제목, Arial + 맑은 고딕, 3쪽).
