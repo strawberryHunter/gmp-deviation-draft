@@ -1,7 +1,7 @@
 # HANDOFF — 현재 상태와 다음 할 일
 
 > 작업이 끝날 때마다 갱신합니다 (규칙: [`CLAUDE.md`](../CLAUDE.md)).
-> **마지막 갱신: 2026-11-26** · 기준 브랜치 `main` · 테스트 326개 통과 + 웹 화면 검사(엔진 48 · 실제 입력 20 · 화면) · **CI 통과 시 Claude가 자동 머지** (CI 6개: Ubuntu Python 3.10–3.13, Windows 3.12, web) · 도구 버전 `devdraft 0.5.0`
+> **마지막 갱신: 2026-11-27** · 기준 브랜치 `main` · 테스트 326개 통과 + 웹 화면 검사(엔진 48 · 실제 입력 20 · 화면) · **CI 통과 시 Claude가 자동 머지** (CI 6개: Ubuntu Python 3.10–3.13, Windows 3.12, web) · 도구 버전 `devdraft 0.5.0`
 >
 > **프로젝트 목적: 입사 포트폴리오.** 실제 회사 도입이 아니므로 회사 SOP·사내 적격성 평가는 범위 밖입니다. 우선순위는 "검토자가 처음 1분에 보고 이해하는가"입니다.
 
@@ -84,6 +84,7 @@
 | [#37](https://github.com/strawberryHunter/gmp-deviation-draft/pull/37) | 웹: 분류 규칙 고르기 (기본 규칙 · 공개 SOP 예시 Duke). 규칙 두 벌을 파일과 키 단위로, 초안의 분류·반복성 절을 CLI 출력과 줄 단위로 대조. 긴 등급 이름이 카드·필터에서 줄을 바꿈 |
 | [#38](https://github.com/strawberryHunter/gmp-deviation-draft/pull/38) | 웹: 완성된 초안 전체를 Word로 한 번에 받기 (.zip, 요약표 CSV 포함). 요약표 머리글의 조회 기간이 고른 규칙을 따르게 수정. 폰에서 숫자 5개가 한 줄 |
 | [#39](https://github.com/strawberryHunter/gmp-deviation-draft/pull/39) | Word 초안에서 제안 등급과 근거 목록이 다른 쪽으로 갈리지 않게 (CLI·웹). CLI: 표 뒤 빈 줄을 얇게, 부록은 한 쪽에. 미리보기 다시 그림 |
+| [#40](https://github.com/strawberryHunter/gmp-deviation-draft/pull/40) | 문서: HANDOFF의 "사용자가 해야 할 일"을 지금 상태로 (브랜치 정리 끝, 포트폴리오 페이지에서 면접 준비를 분리, 저장 버튼 확인 2개) |
 
 ## 3. 사용자가 해야 할 일 — Claude가 대신할 수 없는 것
 
@@ -91,21 +92,18 @@
 
 - [ ] **⓪ (선택) 저장소를 공개(Public)로 전환** — 지원서에는 포트폴리오 PDF(대화에서 받은 파일)만 첨부해도 됩니다. 면접관이 코드를 보고 싶어 할 때 전환하십시오. 비공개 상태에서는 링크가 404입니다. 이 세션은 저장소 설정을 바꿀 권한이 없습니다(2026-11-25 시도, 403).
   - Settings → General → 맨 아래 Danger Zone → **Change visibility** → Public
-  - 공개 전 점검 완료: 추적 파일에 비밀값·개인 이메일 없음, 커밋 이메일은 GitHub noreply 주소
+  - 공개 전 점검 완료 (2026-11-27 다시 확인): 전체 커밋 기록에 비밀값·개인 이메일·내 컴퓨터 경로 없음, 커밋 이메일은 GitHub noreply 주소. 공개하면 `CLAUDE.md`·이 문서·커밋 작성자(Claude)도 함께 보입니다
   - 같은 화면에서 함께: About(오른쪽 톱니)에 주제 태그 `gmp` `gxp` `deviation-management` `data-integrity` `quality-assurance` `python` 추가, 프로필에서 **Pin**
-- [ ] **⓪-2 포트폴리오 페이지 공유** — claude.ai 아티팩트(대화에서 받은 링크) 오른쪽 위 Share에서 링크 공유 켜기. 공유 후 README나 이력서에 링크를 넣을지 Claude에게 알려 주세요.
+- [ ] **⓪-2 포트폴리오 페이지 공유** — claude.ai 아티팩트 "GMP Deviation Draft"(대화에서 받은 링크) 오른쪽 위 Share에서 링크 공유 켜기. 이 페이지에는 포트폴리오와 사용 매뉴얼만 있습니다. 면접 준비와 오픈소스 기여 안내는 2026-11-27에 따로 떼어 개인용 페이지 "GMP 면접 준비 노트"로 옮겼으니, 포트폴리오 페이지를 공유해도 같이 나가지 않습니다. 브라우저 화면("Deviation 초안 데스크")은 공유 설정이 따로입니다. 공유 설정은 Claude가 바꿀 수 없습니다. 공유 후 README나 이력서에 링크를 넣을지 Claude에게 알려 주세요.
 
-- [ ] **⓪-3 웹 화면에서 Word 저장 한 번 눌러 보기** — 게시된 "Deviation 초안 데스크"에서 예시 불러오기 → 카드 열기 → 내보내기 → Word. 저장 확인 창이 뜨고 .docx가 받아지는지만 알려 주세요. Claude 세션에는 claude.ai에 로그인된 브라우저 도구가 없어 이 버튼만은 직접 누르지 못했습니다 (2026-11-26). 대신 저장 기능의 공식 규격(허용 확장자, 거절 코드)을 그대로 따르는 대역으로 시험했고, 받은 파일의 모양은 Microsoft Word 16.89로 열어 확인했습니다 (표 폭·여백, 검정 굵은 제목, Arial + 맑은 고딕, 3쪽).
+- [ ] **⓪-3 웹 화면에서 저장 버튼 두 개 눌러 보기** — 게시된 "Deviation 초안 데스크"에서 예시 불러오기 → ① 카드 열기 → 내보내기 → Word, ② 왼쪽 메뉴 내보내기 → Word 전체 저장 (.zip). 저장 확인 창이 뜨고 파일이 받아지는지만 알려 주세요. Claude 세션에는 claude.ai에 로그인된 브라우저 도구가 없어 이 버튼만은 직접 누르지 못했습니다 (2026-11-26). 대신 저장 기능의 공식 규격(허용 확장자, 거절 코드)을 그대로 따르는 대역으로 시험했고, 받은 파일의 모양은 Microsoft Word 16.89로 열어 확인했습니다 (표 폭·여백, 검정 굵은 제목, Arial + 맑은 고딕, 3쪽).
 
   1. 바로 볼 수 있는 렌더링 결과: [`sample_output/showcase/`](../sample_output/showcase/)의 PDF (Microsoft Word가 그린 것, A4). Word 원본이 필요하면 "프롬프트 A". 미리보기를 다시 만들 때는 `python scripts/make_showcase.py --word` (macOS + Word, PyMuPDF 또는 poppler 필요)
   2. 확인할 것: 모든 쪽 머리글의 빨간 "초안 — 승인 문서 아님" · 빈칸 노란 강조 · 한글이 맑은 고딕으로 보이는지
   3. 이상하면 화면 캡처를 Claude에게 보내기
 - [ ] **② CI 결과 확인** — PR 화면 아래쪽 "Checks"가 초록색 ✅인지 봐 주세요. 빨간 ❌면 Claude에게 "CI 실패 고쳐줘"
 
-- [ ] **③ GitHub 브랜치 정리** — Claude가 지우려 했으나 권한 장치가 막았습니다 (2026-11-26). 남은 원격 브랜치(머지된 PR마다 1개)는 모두 머지된 PR의 마지막 커밋과 같아 지워도 잃는 것이 없음을 확인했습니다 (PR 화면에서 되살릴 수 있음). 머지가 끝난 아래 브랜치는 지워도 내용이 사라지지 않습니다. 포트폴리오 저장소가 깔끔해 보입니다.
-  `fix/flag-validation-template`, `feat/history-check`, `feat/docx-format`, `feat/traceability`, `feat/public-sop-example`, `docs/handoff`, `ci/github-actions`, `feat/showcase`, `docs/readme-portfolio`, `feat/summary-docx`, `fix/verbatim-facts`, `decisions/resolve-open-items`, `feat/new-risk-questions`, `feat/summary-xlsx`, `fix/template-comment-leak`, `fix/recurrence-not-checked`, `fix/unused-yes-answers`
-  - 지우는 곳: 저장소 → Branches → 각 줄의 휴지통 아이콘
-  - 앞으로 자동으로 지우려면: Settings → General → **Automatically delete head branches** 켜기
+- [ ] **③ (선택) 머지된 브랜치 자동 삭제 켜기** — 머지가 끝난 브랜치 39개는 Claude가 모두 지웠습니다 (2026-11-27, 지우기 전에 39개 전부 머지된 PR의 마지막 커밋과 같은지 대조. PR 화면의 Restore branch로 되살릴 수 있음). 지금 GitHub에는 `main`만 있습니다. 설정을 바꾸는 것은 권한 장치가 막아서, 앞으로는 Claude가 머지할 때마다 그 브랜치를 지웁니다. 자동으로 하려면 Settings → General → **Automatically delete head branches** 켜기.
 
 ## 4. 다음 작업 후보 — Claude에게 그대로 복사해서 보내는 프롬프트
 
